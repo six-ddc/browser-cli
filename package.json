@@ -1,0 +1,38 @@
+{
+  "name": "@browser-cli/root",
+  "private": true,
+  "type": "module",
+  "description": "Extension-based browser automation CLI — control Chrome from the terminal without Playwright",
+  "author": "six-ddc",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/six-ddc/browser-cli.git"
+  },
+  "homepage": "https://github.com/six-ddc/browser-cli",
+  "bugs": {
+    "url": "https://github.com/six-ddc/browser-cli/issues"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^3.0.4"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=18"
+  }
+}
