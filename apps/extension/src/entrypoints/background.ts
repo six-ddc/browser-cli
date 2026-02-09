@@ -7,7 +7,7 @@ let wsClient: WsClient | null = null;
 
 async function resolveTargetTab(tabId?: number): Promise<number> {
   if (tabId) return tabId;
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (!activeTab?.id) throw new Error('No active tab found');
   return activeTab.id;
 }
@@ -32,7 +32,7 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
     }
 
     // Forward to content script
-    const response = await chrome.tabs.sendMessage(targetTabId, {
+    const response = await browser.tabs.sendMessage(targetTabId, {
       type: 'browser-cli-command',
       id,
       command,
@@ -83,7 +83,7 @@ export default defineBackground(async () => {
   wsClient.start();
 
   // Listen for port changes from popup
-  chrome.storage.onChanged.addListener((changes) => {
+  browser.storage.onChanged.addListener((changes) => {
     const stateChange = changes['browserCliState'];
     if (stateChange?.newValue) {
       const newState = stateChange.newValue as Record<string, unknown>;

@@ -5,9 +5,9 @@ export default defineContentScript({
   matches: ['<all_urls>'],
   main() {
     // Listen for commands from background script
-    chrome.runtime.onMessage.addListener((
+    browser.runtime.onMessage.addListener((
       message: { type: string; id: string; command: Command },
-      _sender: chrome.runtime.MessageSender,
+      _sender: Browser.runtime.MessageSender,
       sendResponse: (response: unknown) => void,
     ) => {
       if (message.type !== 'browser-cli-command') return false;
