@@ -1,21 +1,21 @@
 # Browser-CLI
 
-Extension-based browser automation from the command line — control Chrome without Playwright or WebDriver.
+Extension-based browser automation from the command line — control Chrome or Firefox without Playwright or WebDriver.
 
-Browser-CLI uses a Chrome extension as a bridge instead of a browser driver, giving you direct access to Chrome APIs (cookies, storage, tabs, etc.) while keeping the automation workflow in your terminal.
+Browser-CLI uses a browser extension as a bridge instead of a browser driver, giving you direct access to browser APIs (cookies, storage, tabs, etc.) while keeping the automation workflow in your terminal.
 
 ## Architecture
 
 ```
 ┌─────────┐  Unix socket   ┌────────┐  WebSocket   ┌───────────┐
 │   CLI   │ ──── NDJSON ──→│ Daemon │ ──── JSON ──→│ Extension │
-│(client) │                │(server)│              │(Chrome)   │
+│(client) │                │(server)│              │(browser)  │
 └─────────┘                └────────┘              └───────────┘
 ```
 
 - **CLI** — Commander.js client that sends commands over a Unix socket
 - **Daemon** — Background process with a WebSocket server (port 9222) + Unix socket server
-- **Extension** — Chrome MV3 extension that routes commands to Chrome APIs or content scripts
+- **Extension** — MV3 browser extension (Chrome + Firefox) that routes commands to browser APIs or content scripts
 
 ## Features
 
@@ -55,7 +55,7 @@ Browser-CLI uses a Chrome extension as a bridge instead of a browser driver, giv
 
 - Node.js >= 20
 - pnpm >= 9
-- Chrome / Chromium
+- Chrome / Chromium or Firefox
 
 ### Install
 
@@ -68,9 +68,19 @@ pnpm build
 
 ### Load the Extension
 
+**Chrome:**
+
 1. Open `chrome://extensions` in Chrome
 2. Enable **Developer mode**
 3. Click **Load unpacked** and select `apps/extension/.output/chrome-mv3`
+
+Or install from the zip file at `apps/extension/.output/<name>-chrome.zip`.
+
+**Firefox:**
+
+1. Open `about:debugging#/runtime/this-firefox` in Firefox
+2. Click **Load Temporary Add-on**
+3. Select the zip file at `apps/extension/.output/<name>-firefox.zip`
 
 ### Usage
 
@@ -142,7 +152,7 @@ pnpm format
 | Package | Path | Description |
 |---|---|---|
 | `@browser-cli/cli` | `apps/cli` | CLI client + daemon process |
-| `@browser-cli/extension` | `apps/extension` | Chrome extension (WXT + React) |
+| `@browser-cli/extension` | `apps/extension` | Browser extension — Chrome + Firefox (WXT + React) |
 | `@browser-cli/shared` | `packages/shared` | Protocol types, Zod schemas, constants |
 
 ## License

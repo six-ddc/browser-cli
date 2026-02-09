@@ -20,13 +20,13 @@ export default function App() {
     });
 
     // Listen for state changes
-    const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+    const listener = (changes: { [key: string]: Browser.storage.StorageChange }) => {
       if (changes.browserCliState?.newValue) {
         setStateLocal(changes.browserCliState.newValue as ConnectionState);
       }
     };
-    chrome.storage.onChanged.addListener(listener);
-    return () => chrome.storage.onChanged.removeListener(listener);
+    browser.storage.onChanged.addListener(listener);
+    return () => browser.storage.onChanged.removeListener(listener);
   }, []);
 
   const handlePortSave = () => {

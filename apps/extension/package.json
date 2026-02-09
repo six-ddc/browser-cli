@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Browser-CLI Chrome extension bridge",
+  "description": "Browser-CLI browser extension bridge",
   "author": "six-ddc",
   "license": "MIT",
   "scripts": {
     "dev": "wxt",
-    "build": "wxt build",
+    "build": "wxt zip && wxt zip -b firefox",
     "lint": "eslint .",
     "typecheck": "wxt prepare && tsc --noEmit"
   },
@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@types/chrome": "^0.1.36",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@wxt-dev/module-react": "^1.1.2",

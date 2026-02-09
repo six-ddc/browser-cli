@@ -93,7 +93,7 @@ export class WsClient {
       const handshake = {
         type: 'handshake' as const,
         protocolVersion: PROTOCOL_VERSION,
-        extensionId: chrome.runtime.id,
+        extensionId: browser.runtime.id,
       };
       this.ws?.send(JSON.stringify(handshake));
     };
