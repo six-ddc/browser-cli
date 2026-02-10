@@ -52,6 +52,17 @@ vi.mock('../src/commands/shared.js', () => ({
       routeId: 1,
       pattern: '*',
       action: 'block',
+      // New features
+      dragged: true,
+      released: true,
+      moved: true,
+      scrolled: true,
+      found: true,
+      windowId: 1,
+      windows: [],
+      closed: true,
+      set: true,
+      ruleCount: 0,
     });
   },
 }));
@@ -787,6 +798,185 @@ describe('AgentBrowser CLI syntax compatibility', () => {
     it('get count @e1', async () => {
       await parseArgs('get', 'count', '@e1');
       expectCommand('count', { selector: '@e1' });
+    });
+  });
+
+  // ─── Drag and Drop ─────────────────────────────────────────────────
+
+  describe('drag', () => {
+    it('drag <source> <target>', async () => {
+      await parseArgs('drag', '#item', '#dropzone');
+      expectCommand('drag', { source: '#item', target: '#dropzone' });
+    });
+
+    it('drag with semantic locators', async () => {
+      await parseArgs('drag', 'text=Card', 'text=Column B');
+      expectCommand('drag', { source: 'text=Card', target: 'text=Column B' });
+    });
+
+    it('drag with @refs', async () => {
+      await parseArgs('drag', '@e1', '@e5');
+      expectCommand('drag', { source: '@e1', target: '@e5' });
+    });
+  });
+
+  // ─── Key down/up ──────────────────────────────────────────────────
+
+  describe('keydown / keyup', () => {
+    it('keydown <key>', async () => {
+      await parseArgs('keydown', 'Shift');
+      expectCommand('keydown', { key: 'Shift' });
+    });
+
+    it('keyup <key>', async () => {
+      await parseArgs('keyup', 'Shift');
+      expectCommand('keyup', { key: 'Shift' });
+    });
+
+    it('keydown Control', async () => {
+      await parseArgs('keydown', 'Control');
+      expectCommand('keydown', { key: 'Control' });
+    });
+
+    it('keyup Control', async () => {
+      await parseArgs('keyup', 'Control');
+      expectCommand('keyup', { key: 'Control' });
+    });
+  });
+
+  // ─── Mouse control ───────────────────────────────────────────────
+
+  describe('mouse', () => {
+    it('mouse move <x> <y>', async () => {
+      await parseArgs('mouse', 'move', '100', '200');
+      expectCommand('mouseMove', { x: 100, y: 200 });
+    });
+
+    it('mouse down', async () => {
+      await parseArgs('mouse', 'down');
+      expectCommand('mouseDown', {});
+    });
+
+    it('mouse down right', async () => {
+      await parseArgs('mouse', 'down', 'right');
+      expectCommand('mouseDown', { button: 'right' });
+    });
+
+    it('mouse up', async () => {
+      await parseArgs('mouse', 'up');
+      expectCommand('mouseUp', {});
+    });
+
+    it('mouse up left', async () => {
+      await parseArgs('mouse', 'up', 'left');
+      expectCommand('mouseUp', { button: 'left' });
+    });
+
+    it('mouse wheel <deltaY>', async () => {
+      await parseArgs('mouse', 'wheel', '100');
+      expectCommand('mouseWheel', { deltaY: 100 });
+    });
+
+    it('mouse wheel <deltaY> <deltaX>', async () => {
+      await parseArgs('mouse', 'wheel', '100', '50');
+      expectCommand('mouseWheel', { deltaY: 100, deltaX: 50 });
+    });
+  });
+
+  // ─── Wait extensions ─────────────────────────────────────────────
+
+  describe('wait extensions', () => {
+    it('wait --text <text>', async () => {
+      await parseArgs('wait', '--text', 'Loading complete');
+      expectCommand('wait', { text: 'Loading complete' });
+    });
+
+    it('wait --load', async () => {
+      await parseArgs('wait', '--load');
+      expectCommand('wait', { load: 'load' });
+    });
+
+    it('wait --load domcontentloaded', async () => {
+      await parseArgs('wait', '--load', 'domcontentloaded');
+      expectCommand('wait', { load: 'domcontentloaded' });
+    });
+
+    it('wait --load networkidle', async () => {
+      await parseArgs('wait', '--load', 'networkidle');
+      expectCommand('wait', { load: 'networkidle' });
+    });
+
+    it('wait --fn <expression>', async () => {
+      await parseArgs('wait', '--fn', 'window.ready === true');
+      expectCommand('wait', { fn: 'window.ready === true' });
+    });
+  });
+
+  // ─── Window management ───────────────────────────────────────────
+
+  describe('window', () => {
+    it('window (bare) — list windows', async () => {
+      await parseArgs('window');
+      expectCommand('windowList', {});
+    });
+
+    it('window new', async () => {
+      await parseArgs('window', 'new');
+      expectCommand('windowNew', {});
+    });
+
+    it('window new <url>', async () => {
+      await parseArgs('window', 'new', 'https://example.com');
+      expectCommand('windowNew', { url: 'https://example.com' });
+    });
+
+    it('window list', async () => {
+      await parseArgs('window', 'list');
+      expectCommand('windowList', {});
+    });
+
+    it('window close', async () => {
+      await parseArgs('window', 'close');
+      expectCommand('windowClose', {});
+    });
+
+    it('window close <windowId>', async () => {
+      await parseArgs('window', 'close', '42');
+      expectCommand('windowClose', { windowId: 42 });
+    });
+  });
+
+  // ─── Browser config (set) ────────────────────────────────────────
+
+  describe('set', () => {
+    it('set viewport <width> <height>', async () => {
+      await parseArgs('set', 'viewport', '1920', '1080');
+      expectCommand('setViewport', { width: 1920, height: 1080 });
+    });
+
+    it('set geo <lat> <lng>', async () => {
+      await parseArgs('set', 'geo', '37.7749', '-122.4194');
+      expectCommand('setGeo', { latitude: 37.7749, longitude: -122.4194 });
+    });
+
+    it('set geo with --accuracy', async () => {
+      await parseArgs('set', 'geo', '51.5074', '-0.1278', '--accuracy', '50');
+      expectCommand('setGeo', { latitude: 51.5074, longitude: -0.1278, accuracy: 50 });
+    });
+
+    it('set media dark', async () => {
+      await parseArgs('set', 'media', 'dark');
+      expectCommand('setMedia', { colorScheme: 'dark' });
+    });
+
+    it('set media light', async () => {
+      await parseArgs('set', 'media', 'light');
+      expectCommand('setMedia', { colorScheme: 'light' });
+    });
+
+    it('set headers <json>', async () => {
+      await parseArgs('set', 'headers', '{"X-Custom":"value"}');
+      expectCommand('setHeaders', { headers: { 'X-Custom': 'value' } });
     });
   });
 

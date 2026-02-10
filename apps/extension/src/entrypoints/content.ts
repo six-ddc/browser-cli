@@ -66,9 +66,21 @@ async function handleContentCommand(command: Command): Promise<unknown> {
     case 'type':
     case 'press':
     case 'clear':
-    case 'focus': {
+    case 'focus':
+    case 'drag':
+    case 'keydown':
+    case 'keyup': {
       const { handleInteraction } = await import('../content-lib/dom-interact');
       return handleInteraction(command);
+    }
+
+    // Mouse
+    case 'mouseMove':
+    case 'mouseDown':
+    case 'mouseUp':
+    case 'mouseWheel': {
+      const { handleMouse } = await import('../content-lib/mouse');
+      return handleMouse(command);
     }
 
     // Data queries
@@ -151,6 +163,13 @@ async function handleContentCommand(command: Command): Promise<unknown> {
     case 'highlight': {
       const { handleHighlight } = await import('../content-lib/highlight');
       return handleHighlight(command.params);
+    }
+
+    // Browser Config (content-script side: geo, media)
+    case 'setGeo':
+    case 'setMedia': {
+      const { handleBrowserConfig } = await import('../content-lib/browser-config');
+      return handleBrowserConfig(command);
     }
 
     // Frame management

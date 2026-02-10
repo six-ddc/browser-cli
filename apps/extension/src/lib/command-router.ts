@@ -256,6 +256,86 @@ async function routeCommand(
       return { cleared };
     }
 
+    // ─── Window Management ─────────────────────────────────────
+    case 'windowNew': {
+      const { url } = command.params as { url?: string };
+      const win = await browser.windows.create({ url: url || 'about:blank' });
+      if (!win) throw new Error('Failed to create window');
+      const tab = win.tabs?.[0];
+      return {
+        windowId: win.id,
+        tabId: tab?.id,
+        url: tab?.url || url || 'about:blank',
+      };
+    }
+    case 'windowList': {
+      const windows = await browser.windows.getAll({ populate: true });
+      return {
+        windows: windows.map((w) => ({
+          id: w.id,
+          focused: w.focused,
+          type: w.type || 'normal',
+          tabs: w.tabs?.length || 0,
+        })),
+      };
+    }
+    case 'windowClose': {
+      const { windowId } = command.params as { windowId?: number };
+      if (windowId) {
+        await browser.windows.remove(windowId);
+      } else {
+        const current = await browser.windows.getCurrent();
+        if (current.id) await browser.windows.remove(current.id);
+      }
+      return { closed: true };
+    }
+
+    // ─── Browser Config ─────────────────────────────────────────
+    case 'setViewport': {
+      const { width, height } = command.params as { width: number; height: number };
+      const current = await browser.windows.getCurrent();
+      if (current.id) {
+        await browser.windows.update(current.id, { width, height });
+      }
+      return { set: true, width, height };
+    }
+    case 'setHeaders': {
+      const { headers } = command.params as { headers: Record<string, string> };
+      const rules: Array<{
+        id: number;
+        priority: number;
+        action: { type: string; requestHeaders: Array<{ header: string; operation: string; value: string }> };
+        condition: { resourceTypes: string[] };
+      }> = [];
+      let ruleId = 9000; // Use high IDs to avoid conflicts with network manager
+      for (const [header, value] of Object.entries(headers)) {
+        rules.push({
+          id: ruleId++,
+          priority: 1,
+          action: {
+            type: 'modifyHeaders',
+            requestHeaders: [{ header, operation: 'set', value }],
+          },
+          condition: {
+            resourceTypes: ['main_frame', 'sub_frame', 'xmlhttprequest', 'script', 'stylesheet', 'image', 'font', 'media', 'other'],
+          },
+        });
+      }
+
+      // Remove old header rules first (IDs 9000+)
+      const existingRules = await browser.declarativeNetRequest.getDynamicRules();
+      const oldIds = existingRules
+        .filter((r: { id: number }) => r.id >= 9000)
+        .map((r: { id: number }) => r.id);
+
+      await browser.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: oldIds,
+        addRules: rules as unknown as Browser.declarativeNetRequest.Rule[],
+      });
+
+      return { set: true, ruleCount: rules.length };
+    }
+
     default:
       throw new Error(`Unknown background command: ${command.action}`);
   }
@@ -270,6 +350,9 @@ function getFallbackErrorCode(action: string): ErrorCode {
   }
   if (action === 'screenshot') {
     return ErrorCode.SCREENSHOT_FAILED;
+  }
+  if (['windowNew', 'windowList', 'windowClose'].includes(action)) {
+    return ErrorCode.UNKNOWN;
   }
   return ErrorCode.UNKNOWN;
 }

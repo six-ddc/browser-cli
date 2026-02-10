@@ -19,7 +19,17 @@ import {
   pressCommand,
   clearCommand,
   focusCommand,
+  keydownCommand,
+  keyupCommand,
 } from './interact.js';
+// Drag
+import { dragCommand } from './drag.js';
+// Mouse
+import { mouseCommand } from './mouse.js';
+// Window
+import { windowCommand } from './window.js';
+// Browser Config
+import { setCommand } from './set.js';
 // Form
 import { checkCommand, uncheckCommand, selectCommand } from './form.js';
 import { uploadCommand } from './upload.js';
@@ -75,6 +85,12 @@ export function registerCommands(program: Command): void {
   program.addCommand(pressCommand);
   program.addCommand(clearCommand);
   program.addCommand(focusCommand);
+  program.addCommand(keydownCommand);
+  program.addCommand(keyupCommand);
+  program.addCommand(dragCommand);
+
+  // Mouse
+  program.addCommand(mouseCommand);
 
   // Form
   program.addCommand(checkCommand);
@@ -127,6 +143,12 @@ export function registerCommands(program: Command): void {
 
   // Network
   program.addCommand(networkCommand);
+
+  // Window
+  program.addCommand(windowCommand);
+
+  // Browser Config
+  program.addCommand(setCommand);
 
   // Find (AgentBrowser-compatible)
   program.addCommand(findCommand);

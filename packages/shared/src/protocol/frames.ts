@@ -49,9 +49,7 @@ export interface ListFramesResult {
   frames: FrameInfo[];
 }
 
-export interface GetCurrentFrameParams {
-  // Empty
-}
+export type GetCurrentFrameParams = Record<string, never>;
 
 export interface GetCurrentFrameResult {
   /** Current frame index (0 = main frame) */
