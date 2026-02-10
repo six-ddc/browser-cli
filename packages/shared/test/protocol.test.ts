@@ -105,6 +105,193 @@ describe('schemas - command', () => {
     expect(commandSchema.parse({ action: 'tabClose', params: {} })).toBeTruthy();
   });
 
+  // ─── Drag ──────────────────────────────────────────────────────────
+  it('validates drag command', () => {
+    const cmd = { action: 'drag', params: { source: '#a', target: '#b' } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects drag without source', () => {
+    expect(() => commandSchema.parse({ action: 'drag', params: { target: '#b' } })).toThrow();
+  });
+
+  it('rejects drag without target', () => {
+    expect(() => commandSchema.parse({ action: 'drag', params: { source: '#a' } })).toThrow();
+  });
+
+  // ─── Keydown / Keyup ──────────────────────────────────────────────
+  it('validates keydown command', () => {
+    const cmd = { action: 'keydown', params: { key: 'Shift' } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('validates keydown with optional selector', () => {
+    const cmd = { action: 'keydown', params: { key: 'a', selector: '#input' } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('validates keyup command', () => {
+    const cmd = { action: 'keyup', params: { key: 'Control' } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects keydown without key', () => {
+    expect(() => commandSchema.parse({ action: 'keydown', params: {} })).toThrow();
+  });
+
+  // ─── Mouse ────────────────────────────────────────────────────────
+  it('validates mouseMove command', () => {
+    const cmd = { action: 'mouseMove', params: { x: 100, y: 200 } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects mouseMove without coordinates', () => {
+    expect(() => commandSchema.parse({ action: 'mouseMove', params: { x: 100 } })).toThrow();
+    expect(() => commandSchema.parse({ action: 'mouseMove', params: { y: 200 } })).toThrow();
+  });
+
+  it('validates mouseDown with optional button', () => {
+    expect(commandSchema.parse({ action: 'mouseDown', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'mouseDown', params: { button: 'right' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'mouseDown', params: { button: 'middle' } })).toBeTruthy();
+  });
+
+  it('rejects mouseDown with invalid button', () => {
+    expect(() => commandSchema.parse({ action: 'mouseDown', params: { button: 'extra' } })).toThrow();
+  });
+
+  it('validates mouseUp with optional button', () => {
+    expect(commandSchema.parse({ action: 'mouseUp', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'mouseUp', params: { button: 'left' } })).toBeTruthy();
+  });
+
+  it('validates mouseWheel command', () => {
+    const cmd = { action: 'mouseWheel', params: { deltaY: 100 } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('validates mouseWheel with deltaX', () => {
+    const cmd = { action: 'mouseWheel', params: { deltaY: 100, deltaX: 50 } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects mouseWheel without deltaY', () => {
+    expect(() => commandSchema.parse({ action: 'mouseWheel', params: {} })).toThrow();
+  });
+
+  // ─── Wait extensions ──────────────────────────────────────────────
+  it('validates wait with text', () => {
+    const cmd = { action: 'wait', params: { text: 'Loading...' } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('validates wait with load state', () => {
+    expect(commandSchema.parse({ action: 'wait', params: { load: 'load' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'wait', params: { load: 'domcontentloaded' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'wait', params: { load: 'networkidle' } })).toBeTruthy();
+  });
+
+  it('rejects wait with invalid load state', () => {
+    expect(() => commandSchema.parse({ action: 'wait', params: { load: 'invalid' } })).toThrow();
+  });
+
+  it('validates wait with fn', () => {
+    const cmd = { action: 'wait', params: { fn: 'window.ready === true' } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('validates wait with duration', () => {
+    const cmd = { action: 'wait', params: { duration: 1000 } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('validates wait with selector (optional now)', () => {
+    expect(commandSchema.parse({ action: 'wait', params: { selector: '.loaded' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'wait', params: {} })).toBeTruthy();
+  });
+
+  // ─── Window management ────────────────────────────────────────────
+  it('validates window commands', () => {
+    expect(commandSchema.parse({ action: 'windowNew', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'windowNew', params: { url: 'https://x.com' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'windowList', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'windowClose', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'windowClose', params: { windowId: 42 } })).toBeTruthy();
+  });
+
+  // ─── Browser config ───────────────────────────────────────────────
+  it('validates setViewport command', () => {
+    const cmd = { action: 'setViewport', params: { width: 1920, height: 1080 } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects setViewport without dimensions', () => {
+    expect(() => commandSchema.parse({ action: 'setViewport', params: { width: 1920 } })).toThrow();
+    expect(() => commandSchema.parse({ action: 'setViewport', params: { height: 1080 } })).toThrow();
+  });
+
+  it('validates setGeo command', () => {
+    const cmd = { action: 'setGeo', params: { latitude: 37.7749, longitude: -122.4194 } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('validates setGeo with accuracy', () => {
+    const cmd = { action: 'setGeo', params: { latitude: 0, longitude: 0, accuracy: 50 } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects setGeo without coordinates', () => {
+    expect(() => commandSchema.parse({ action: 'setGeo', params: { latitude: 0 } })).toThrow();
+  });
+
+  it('validates setMedia command', () => {
+    expect(commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'dark' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'light' } })).toBeTruthy();
+  });
+
+  it('rejects setMedia with invalid colorScheme', () => {
+    expect(() => commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'auto' } })).toThrow();
+  });
+
+  it('validates setHeaders command', () => {
+    const cmd = { action: 'setHeaders', params: { headers: { 'X-Custom': 'value', 'Authorization': 'Bearer token' } } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('validates setHeaders with empty headers', () => {
+    const cmd = { action: 'setHeaders', params: { headers: {} } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects setHeaders without headers field', () => {
+    expect(() => commandSchema.parse({ action: 'setHeaders', params: {} })).toThrow();
+  });
+
+  // ─── Frame commands ───────────────────────────────────────────────
+  it('validates frame commands', () => {
+    expect(commandSchema.parse({ action: 'switchFrame', params: { selector: 'iframe' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'switchFrame', params: { main: true } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'listFrames', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'getCurrentFrame', params: {} })).toBeTruthy();
+  });
+
+  // ─── Network commands ─────────────────────────────────────────────
+  it('validates network commands', () => {
+    expect(commandSchema.parse({ action: 'route', params: { pattern: '*.png', action: 'block' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'route', params: { pattern: '*/api/*', action: 'redirect', redirectUrl: 'https://mock.com' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'unroute', params: { routeId: 1 } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'getRequests', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'getRoutes', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'clearRequests', params: {} })).toBeTruthy();
+  });
+
+  // ─── Upload command ───────────────────────────────────────────────
+  it('validates upload command', () => {
+    expect(commandSchema.parse({ action: 'upload', params: { selector: '#file', files: 'data:text/plain;base64,aGVsbG8=' } })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'upload', params: { selector: '#file', files: ['file1.txt', 'file2.txt'] } })).toBeTruthy();
+  });
+
+  // ─── Existing validations ─────────────────────────────────────────
   it('rejects invalid command', () => {
     expect(() => commandSchema.parse({ action: 'unknown', params: {} })).toThrow();
   });

@@ -60,6 +60,25 @@ export async function handleInteraction(command: Command): Promise<unknown> {
       el.focus();
       return { focused: true };
     }
+    case 'drag': {
+      const { source, target } = command.params as { source: string; target: string };
+      const srcEl = requireElement(source);
+      const tgtEl = requireElement(target);
+      await performDrag(srcEl, tgtEl);
+      return { dragged: true };
+    }
+    case 'keydown': {
+      const { selector, key } = command.params as { selector?: string; key: string };
+      const el = selector ? requireElement(selector) : (document.activeElement as Element || document.body);
+      el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      return { pressed: true };
+    }
+    case 'keyup': {
+      const { selector, key } = command.params as { selector?: string; key: string };
+      const el = selector ? requireElement(selector) : (document.activeElement as Element || document.body);
+      el.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true }));
+      return { released: true };
+    }
     default:
       throw new Error(`Unknown interaction: ${(command as { action: string }).action}`);
   }
@@ -223,4 +242,30 @@ async function performPress(el: Element, key: string): Promise<void> {
 async function performClear(el: HTMLInputElement | HTMLTextAreaElement): Promise<void> {
   el.focus();
   await performFill(el, '');
+}
+
+/** Full drag and drop event sequence: dragstart → drag → dragenter → dragover → drop → dragend */
+async function performDrag(source: Element, target: Element): Promise<void> {
+  const srcCenter = getCenter(source);
+  const tgtCenter = getCenter(target);
+  const dataTransfer = new DataTransfer();
+
+  source.dispatchEvent(
+    new DragEvent('dragstart', { bubbles: true, clientX: srcCenter.x, clientY: srcCenter.y, dataTransfer }),
+  );
+  source.dispatchEvent(
+    new DragEvent('drag', { bubbles: true, clientX: srcCenter.x, clientY: srcCenter.y, dataTransfer }),
+  );
+  target.dispatchEvent(
+    new DragEvent('dragenter', { bubbles: true, clientX: tgtCenter.x, clientY: tgtCenter.y, dataTransfer }),
+  );
+  target.dispatchEvent(
+    new DragEvent('dragover', { bubbles: true, clientX: tgtCenter.x, clientY: tgtCenter.y, dataTransfer }),
+  );
+  target.dispatchEvent(
+    new DragEvent('drop', { bubbles: true, clientX: tgtCenter.x, clientY: tgtCenter.y, dataTransfer }),
+  );
+  source.dispatchEvent(
+    new DragEvent('dragend', { bubbles: true, clientX: tgtCenter.x, clientY: tgtCenter.y, dataTransfer }),
+  );
 }

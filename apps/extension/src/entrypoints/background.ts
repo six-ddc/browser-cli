@@ -15,6 +15,8 @@ const BG_ACTIONS = new Set([
   'cookiesGet', 'cookiesSet', 'cookiesClear',
   'screenshot',
   'route', 'unroute', 'getRequests', 'getRoutes', 'clearRequests',
+  'windowNew', 'windowList', 'windowClose',
+  'setViewport', 'setHeaders',
 ]);
 
 async function resolveTargetTab(tabId?: number): Promise<number> {

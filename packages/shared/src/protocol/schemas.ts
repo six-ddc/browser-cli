@@ -84,11 +84,47 @@ export const screenshotParamsSchema = z.object({
   quality: z.number().min(0).max(100).optional(),
 });
 
+// Drag
+export const dragParamsSchema = z.object({
+  source: z.string(),
+  target: z.string(),
+});
+
+// Key Down/Up
+export const keydownParamsSchema = z.object({
+  key: z.string(),
+  selector: z.string().optional(),
+});
+export const keyupParamsSchema = z.object({
+  key: z.string(),
+  selector: z.string().optional(),
+});
+
+// Mouse
+export const mouseMoveParamsSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+});
+export const mouseDownParamsSchema = z.object({
+  button: z.enum(['left', 'right', 'middle']).optional(),
+});
+export const mouseUpParamsSchema = z.object({
+  button: z.enum(['left', 'right', 'middle']).optional(),
+});
+export const mouseWheelParamsSchema = z.object({
+  deltaY: z.number(),
+  deltaX: z.number().optional(),
+});
+
 // Wait
 export const waitParamsSchema = z.object({
-  selector: z.string(),
+  selector: z.string().optional(),
+  duration: z.number().optional(),
   timeout: z.number().optional(),
   visible: z.boolean().optional(),
+  text: z.string().optional(),
+  load: z.enum(['load', 'domcontentloaded', 'networkidle']).optional(),
+  fn: z.string().optional(),
 });
 export const waitForUrlParamsSchema = z.object({
   pattern: z.string(),
@@ -156,6 +192,47 @@ export const highlightParamsSchema = z.object({
   duration: z.number().optional(),
 });
 
+// Frame management
+export const switchFrameParamsSchema = z.object({
+  selector: z.string().optional(),
+  name: z.string().optional(),
+  url: z.string().optional(),
+  index: z.number().optional(),
+  main: z.boolean().optional(),
+});
+
+// Upload
+export const uploadParamsSchema = z.object({
+  selector: z.string(),
+  files: z.union([z.string(), z.array(z.string())]),
+  clear: z.boolean().optional(),
+});
+
+// Window
+export const windowNewParamsSchema = z.object({
+  url: z.string().optional(),
+});
+export const windowCloseParamsSchema = z.object({
+  windowId: z.number().optional(),
+});
+
+// Browser Config
+export const setViewportParamsSchema = z.object({
+  width: z.number(),
+  height: z.number(),
+});
+export const setGeoParamsSchema = z.object({
+  latitude: z.number(),
+  longitude: z.number(),
+  accuracy: z.number().optional(),
+});
+export const setMediaParamsSchema = z.object({
+  colorScheme: z.enum(['dark', 'light']),
+});
+export const setHeadersParamsSchema = z.object({
+  headers: z.record(z.string(), z.string()),
+});
+
 // ─── Command Schema ──────────────────────────────────────────────────
 
 export const commandSchema = z.discriminatedUnion('action', [
@@ -173,9 +250,17 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('press'), params: pressParamsSchema }),
   z.object({ action: z.literal('clear'), params: clearParamsSchema }),
   z.object({ action: z.literal('focus'), params: focusParamsSchema }),
+  z.object({ action: z.literal('drag'), params: dragParamsSchema }),
+  z.object({ action: z.literal('keydown'), params: keydownParamsSchema }),
+  z.object({ action: z.literal('keyup'), params: keyupParamsSchema }),
+  z.object({ action: z.literal('mouseMove'), params: mouseMoveParamsSchema }),
+  z.object({ action: z.literal('mouseDown'), params: mouseDownParamsSchema }),
+  z.object({ action: z.literal('mouseUp'), params: mouseUpParamsSchema }),
+  z.object({ action: z.literal('mouseWheel'), params: mouseWheelParamsSchema }),
   z.object({ action: z.literal('check'), params: checkParamsSchema }),
   z.object({ action: z.literal('uncheck'), params: uncheckParamsSchema }),
   z.object({ action: z.literal('select'), params: selectParamsSchema }),
+  z.object({ action: z.literal('upload'), params: uploadParamsSchema }),
   z.object({ action: z.literal('scroll'), params: scrollParamsSchema }),
   z.object({ action: z.literal('scrollIntoView'), params: scrollIntoViewParamsSchema }),
   z.object({ action: z.literal('getText'), params: getTextParamsSchema }),
@@ -207,6 +292,21 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('dialogAccept'), params: dialogAcceptParamsSchema }),
   z.object({ action: z.literal('dialogDismiss'), params: dialogDismissParamsSchema }),
   z.object({ action: z.literal('highlight'), params: highlightParamsSchema }),
+  z.object({ action: z.literal('switchFrame'), params: switchFrameParamsSchema }),
+  z.object({ action: z.literal('listFrames'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('getCurrentFrame'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('route'), params: z.object({ pattern: z.string(), action: z.enum(['block', 'redirect']), redirectUrl: z.string().optional() }) }),
+  z.object({ action: z.literal('unroute'), params: z.object({ routeId: z.number() }) }),
+  z.object({ action: z.literal('getRequests'), params: z.object({ pattern: z.string().optional(), tabId: z.number().optional(), blockedOnly: z.boolean().optional(), limit: z.number().optional() }) }),
+  z.object({ action: z.literal('getRoutes'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('clearRequests'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('windowNew'), params: windowNewParamsSchema }),
+  z.object({ action: z.literal('windowList'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('windowClose'), params: windowCloseParamsSchema }),
+  z.object({ action: z.literal('setViewport'), params: setViewportParamsSchema }),
+  z.object({ action: z.literal('setGeo'), params: setGeoParamsSchema }),
+  z.object({ action: z.literal('setMedia'), params: setMediaParamsSchema }),
+  z.object({ action: z.literal('setHeaders'), params: setHeadersParamsSchema }),
 ]);
 
 // ─── Message Schemas ─────────────────────────────────────────────────

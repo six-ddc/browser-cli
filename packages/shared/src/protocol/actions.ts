@@ -274,6 +274,74 @@ export interface ScreenshotResult {
   height: number;
 }
 
+// ─── Drag and Drop ───────────────────────────────────────────────────
+
+export interface DragParams {
+  /** Source element selector */
+  source: string;
+  /** Target element selector */
+  target: string;
+}
+export interface DragResult {
+  dragged: true;
+}
+
+// ─── Key Down/Up ────────────────────────────────────────────────────
+
+export interface KeyDownParams {
+  /** Key to press down */
+  key: string;
+  /** Selector of element (defaults to active element) */
+  selector?: string;
+}
+export interface KeyDownResult {
+  pressed: true;
+}
+
+export interface KeyUpParams {
+  /** Key to release */
+  key: string;
+  /** Selector of element (defaults to active element) */
+  selector?: string;
+}
+export interface KeyUpResult {
+  released: true;
+}
+
+// ─── Mouse Control ──────────────────────────────────────────────────
+
+export interface MouseMoveParams {
+  x: number;
+  y: number;
+}
+export interface MouseMoveResult {
+  moved: true;
+}
+
+export interface MouseDownParams {
+  button?: 'left' | 'right' | 'middle';
+}
+export interface MouseDownResult {
+  pressed: true;
+}
+
+export interface MouseUpParams {
+  button?: 'left' | 'right' | 'middle';
+}
+export interface MouseUpResult {
+  released: true;
+}
+
+export interface MouseWheelParams {
+  /** Vertical scroll delta (positive = down) */
+  deltaY: number;
+  /** Horizontal scroll delta (positive = right) */
+  deltaX?: number;
+}
+export interface MouseWheelResult {
+  scrolled: true;
+}
+
 // ─── Wait ────────────────────────────────────────────────────────────
 
 export interface WaitParams {
@@ -285,6 +353,12 @@ export interface WaitParams {
   timeout?: number;
   /** Wait until visible (default true, only used with selector) */
   visible?: boolean;
+  /** Wait for text content to appear on the page */
+  text?: string;
+  /** Wait for document load state: load, domcontentloaded, networkidle */
+  load?: 'load' | 'domcontentloaded' | 'networkidle';
+  /** Wait for a JavaScript function/expression to return truthy (evaluated in MAIN world) */
+  fn?: string;
 }
 export interface WaitResult {
   found: true;
@@ -574,6 +648,72 @@ export interface ClearRequestsResult {
   cleared: number;
 }
 
+// ─── Window Management ──────────────────────────────────────────────
+
+export interface WindowNewParams {
+  url?: string;
+}
+export interface WindowNewResult {
+  windowId: number;
+  tabId: number;
+  url: string;
+}
+
+export type WindowListParams = Record<string, never>;
+export interface WindowListResult {
+  windows: WindowInfo[];
+}
+
+export interface WindowInfo {
+  id: number;
+  focused: boolean;
+  type: string;
+  tabs: number;
+}
+
+export interface WindowCloseParams {
+  windowId?: number;
+}
+export interface WindowCloseResult {
+  closed: true;
+}
+
+// ─── Browser Config ─────────────────────────────────────────────────
+
+export interface SetViewportParams {
+  width: number;
+  height: number;
+}
+export interface SetViewportResult {
+  set: true;
+  width: number;
+  height: number;
+}
+
+export interface SetGeoParams {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+}
+export interface SetGeoResult {
+  set: true;
+}
+
+export interface SetMediaParams {
+  colorScheme: 'dark' | 'light';
+}
+export interface SetMediaResult {
+  set: true;
+}
+
+export interface SetHeadersParams {
+  headers: Record<string, string>;
+}
+export interface SetHeadersResult {
+  set: true;
+  ruleCount: number;
+}
+
 // ─── Action Type Union ───────────────────────────────────────────────
 
 export type ActionType =
@@ -593,6 +733,14 @@ export type ActionType =
   | 'press'
   | 'clear'
   | 'focus'
+  | 'drag'
+  | 'keydown'
+  | 'keyup'
+  // Mouse
+  | 'mouseMove'
+  | 'mouseDown'
+  | 'mouseUp'
+  | 'mouseWheel'
   // Form
   | 'check'
   | 'uncheck'
@@ -650,7 +798,16 @@ export type ActionType =
   | 'unroute'
   | 'getRequests'
   | 'getRoutes'
-  | 'clearRequests';
+  | 'clearRequests'
+  // Window
+  | 'windowNew'
+  | 'windowList'
+  | 'windowClose'
+  // Browser Config
+  | 'setViewport'
+  | 'setGeo'
+  | 'setMedia'
+  | 'setHeaders';
 
 /**
  * Discriminated union of all commands.
@@ -671,6 +828,13 @@ export type Command =
   | { action: 'press'; params: PressParams }
   | { action: 'clear'; params: ClearParams }
   | { action: 'focus'; params: FocusParams }
+  | { action: 'drag'; params: DragParams }
+  | { action: 'keydown'; params: KeyDownParams }
+  | { action: 'keyup'; params: KeyUpParams }
+  | { action: 'mouseMove'; params: MouseMoveParams }
+  | { action: 'mouseDown'; params: MouseDownParams }
+  | { action: 'mouseUp'; params: MouseUpParams }
+  | { action: 'mouseWheel'; params: MouseWheelParams }
   | { action: 'check'; params: CheckParams }
   | { action: 'uncheck'; params: UncheckParams }
   | { action: 'select'; params: SelectParams }
@@ -713,7 +877,14 @@ export type Command =
   | { action: 'unroute'; params: UnrouteParams }
   | { action: 'getRequests'; params: GetRequestsParams }
   | { action: 'getRoutes'; params: GetRoutesParams }
-  | { action: 'clearRequests'; params: ClearRequestsParams };
+  | { action: 'clearRequests'; params: ClearRequestsParams }
+  | { action: 'windowNew'; params: WindowNewParams }
+  | { action: 'windowList'; params: WindowListParams }
+  | { action: 'windowClose'; params: WindowCloseParams }
+  | { action: 'setViewport'; params: SetViewportParams }
+  | { action: 'setGeo'; params: SetGeoParams }
+  | { action: 'setMedia'; params: SetMediaParams }
+  | { action: 'setHeaders'; params: SetHeadersParams };
 
 /** Map action type → result type */
 export interface ActionResultMap {
@@ -731,6 +902,13 @@ export interface ActionResultMap {
   press: PressResult;
   clear: ClearResult;
   focus: FocusResult;
+  drag: DragResult;
+  keydown: KeyDownResult;
+  keyup: KeyUpResult;
+  mouseMove: MouseMoveResult;
+  mouseDown: MouseDownResult;
+  mouseUp: MouseUpResult;
+  mouseWheel: MouseWheelResult;
   check: CheckResult;
   uncheck: UncheckResult;
   select: SelectResult;
@@ -774,4 +952,11 @@ export interface ActionResultMap {
   getRequests: GetRequestsResult;
   getRoutes: GetRoutesResult;
   clearRequests: ClearRequestsResult;
+  windowNew: WindowNewResult;
+  windowList: WindowListResult;
+  windowClose: WindowCloseResult;
+  setViewport: SetViewportResult;
+  setGeo: SetGeoResult;
+  setMedia: SetMediaResult;
+  setHeaders: SetHeadersResult;
 }

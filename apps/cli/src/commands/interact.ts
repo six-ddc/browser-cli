@@ -70,3 +70,19 @@ export const focusCommand = new Command('focus')
     await sendCommand(cmd, { action: 'focus', params: { selector } });
     console.log('Focused');
   });
+
+export const keydownCommand = new Command('keydown')
+  .description('Press a key down (without releasing)')
+  .argument('<key>', 'Key to press down (e.g., Shift, Control)')
+  .action(async (key: string, _opts: unknown, cmd: Command) => {
+    await sendCommand(cmd, { action: 'keydown', params: { key } });
+    console.log('Key down');
+  });
+
+export const keyupCommand = new Command('keyup')
+  .description('Release a key')
+  .argument('<key>', 'Key to release (e.g., Shift, Control)')
+  .action(async (key: string, _opts: unknown, cmd: Command) => {
+    await sendCommand(cmd, { action: 'keyup', params: { key } });
+    console.log('Key up');
+  });
