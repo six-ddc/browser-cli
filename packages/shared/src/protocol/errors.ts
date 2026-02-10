@@ -40,6 +40,10 @@ export enum ErrorCode {
   // Content script
   CONTENT_SCRIPT_ERROR = 'CONTENT_SCRIPT_ERROR',
   CONTENT_SCRIPT_NOT_READY = 'CONTENT_SCRIPT_NOT_READY',
+
+  // Frame
+  FRAME_ERROR = 'FRAME_ERROR',
+  FRAME_NOT_FOUND = 'FRAME_NOT_FOUND',
 }
 
 export interface ProtocolError {

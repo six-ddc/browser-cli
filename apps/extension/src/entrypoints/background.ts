@@ -2,8 +2,19 @@ import { WsClient } from '../lib/ws-client';
 import { getPort, setState } from '../lib/state';
 import type { RequestMessage, ResponseMessage } from '@browser-cli/shared';
 import { ErrorCode, createError } from '@browser-cli/shared';
+import { NetworkManager } from '../lib/network-manager';
 
 let wsClient: WsClient | null = null;
+let networkManager: NetworkManager | null = null;
+
+/** Commands handled by the background service worker (not content scripts) */
+const BG_ACTIONS = new Set([
+  'navigate', 'goBack', 'goForward', 'reload', 'getUrl', 'getTitle',
+  'tabNew', 'tabList', 'tabSwitch', 'tabClose',
+  'cookiesGet', 'cookiesSet', 'cookiesClear',
+  'screenshot',
+  'route', 'unroute', 'getRequests', 'getRoutes', 'clearRequests',
+]);
 
 async function resolveTargetTab(tabId?: number): Promise<number> {
   if (tabId) return tabId;
@@ -15,28 +26,28 @@ async function resolveTargetTab(tabId?: number): Promise<number> {
 async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
   const { id, command } = msg;
 
+  console.log(`[browser-cli] Handling command #${id}:`, command.action, command);
+
   try {
     const targetTabId = await resolveTargetTab(msg.tabId);
 
-    // Route command: background-level commands vs content-script commands
-    const bgActions = new Set([
-      'navigate', 'goBack', 'goForward', 'reload', 'getUrl', 'getTitle',
-      'tabNew', 'tabList', 'tabSwitch', 'tabClose',
-      'cookiesGet', 'cookiesSet', 'cookiesClear',
-      'screenshot',
-    ]);
-
-    if (bgActions.has(command.action)) {
+    if (BG_ACTIONS.has(command.action)) {
+      console.log(`[browser-cli] Routing to background handler: ${command.action}`);
       const { handleBackgroundCommand } = await import('../lib/command-router');
-      return handleBackgroundCommand(msg, targetTabId);
+      const result = await handleBackgroundCommand(msg, targetTabId, networkManager);
+      console.log(`[browser-cli] Background command #${id} result:`, result.success ? 'success' : 'error', result);
+      return result;
     }
 
     // Forward to content script
+    console.log(`[browser-cli] Forwarding to content script on tab ${targetTabId}: ${command.action}`);
     const response = await browser.tabs.sendMessage(targetTabId, {
       type: 'browser-cli-command',
       id,
       command,
     });
+
+    console.log(`[browser-cli] Content script response #${id}:`, response.success ? 'success' : 'error', response);
 
     return {
       id,
@@ -46,6 +57,7 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
       error: response.error,
     };
   } catch (err) {
+    console.error(`[browser-cli] Command #${id} failed:`, err);
     return {
       id,
       type: 'response',
@@ -61,6 +73,10 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
 export default defineBackground(async () => {
   console.log('[browser-cli] Background script loaded');
 
+  // Initialize network manager
+  networkManager = new NetworkManager();
+  console.log('[browser-cli] NetworkManager initialized');
+
   const port = await getPort();
 
   wsClient = new WsClient({
@@ -68,7 +84,7 @@ export default defineBackground(async () => {
     messageHandler: handleCommand,
     onConnect: () => {
       console.log('[browser-cli] Connected to daemon');
-      setState({ connected: true, lastConnected: Date.now() });
+      setState({ connected: true, lastConnected: Date.now(), reconnecting: false, nextRetryIn: null });
     },
     onDisconnect: () => {
       console.log('[browser-cli] Disconnected from daemon');
@@ -78,6 +94,10 @@ export default defineBackground(async () => {
       console.log('[browser-cli] Handshake complete, session:', ack.sessionId);
       setState({ sessionId: ack.sessionId });
     },
+    onReconnecting: (nextRetryMs) => {
+      console.log(`[browser-cli] Reconnecting in ${nextRetryMs}ms...`);
+      setState({ reconnecting: true, nextRetryIn: nextRetryMs });
+    },
   });
 
   wsClient.start();
@@ -85,11 +105,32 @@ export default defineBackground(async () => {
   // Listen for port changes from popup
   browser.storage.onChanged.addListener((changes) => {
     const stateChange = changes['browserCliState'];
-    if (stateChange?.newValue) {
+    if (stateChange?.newValue && stateChange?.oldValue) {
       const newState = stateChange.newValue as Record<string, unknown>;
-      if (typeof newState.port === 'number' && wsClient && newState.port !== port) {
-        wsClient.updatePort(newState.port);
+      const oldState = stateChange.oldValue as Record<string, unknown>;
+      const newPort = newState.port;
+      const oldPort = oldState.port;
+
+      if (typeof newPort === 'number' && typeof oldPort === 'number' && newPort !== oldPort && wsClient) {
+        console.log(`[browser-cli] Port changed: ${oldPort} → ${newPort}`);
+        wsClient.updatePort(newPort);
       }
     }
+  });
+
+  // Listen for manual reconnect requests from popup
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'reconnect' && wsClient) {
+      wsClient.reconnect();
+      sendResponse({ success: true });
+    } else if (message.type === 'getConnectionState' && wsClient) {
+      // Popup can query current connection state
+      sendResponse({
+        connected: wsClient.isConnected,
+        sessionId: wsClient.currentSessionId,
+      });
+    }
+    // Return true to indicate we'll send a response asynchronously
+    return true;
   });
 });

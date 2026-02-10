@@ -131,6 +131,16 @@ export interface SelectResult {
   value: string;
 }
 
+export interface UploadParams {
+  selector: string;
+  files: string | string[];
+  clear?: boolean;
+}
+export interface UploadResult {
+  uploaded: true;
+  fileCount: number;
+}
+
 // ─── Scroll ──────────────────────────────────────────────────────────
 
 export interface ScrollParams {
@@ -262,10 +272,13 @@ export interface ScreenshotResult {
 // ─── Wait ────────────────────────────────────────────────────────────
 
 export interface WaitParams {
-  selector: string;
-  /** Timeout in ms */
+  /** CSS selector to wait for (optional if duration is provided) */
+  selector?: string;
+  /** Duration to wait in ms (for time-based delays) */
+  duration?: number;
+  /** Timeout in ms (only used with selector) */
   timeout?: number;
-  /** Wait until visible (default true) */
+  /** Wait until visible (default true, only used with selector) */
   visible?: boolean;
 }
 export interface WaitResult {
@@ -447,6 +460,115 @@ export interface HighlightResult {
   highlighted: true;
 }
 
+// ─── Frame Management ────────────────────────────────────────────────
+
+export interface SwitchFrameParams {
+  /** CSS selector to find the iframe */
+  selector?: string;
+  /** Frame name attribute */
+  name?: string;
+  /** Frame URL (partial match) */
+  url?: string;
+  /** Frame index (0-based) */
+  index?: number;
+  /** Switch to main/top frame */
+  main?: boolean;
+}
+export interface SwitchFrameResult {
+  frameIndex: number;
+  frame: {
+    index: number;
+    name: string | null;
+    src: string;
+    isMainFrame: boolean;
+    isSameOrigin: boolean;
+  };
+}
+
+export type ListFramesParams = Record<string, never>;
+export interface ListFramesResult {
+  currentFrame: number;
+  frames: Array<{
+    index: number;
+    name: string | null;
+    src: string;
+    isMainFrame: boolean;
+    isSameOrigin: boolean;
+  }>;
+}
+
+export type GetCurrentFrameParams = Record<string, never>;
+export interface GetCurrentFrameResult {
+  frameIndex: number;
+  frame: {
+    index: number;
+    name: string | null;
+    src: string;
+    isMainFrame: boolean;
+    isSameOrigin: boolean;
+  };
+}
+
+// ─── Network ─────────────────────────────────────────────────────────
+
+export interface RouteParams {
+  pattern: string;
+  action: 'block' | 'redirect';
+  redirectUrl?: string;
+}
+export interface RouteResult {
+  routeId: number;
+  pattern: string;
+  action: 'block' | 'redirect';
+}
+
+export interface UnrouteParams {
+  routeId: number;
+}
+export interface UnrouteResult {
+  removed: true;
+}
+
+export interface GetRequestsParams {
+  /** Filter by URL pattern */
+  pattern?: string;
+  /** Filter by tab ID */
+  tabId?: number;
+  /** Only blocked requests */
+  blockedOnly?: boolean;
+  /** Limit number of results */
+  limit?: number;
+}
+export interface GetRequestsResult {
+  requests: Array<{
+    id: string;
+    url: string;
+    method: string;
+    type: string;
+    timestamp: number;
+    tabId: number;
+    blocked?: boolean;
+    redirectedTo?: string;
+  }>;
+  total: number;
+}
+
+export type GetRoutesParams = Record<string, never>;
+export interface GetRoutesResult {
+  routes: Array<{
+    id: number;
+    pattern: string;
+    action: 'block' | 'redirect';
+    redirectUrl?: string;
+    createdAt: number;
+  }>;
+}
+
+export type ClearRequestsParams = Record<string, never>;
+export interface ClearRequestsResult {
+  cleared: number;
+}
+
 // ─── Action Type Union ───────────────────────────────────────────────
 
 export type ActionType =
@@ -470,6 +592,7 @@ export type ActionType =
   | 'check'
   | 'uncheck'
   | 'select'
+  | 'upload'
   // Scroll
   | 'scroll'
   | 'scrollIntoView'
@@ -512,7 +635,17 @@ export type ActionType =
   | 'dialogAccept'
   | 'dialogDismiss'
   // Highlight
-  | 'highlight';
+  | 'highlight'
+  // Frames
+  | 'switchFrame'
+  | 'listFrames'
+  | 'getCurrentFrame'
+  // Network
+  | 'route'
+  | 'unroute'
+  | 'getRequests'
+  | 'getRoutes'
+  | 'clearRequests';
 
 /**
  * Discriminated union of all commands.
@@ -536,6 +669,7 @@ export type Command =
   | { action: 'check'; params: CheckParams }
   | { action: 'uncheck'; params: UncheckParams }
   | { action: 'select'; params: SelectParams }
+  | { action: 'upload'; params: UploadParams }
   | { action: 'scroll'; params: ScrollParams }
   | { action: 'scrollIntoView'; params: ScrollIntoViewParams }
   | { action: 'getText'; params: GetTextParams }
@@ -566,7 +700,15 @@ export type Command =
   | { action: 'storageClear'; params: StorageClearParams }
   | { action: 'dialogAccept'; params: DialogAcceptParams }
   | { action: 'dialogDismiss'; params: DialogDismissParams }
-  | { action: 'highlight'; params: HighlightParams };
+  | { action: 'highlight'; params: HighlightParams }
+  | { action: 'switchFrame'; params: SwitchFrameParams }
+  | { action: 'listFrames'; params: ListFramesParams }
+  | { action: 'getCurrentFrame'; params: GetCurrentFrameParams }
+  | { action: 'route'; params: RouteParams }
+  | { action: 'unroute'; params: UnrouteParams }
+  | { action: 'getRequests'; params: GetRequestsParams }
+  | { action: 'getRoutes'; params: GetRoutesParams }
+  | { action: 'clearRequests'; params: ClearRequestsParams };
 
 /** Map action type → result type */
 export interface ActionResultMap {
@@ -587,6 +729,7 @@ export interface ActionResultMap {
   check: CheckResult;
   uncheck: UncheckResult;
   select: SelectResult;
+  upload: UploadResult;
   scroll: ScrollResult;
   scrollIntoView: ScrollIntoViewResult;
   getText: GetTextResult;
@@ -618,4 +761,12 @@ export interface ActionResultMap {
   dialogAccept: DialogAcceptResult;
   dialogDismiss: DialogDismissResult;
   highlight: HighlightResult;
+  switchFrame: SwitchFrameResult;
+  listFrames: ListFramesResult;
+  getCurrentFrame: GetCurrentFrameResult;
+  route: RouteResult;
+  unroute: UnrouteResult;
+  getRequests: GetRequestsResult;
+  getRoutes: GetRoutesResult;
+  clearRequests: ClearRequestsResult;
 }

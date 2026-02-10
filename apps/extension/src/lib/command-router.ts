@@ -6,15 +6,17 @@
 
 import type { RequestMessage, ResponseMessage, Command } from '@browser-cli/shared';
 import { ErrorCode, createError } from '@browser-cli/shared';
+import type { NetworkManager } from './network-manager';
 
 export async function handleBackgroundCommand(
   msg: RequestMessage,
   targetTabId: number,
+  networkManager: NetworkManager | null = null,
 ): Promise<ResponseMessage> {
   const { id, command } = msg;
 
   try {
-    const data = await routeCommand(command, targetTabId);
+    const data = await routeCommand(command, targetTabId, networkManager);
     return { id, type: 'response', success: true, data };
   } catch (err) {
     return {
@@ -32,6 +34,7 @@ export async function handleBackgroundCommand(
 async function routeCommand(
   command: Command,
   targetTabId: number,
+  networkManager: NetworkManager | null = null,
 ): Promise<unknown> {
   switch (command.action) {
     // ─── Navigation ────────────────────────────────────────────
@@ -212,6 +215,46 @@ async function routeCommand(
         height: viewportHeight,
         ...(cropRect ? { cropRect } : {}),
       };
+    }
+
+    // ─── Network ───────────────────────────────────────────────
+    case 'route': {
+      if (!networkManager) throw new Error('NetworkManager not initialized');
+      const { pattern, action, redirectUrl } = command.params as {
+        pattern: string;
+        action: 'block' | 'redirect';
+        redirectUrl?: string;
+      };
+      const route = await networkManager.addRoute(pattern, action, redirectUrl);
+      return { routeId: route.id, pattern: route.pattern, action: route.action };
+    }
+    case 'unroute': {
+      if (!networkManager) throw new Error('NetworkManager not initialized');
+      const { routeId } = command.params as { routeId: number };
+      const removed = await networkManager.removeRoute(routeId);
+      if (!removed) throw new Error(`Route ${routeId} not found`);
+      return { removed: true };
+    }
+    case 'getRequests': {
+      if (!networkManager) throw new Error('NetworkManager not initialized');
+      const { pattern, tabId, blockedOnly, limit } = command.params as {
+        pattern?: string;
+        tabId?: number;
+        blockedOnly?: boolean;
+        limit?: number;
+      };
+      const result = networkManager.getRequests({ pattern, tabId, blockedOnly, limit });
+      return result;
+    }
+    case 'getRoutes': {
+      if (!networkManager) throw new Error('NetworkManager not initialized');
+      const routes = networkManager.getRoutes();
+      return { routes };
+    }
+    case 'clearRequests': {
+      if (!networkManager) throw new Error('NetworkManager not initialized');
+      const cleared = networkManager.clearRequests();
+      return { cleared };
     }
 
     default:

@@ -1,9 +1,14 @@
 import type { Command } from '@browser-cli/shared';
 import { ErrorCode, createError } from '@browser-cli/shared';
+import { initFrameBridge } from '../content-lib/frame-bridge';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
+  allFrames: true,
   main() {
+    // Initialize frame bridge for iframe support
+    initFrameBridge();
+
     // Listen for commands from background script
     browser.runtime.onMessage.addListener((
       message: { type: string; id: string; command: Command },
@@ -35,6 +40,22 @@ export default defineContentScript({
 });
 
 async function handleContentCommand(command: Command): Promise<unknown> {
+  // Check if we need to route to an iframe
+  const { getCurrentFrameIndex, getCurrentIFrame } = await import('../content-lib/frames');
+  const frameIndex = getCurrentFrameIndex();
+
+  // If we're targeting an iframe, route the command there
+  if (frameIndex > 0 && command.action !== 'switchFrame' && command.action !== 'listFrames' && command.action !== 'getCurrentFrame') {
+    const iframe = getCurrentIFrame();
+    if (!iframe) {
+      throw new Error(`Frame index ${frameIndex} is no longer available`);
+    }
+
+    const { executeInFrame } = await import('../content-lib/frame-bridge');
+    return executeInFrame(iframe, command);
+  }
+
+  // Execute command in main frame context
   // Dynamic import of content-lib modules based on action
   switch (command.action) {
     // Interaction
@@ -76,6 +97,12 @@ async function handleContentCommand(command: Command): Promise<unknown> {
     case 'select': {
       const { handleForm } = await import('../content-lib/form');
       return handleForm(command);
+    }
+
+    // Upload
+    case 'upload': {
+      const { handleUpload } = await import('../content-lib/upload');
+      return handleUpload(command);
     }
 
     // Scroll
@@ -124,6 +151,22 @@ async function handleContentCommand(command: Command): Promise<unknown> {
     case 'highlight': {
       const { handleHighlight } = await import('../content-lib/highlight');
       return handleHighlight(command.params);
+    }
+
+    // Frame management
+    case 'switchFrame': {
+      const { handleSwitchFrame } = await import('../content-lib/frames');
+      return handleSwitchFrame(command.params);
+    }
+
+    case 'listFrames': {
+      const { handleListFrames } = await import('../content-lib/frames');
+      return handleListFrames();
+    }
+
+    case 'getCurrentFrame': {
+      const { handleGetCurrentFrame } = await import('../content-lib/frames');
+      return handleGetCurrentFrame();
     }
 
     default:

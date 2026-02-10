@@ -10,11 +10,24 @@ const POLL_INTERVAL = 100;
 export async function handleWait(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'wait': {
-      const { selector, timeout, visible } = command.params as {
-        selector: string;
+      const { selector, duration, timeout, visible } = command.params as {
+        selector?: string;
+        duration?: number;
         timeout?: number;
         visible?: boolean;
       };
+
+      // Duration-based wait (simple time delay)
+      if (duration !== undefined) {
+        await new Promise((resolve) => setTimeout(resolve, duration));
+        return { found: true };
+      }
+
+      // Selector-based wait
+      if (!selector) {
+        throw new Error('Either selector or duration must be provided');
+      }
+
       await waitForSelector(selector, {
         timeout: timeout ?? DEFAULT_TIMEOUT,
         visible: visible ?? true,

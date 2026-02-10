@@ -10,19 +10,44 @@ export default function App() {
     port: DEFAULT_WS_PORT,
     lastConnected: null,
     lastDisconnected: null,
+    reconnecting: false,
+    nextRetryIn: null,
   });
   const [portInput, setPortInput] = useState(String(DEFAULT_WS_PORT));
+  const [copied, setCopied] = useState(false);
+  const [sessionCopied, setSessionCopied] = useState(false);
 
   useEffect(() => {
+    // Get initial state from storage
     getState().then((s) => {
+      console.log('[browser-cli] Popup initial state:', s);
       setStateLocal(s);
       setPortInput(String(s.port));
     });
 
+    // Query background for real-time connection status
+    browser.runtime.sendMessage({ type: 'getConnectionState' })
+      .then((response: { connected: boolean; sessionId: string | null }) => {
+        console.log('[browser-cli] Background connection state:', response);
+        if (response) {
+          setStateLocal((prev) => ({
+            ...prev,
+            connected: response.connected,
+            sessionId: response.sessionId,
+          }));
+        }
+      })
+      .catch((err) => {
+        console.error('[browser-cli] Failed to query connection state:', err);
+      });
+
     // Listen for state changes
     const listener = (changes: { [key: string]: Browser.storage.StorageChange }) => {
+      console.log('[browser-cli] Popup storage changed:', changes);
       if (changes.browserCliState?.newValue) {
-        setStateLocal(changes.browserCliState.newValue as ConnectionState);
+        const newState = changes.browserCliState.newValue as ConnectionState;
+        console.log('[browser-cli] Popup updating state:', newState);
+        setStateLocal(newState);
       }
     };
     browser.storage.onChanged.addListener(listener);
@@ -31,58 +56,302 @@ export default function App() {
 
   const handlePortSave = () => {
     const p = parseInt(portInput, 10);
-    if (p > 0 && p < 65536) {
-      setPort(p);
+    if (!p || p <= 0 || p >= 65536) {
+      setPortInput(String(state.port));
+      return;
+    }
+    setPort(p);
+  };
+
+  const copyCommand = async () => {
+    await navigator.clipboard.writeText('browser-cli start');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleReconnect = () => {
+    browser.runtime.sendMessage({ type: 'reconnect' });
+  };
+
+  const copySessionId = async () => {
+    if (state.sessionId) {
+      await navigator.clipboard.writeText(state.sessionId);
+      setSessionCopied(true);
+      setTimeout(() => setSessionCopied(false), 2000);
     }
   };
 
   return (
-    <div style={{ padding: 16, minWidth: 320, fontFamily: 'system-ui, sans-serif' }}>
-      <h2 style={{ margin: '0 0 12px' }}>{APP_NAME}</h2>
+    <div style={{
+      width: 380,
+      background: '#fff',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      color: '#000',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '20px 20px 16px',
+        borderBottom: '1px solid #eaeaea',
+      }}>
+        <h1 style={{
+          margin: 0,
+          fontSize: 16,
+          fontWeight: 600,
+          letterSpacing: '-0.2px',
+        }}>
+          {APP_NAME}
+        </h1>
+      </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span
-            style={{
-              width: 10,
-              height: 10,
+      {/* Status */}
+      <div style={{
+        padding: '16px 20px',
+        borderBottom: '1px solid #eaeaea',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}>
+            <div style={{
+              width: 8,
+              height: 8,
               borderRadius: '50%',
-              backgroundColor: state.connected ? '#22c55e' : '#ef4444',
-              display: 'inline-block',
-            }}
-          />
-          <strong>{state.connected ? 'Connected' : 'Disconnected'}</strong>
+              backgroundColor: state.connected ? '#0070f3' : '#999',
+            }} />
+            <span style={{
+              fontSize: 14,
+              color: '#666',
+            }}>
+              {state.connected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
+          {state.reconnecting && (
+            <span style={{
+              fontSize: 12,
+              color: '#999',
+            }}>
+              Reconnecting...
+            </span>
+          )}
         </div>
         {state.sessionId && (
-          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-            Session: {state.sessionId.slice(0, 8)}...
+          <div
+            onClick={copySessionId}
+            title="Click to copy full session ID"
+            style={{
+              fontSize: 11,
+              color: '#666',
+              marginTop: 8,
+              fontFamily: 'Menlo, Monaco, monospace',
+              background: '#fafafa',
+              border: '1px solid #eaeaea',
+              borderRadius: 4,
+              padding: '6px 8px',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = '#000';
+              e.currentTarget.style.background = '#fff';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#eaeaea';
+              e.currentTarget.style.background = '#fafafa';
+            }}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {state.sessionId}
+            </span>
+            <span style={{
+              fontSize: 10,
+              color: sessionCopied ? '#0070f3' : '#999',
+              marginLeft: 8,
+              flexShrink: 0,
+            }}>
+              {sessionCopied ? '✓' : '⎘'}
+            </span>
           </div>
         )}
       </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-          Daemon WebSocket Port
-        </label>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <input
-            type="number"
-            value={portInput}
-            onChange={(e) => setPortInput(e.target.value)}
-            style={{ width: 80, padding: '4px 8px' }}
-          />
-          <button onClick={handlePortSave} style={{ padding: '4px 12px' }}>
-            Save
-          </button>
-        </div>
-      </div>
-
-      <div style={{ fontSize: 12, color: '#888' }}>
-        {state.lastConnected && (
-          <div>Last connected: {new Date(state.lastConnected).toLocaleTimeString()}</div>
+      {/* Content */}
+      <div style={{ padding: '16px 20px' }}>
+        {!state.connected && (
+          <div style={{
+            background: '#fafafa',
+            border: '1px solid #eaeaea',
+            borderRadius: 5,
+            padding: 16,
+            marginBottom: 16,
+          }}>
+            <div style={{
+              fontSize: 13,
+              color: '#666',
+              marginBottom: 12,
+            }}>
+              Start the daemon in your terminal:
+            </div>
+            <div style={{
+              background: '#000',
+              borderRadius: 5,
+              padding: '10px 12px',
+              marginBottom: 12,
+              fontFamily: 'Menlo, Monaco, monospace',
+              fontSize: 12,
+              color: '#0070f3',
+            }}>
+              $ browser-cli start
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: 8,
+            }}>
+              <button
+                onClick={copyCommand}
+                style={{
+                  flex: 1,
+                  height: 32,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  background: copied ? '#000' : '#fff',
+                  color: copied ? '#fff' : '#000',
+                  border: '1px solid #eaeaea',
+                  borderRadius: 5,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onMouseOver={(e) => {
+                  if (!copied) {
+                    e.currentTarget.style.borderColor = '#000';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!copied) {
+                    e.currentTarget.style.borderColor = '#eaeaea';
+                  }
+                }}
+              >
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+              <button
+                onClick={handleReconnect}
+                style={{
+                  flex: 1,
+                  height: 32,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  background: '#000',
+                  color: '#fff',
+                  border: '1px solid #000',
+                  borderRadius: 5,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = '#333';
+                  e.currentTarget.style.borderColor = '#333';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = '#000';
+                  e.currentTarget.style.borderColor = '#000';
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          </div>
         )}
-        {state.lastDisconnected && (
-          <div>Last disconnected: {new Date(state.lastDisconnected).toLocaleTimeString()}</div>
+
+        {/* Settings */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: 12,
+            fontWeight: 500,
+            color: '#666',
+            marginBottom: 8,
+          }}>
+            WebSocket Port
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={portInput}
+              onChange={(e) => setPortInput(e.target.value)}
+              placeholder="9222"
+              style={{
+                flex: 1,
+                height: 32,
+                padding: '0 10px',
+                fontSize: 14,
+                background: '#fff',
+                color: '#000',
+                border: '1px solid #eaeaea',
+                borderRadius: 5,
+                outline: 'none',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#000';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#eaeaea';
+              }}
+            />
+            <button
+              onClick={handlePortSave}
+              style={{
+                height: 32,
+                padding: '0 16px',
+                fontSize: 12,
+                fontWeight: 500,
+                background: '#000',
+                color: '#fff',
+                border: '1px solid #000',
+                borderRadius: 5,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#333';
+                e.currentTarget.style.borderColor = '#333';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = '#000';
+                e.currentTarget.style.borderColor = '#000';
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        {(state.lastConnected || state.lastDisconnected) && (
+          <div style={{
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: '1px solid #eaeaea',
+            fontSize: 11,
+            color: '#999',
+          }}>
+            {state.lastConnected && (
+              <div>Connected: {new Date(state.lastConnected).toLocaleTimeString()}</div>
+            )}
+            {state.lastDisconnected && (
+              <div style={{ marginTop: 4 }}>
+                Disconnected: {new Date(state.lastDisconnected).toLocaleTimeString()}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

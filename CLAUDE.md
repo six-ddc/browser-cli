@@ -35,6 +35,19 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - CLI ↔ Daemon uses NDJSON over Unix socket
 - Daemon ↔ Extension uses JSON over WebSocket
 
+## Development Principles
+
+### Backward Compatibility
+- **NOT REQUIRED**: Browser-CLI is in active development. Breaking changes are acceptable.
+- Focus on correctness and W3C compliance over backward compatibility
+- Document breaking changes in COMPARISON_WITH_AGENT_BROWSER.md
+- Update version number appropriately (major version bump for breaking changes)
+
+### ARIA Implementation
+- Uses standard libraries (aria-api, dom-accessibility-api) for W3C compliance
+- Provides fallback for test environments (happy-dom) that don't support all CSS selectors
+- Label/placeholder locators default to exact matching (aligns with Playwright/Testing Library)
+
 ## Gotchas
 - WXT + Vite 7 requires Node >= 20 (crypto.hash API)
 - tsup temp files (*.bundled_*.mjs) can race with ESLint — avoid concurrent lint + build
