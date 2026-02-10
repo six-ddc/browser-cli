@@ -1,6 +1,6 @@
 /**
  * DOM-based tests for semantic locator resolution.
- * These tests verify that the locators correctly find elements in a simulated DOM.
+ * Uses AgentBrowser-compatible = syntax (text=Submit, role=button[name="Submit"], etc.)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -8,33 +8,48 @@ import { parseSemanticLocator } from '@browser-cli/shared';
 import { resolveSemanticLocator } from '../src/content-lib/semantic-locators';
 
 // jsdom environment is configured in vitest.config.ts
-// Clean up DOM before each test
 beforeEach(() => {
   document.body.innerHTML = '';
 
-  // Polyfill CSS.escape for jsdom (not included by default)
+  // Polyfill CSS.escape for jsdom
   if (!globalThis.CSS?.escape) {
     globalThis.CSS = {
       ...globalThis.CSS,
       escape: (value: string) => {
-        // Simple polyfill - in real browsers this is more comprehensive
         return value.replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, '\\$&');
       },
     };
   }
 });
 
-describe('semantic-locators - findByRole', () => {
+// ─── Helper ──────────────────────────────────────────────────────────
+
+/** Parse + resolve shorthand */
+function resolve(locatorStr: string): Element[] {
+  const locator = parseSemanticLocator(locatorStr);
+  expect(locator).not.toBeNull();
+  return resolveSemanticLocator(locator!, document.body);
+}
+
+// ─── findByRole ──────────────────────────────────────────────────────
+
+describe('findByRole', () => {
   it('finds button by role and name', () => {
     document.body.innerHTML = `
       <button>Submit</button>
       <button>Cancel</button>
     `;
+    const elements = resolve('role=button[name="Submit"]');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].textContent).toBe('Submit');
+  });
 
-    const locator = parseSemanticLocator('role:button:Submit:exact');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+  it('finds button by role and name with exact', () => {
+    document.body.innerHTML = `
+      <button>Submit</button>
+      <button>Submit Form</button>
+    `;
+    const elements = resolve('role=button[name="Submit"][exact]');
     expect(elements).toHaveLength(1);
     expect(elements[0].textContent).toBe('Submit');
   });
@@ -45,64 +60,26 @@ describe('semantic-locators - findByRole', () => {
       <button>Cancel</button>
       <button>Delete</button>
     `;
-
-    const locator = parseSemanticLocator('role:button');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('role=button');
     expect(elements).toHaveLength(3);
   });
 
-  it('finds textbox by role', () => {
+  it('finds textbox by role with name', () => {
     document.body.innerHTML = `
       <input type="text" aria-label="Email" />
       <input type="password" aria-label="Password" />
     `;
-
-    const locator = parseSemanticLocator('role:textbox:Email');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('role=textbox[name="Email"]');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('aria-label')).toBe('Email');
   });
 
-  it('matches with contains when exact=false', () => {
-    document.body.innerHTML = `
-      <button>Submit Form</button>
-    `;
-
-    const locator = parseSemanticLocator('role:button:Submit:contains');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
-    expect(elements).toHaveLength(1);
-  });
-
-  it('is case-insensitive by default', () => {
+  it('is case-insensitive for name by default', () => {
     document.body.innerHTML = `
       <button>SUBMIT</button>
     `;
-
-    const locator = parseSemanticLocator('role:button:submit');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('role=button[name="submit"]');
     expect(elements).toHaveLength(1);
-  });
-
-  it('respects case-sensitive option', () => {
-    document.body.innerHTML = `
-      <button>SUBMIT</button>
-      <button>submit</button>
-    `;
-
-    const locator = parseSemanticLocator('role:button:submit:exact:case');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
-    expect(elements).toHaveLength(1);
-    expect(elements[0].textContent).toBe('submit');
   });
 
   it('finds links by role', () => {
@@ -110,11 +87,7 @@ describe('semantic-locators - findByRole', () => {
       <a href="/home">Home</a>
       <a href="/about">About</a>
     `;
-
-    const locator = parseSemanticLocator('role:link:Home');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('role=link[name="Home"]');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('href')).toBe('/home');
   });
@@ -123,74 +96,76 @@ describe('semantic-locators - findByRole', () => {
     document.body.innerHTML = `
       <div role="button" tabindex="0">Custom Button</div>
     `;
-
-    const locator = parseSemanticLocator('role:button:Custom Button');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
-    // Note: happy-dom may have limitations with role attributes
-    // In real browser, this should find 1 element
+    const elements = resolve('role=button[name="Custom Button"]');
+    // happy-dom may have limitations with role attributes
     expect(elements.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('includes hidden elements with [hidden]', () => {
+    document.body.innerHTML = `
+      <button style="display: none;">Hidden</button>
+      <button>Visible</button>
+    `;
+    const locator = parseSemanticLocator('role=button[hidden]');
+    expect(locator).not.toBeNull();
+    // Verifies parser accepts hidden option
+    expect(locator!.options.includeHidden).toBe(true);
   });
 });
 
-describe('semantic-locators - findByText', () => {
-  it('finds element by text content', () => {
+// ─── findByText ──────────────────────────────────────────────────────
+
+describe('findByText', () => {
+  it('finds element by text content (substring)', () => {
     document.body.innerHTML = `
       <p>Welcome to our site</p>
       <span>Click here</span>
     `;
-
-    const locator = parseSemanticLocator('text:Welcome');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('text=Welcome');
     expect(elements.length).toBeGreaterThan(0);
     expect(elements[0].textContent).toContain('Welcome');
   });
 
-  it('finds with exact match', () => {
+  it('finds with exact match via quotes', () => {
     document.body.innerHTML = `
       <p>Sign In</p>
       <p>Sign In Now</p>
     `;
-
-    const locator = parseSemanticLocator('text:Sign In:exact');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('text="Sign In"');
     expect(elements).toHaveLength(1);
     expect(elements[0].textContent?.trim()).toBe('Sign In');
   });
 
-  it('finds with contains match (default)', () => {
+  it('finds with exact match via [exact]', () => {
+    document.body.innerHTML = `
+      <p>Sign In</p>
+      <p>Sign In Now</p>
+    `;
+    const elements = resolve('text=Sign In[exact]');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].textContent?.trim()).toBe('Sign In');
+  });
+
+  it('finds with substring match (default)', () => {
     document.body.innerHTML = `
       <div>Click here for more information</div>
     `;
-
-    const locator = parseSemanticLocator('text:more');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
-    // Text match may include parent elements (body) in some DOM implementations
+    const elements = resolve('text=more');
     expect(elements.length).toBeGreaterThanOrEqual(1);
-    // Verify at least one has the expected text
     const hasMatch = elements.some(el => el.textContent?.includes('more information'));
     expect(hasMatch).toBe(true);
   });
 });
 
-describe('semantic-locators - findByLabel', () => {
+// ─── findByLabel ─────────────────────────────────────────────────────
+
+describe('findByLabel', () => {
   it('finds input by label with for attribute', () => {
     document.body.innerHTML = `
       <label for="email">Email Address</label>
       <input type="text" id="email" />
     `;
-
-    const locator = parseSemanticLocator('label:Email Address');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('label=Email Address');
     expect(elements).toHaveLength(1);
     expect(elements[0].tagName.toLowerCase()).toBe('input');
     expect(elements[0].getAttribute('id')).toBe('email');
@@ -203,26 +178,30 @@ describe('semantic-locators - findByLabel', () => {
         <input type="text" />
       </label>
     `;
-
-    const locator = parseSemanticLocator('label:Username');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('label=Username');
     expect(elements).toHaveLength(1);
     expect(elements[0].tagName.toLowerCase()).toBe('input');
   });
 
-  it('matches label with contains', () => {
+  it('matches label with substring (default)', () => {
     document.body.innerHTML = `
       <label for="pwd">Password (required)</label>
       <input type="password" id="pwd" />
     `;
-
-    const locator = parseSemanticLocator('label:Password:contains');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('label=Password');
     expect(elements).toHaveLength(1);
+  });
+
+  it('matches label exactly with quoted value', () => {
+    document.body.innerHTML = `
+      <label for="email">Email</label>
+      <input type="text" id="email" />
+      <label for="email2">Email Address</label>
+      <input type="text" id="email2" />
+    `;
+    const elements = resolve('label="Email"');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].getAttribute('id')).toBe('email');
   });
 
   it('finds textarea by label', () => {
@@ -230,27 +209,21 @@ describe('semantic-locators - findByLabel', () => {
       <label for="msg">Message</label>
       <textarea id="msg"></textarea>
     `;
-
-    const locator = parseSemanticLocator('label:Message');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('label=Message');
     expect(elements).toHaveLength(1);
     expect(elements[0].tagName.toLowerCase()).toBe('textarea');
   });
 });
 
-describe('semantic-locators - findByPlaceholder', () => {
+// ─── findByPlaceholder ───────────────────────────────────────────────
+
+describe('findByPlaceholder', () => {
   it('finds input by placeholder', () => {
     document.body.innerHTML = `
       <input type="text" placeholder="Search..." />
       <input type="text" placeholder="Enter name" />
     `;
-
-    const locator = parseSemanticLocator('placeholder:Search...');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('placeholder=Search...');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('placeholder')).toContain('Search');
   });
@@ -259,70 +232,74 @@ describe('semantic-locators - findByPlaceholder', () => {
     document.body.innerHTML = `
       <textarea placeholder="Type your message here"></textarea>
     `;
-
-    const locator = parseSemanticLocator('placeholder:Type your message here');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('placeholder=Type your message here');
     expect(elements).toHaveLength(1);
   });
 
-  it('matches exactly when exact=true', () => {
+  it('matches exactly with quoted value', () => {
     document.body.innerHTML = `
       <input type="text" placeholder="Search" />
       <input type="text" placeholder="Search..." />
     `;
+    const elements = resolve('placeholder="Search"');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].getAttribute('placeholder')).toBe('Search');
+  });
 
-    const locator = parseSemanticLocator('placeholder:Search:exact');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+  it('matches exactly with [exact]', () => {
+    document.body.innerHTML = `
+      <input type="text" placeholder="Search" />
+      <input type="text" placeholder="Search..." />
+    `;
+    const elements = resolve('placeholder=Search[exact]');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('placeholder')).toBe('Search');
   });
 });
 
-describe('semantic-locators - findByAlt', () => {
-  it('finds image by alt text', () => {
+// ─── findByAlt ───────────────────────────────────────────────────────
+
+describe('findByAlt', () => {
+  it('finds image by alt text (substring)', () => {
     document.body.innerHTML = `
       <img src="logo.png" alt="Company Logo" />
       <img src="avatar.png" alt="User Avatar" />
     `;
-
-    const locator = parseSemanticLocator('alt:Logo');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('alt=Logo');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('alt')).toContain('Logo');
   });
 
-  it('matches exactly with exact option', () => {
+  it('matches exactly with quoted value', () => {
     document.body.innerHTML = `
       <img src="icon.png" alt="Icon" />
       <img src="icon2.png" alt="Icon Large" />
     `;
+    const elements = resolve('alt="Icon"');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].getAttribute('alt')).toBe('Icon');
+  });
 
-    const locator = parseSemanticLocator('alt:Icon:exact');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+  it('matches exactly with [exact]', () => {
+    document.body.innerHTML = `
+      <img src="icon.png" alt="Icon" />
+      <img src="icon2.png" alt="Icon Large" />
+    `;
+    const elements = resolve('alt=Icon[exact]');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('alt')).toBe('Icon');
   });
 });
 
-describe('semantic-locators - findByTitle', () => {
-  it('finds element by title attribute', () => {
+// ─── findByTitle ─────────────────────────────────────────────────────
+
+describe('findByTitle', () => {
+  it('finds element by title attribute (substring)', () => {
     document.body.innerHTML = `
       <button title="Help Center">?</button>
       <a href="#" title="External Link">Visit</a>
     `;
-
-    const locator = parseSemanticLocator('title:Help');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('title=Help');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('title')).toContain('Help');
   });
@@ -332,26 +309,30 @@ describe('semantic-locators - findByTitle', () => {
       <span title="Information">ℹ</span>
       <div title="Tooltip">Hover me</div>
     `;
-
-    const locator = parseSemanticLocator('title:Information');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('title=Information');
     expect(elements).toHaveLength(1);
+  });
+
+  it('exact match with quoted value', () => {
+    document.body.innerHTML = `
+      <span title="Help">?</span>
+      <span title="Help Center">Help</span>
+    `;
+    const elements = resolve('title="Help"');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].getAttribute('title')).toBe('Help');
   });
 });
 
-describe('semantic-locators - findByTestId', () => {
+// ─── findByTestId ────────────────────────────────────────────────────
+
+describe('findByTestId', () => {
   it('finds element by data-testid', () => {
     document.body.innerHTML = `
       <button data-testid="login-button">Login</button>
       <button data-testid="signup-button">Sign Up</button>
     `;
-
-    const locator = parseSemanticLocator('testid:login-button');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('testid=login-button');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('data-testid')).toBe('login-button');
   });
@@ -361,11 +342,7 @@ describe('semantic-locators - findByTestId', () => {
       <div data-testid="user-profile">Profile</div>
       <div data-testid="user-profile-edit">Edit</div>
     `;
-
-    const locator = parseSemanticLocator('testid:user-profile');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('testid=user-profile');
     expect(elements).toHaveLength(1);
     expect(elements[0].getAttribute('data-testid')).toBe('user-profile');
   });
@@ -374,77 +351,103 @@ describe('semantic-locators - findByTestId', () => {
     document.body.innerHTML = `
       <button data-testid="btn.submit.primary">Submit</button>
     `;
-
-    const locator = parseSemanticLocator('testid:btn.submit.primary');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('testid=btn.submit.primary');
     expect(elements).toHaveLength(1);
   });
 });
 
-describe('semantic-locators - visibility filtering', () => {
+// ─── findByXPath ─────────────────────────────────────────────────────
+
+describe('findByXPath', () => {
+  // XPath is not available in happy-dom, but works in real browsers.
+  // These tests verify graceful degradation (returns []) when XPath is unavailable,
+  // and will pass correctly in a real browser environment.
+  const xpathAvailable = typeof globalThis.XPathResult !== 'undefined';
+
+  it('returns results or empty array depending on XPath support', () => {
+    document.body.innerHTML = `
+      <button>Submit</button>
+      <span>Text</span>
+    `;
+    const elements = resolve('xpath=//button');
+    if (xpathAvailable) {
+      expect(elements).toHaveLength(1);
+      expect(elements[0].tagName.toLowerCase()).toBe('button');
+    } else {
+      // Graceful degradation in test env
+      expect(elements).toHaveLength(0);
+    }
+  });
+
+  it('finds elements by XPath with attributes (or degrades)', () => {
+    document.body.innerHTML = `
+      <input type="text" name="email" />
+      <input type="password" name="pwd" />
+    `;
+    const elements = resolve('xpath=//input[@type="text"]');
+    if (xpathAvailable) {
+      expect(elements).toHaveLength(1);
+      expect(elements[0].getAttribute('name')).toBe('email');
+    } else {
+      expect(elements).toHaveLength(0);
+    }
+  });
+
+  it('finds multiple elements (or degrades)', () => {
+    document.body.innerHTML = `
+      <ul>
+        <li>One</li>
+        <li>Two</li>
+        <li>Three</li>
+      </ul>
+    `;
+    const elements = resolve('xpath=//li');
+    if (xpathAvailable) {
+      expect(elements).toHaveLength(3);
+    } else {
+      expect(elements).toHaveLength(0);
+    }
+  });
+
+  it('returns empty array for non-matching XPath', () => {
+    document.body.innerHTML = `<div>Hello</div>`;
+    const elements = resolve('xpath=//table');
+    expect(elements).toHaveLength(0);
+  });
+});
+
+// ─── visibility filtering ────────────────────────────────────────────
+
+describe('visibility filtering', () => {
   it('excludes hidden elements by default', () => {
     document.body.innerHTML = `
       <button style="display: none;">Hidden</button>
       <button>Visible</button>
     `;
-
-    const locator = parseSemanticLocator('role:button');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
-    // Note: happy-dom may not fully support getComputedStyle
-    // In real browser, this would filter out hidden element
+    const elements = resolve('role=button');
+    // happy-dom may not fully support getComputedStyle
     expect(elements.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('includes hidden elements with hidden option', () => {
-    document.body.innerHTML = `
-      <button style="display: none;">Hidden</button>
-      <button>Visible</button>
-    `;
-
-    const locator = parseSemanticLocator('role:button:hidden');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
-    // Note: happy-dom has limited support for getComputedStyle
-    // This test mainly verifies the parser accepts the 'hidden' option
-    expect(elements.length).toBeGreaterThanOrEqual(0);
   });
 });
 
-describe('semantic-locators - complex scenarios', () => {
+// ─── complex scenarios ───────────────────────────────────────────────
+
+describe('complex scenarios', () => {
   it('handles nested elements', () => {
     document.body.innerHTML = `
-      <div>
-        <section>
-          <button>Submit</button>
-        </section>
-      </div>
+      <div><section><button>Submit</button></section></div>
     `;
-
-    const locator = parseSemanticLocator('role:button:Submit');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('role=button[name="Submit"]');
     expect(elements).toHaveLength(1);
   });
 
   it('finds multiple matching elements', () => {
     document.body.innerHTML = `
       <button>Submit</button>
-      <div>
-        <button>Submit</button>
-      </div>
+      <div><button>Submit</button></div>
       <button>Cancel</button>
     `;
-
-    const locator = parseSemanticLocator('role:button:Submit:exact');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
+    const elements = resolve('role=button[name="Submit"][exact]');
     expect(elements).toHaveLength(2);
   });
 
@@ -452,13 +455,8 @@ describe('semantic-locators - complex scenarios', () => {
     document.body.innerHTML = `
       <button aria-label="Close dialog">×</button>
     `;
-
-    const locator = parseSemanticLocator('role:button:Close');
-    expect(locator).not.toBeNull();
-
-    const elements = resolveSemanticLocator(locator!, document.body);
-    // Note: happy-dom may have limited aria-label support
-    // In real browser, this should find 1 element
+    const elements = resolve('role=button[name="Close"]');
+    // happy-dom may have limited aria-label support
     expect(elements.length).toBeGreaterThanOrEqual(0);
   });
 
@@ -467,20 +465,16 @@ describe('semantic-locators - complex scenarios', () => {
       <form>
         <label for="email">Email</label>
         <input type="email" id="email" />
-
         <label for="pwd">Password</label>
         <input type="password" id="pwd" />
-
         <button type="submit">Login</button>
       </form>
     `;
 
-    const emailLocator = parseSemanticLocator('label:Email');
-    const emailElements = resolveSemanticLocator(emailLocator!, document.body);
+    const emailElements = resolve('label=Email');
     expect(emailElements).toHaveLength(1);
 
-    const buttonLocator = parseSemanticLocator('role:button:Login');
-    const buttonElements = resolveSemanticLocator(buttonLocator!, document.body);
+    const buttonElements = resolve('role=button[name="Login"]');
     expect(buttonElements).toHaveLength(1);
   });
 });

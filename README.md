@@ -31,7 +31,9 @@ Browser-CLI uses a browser extension as a bridge instead of a browser driver, gi
 
 **Snapshots** — Accessibility tree snapshot with interactive element refs (`@e1`, `@e2`, ...)
 
-**Semantic Locators** — Find elements by role, text, label, placeholder, alt, title, or testid (Testing Library-style queries)
+**Semantic Locators** — Find elements by role, text, label, placeholder, alt, title, testid, or xpath (AgentBrowser-compatible syntax)
+
+**Find Command** — Locate elements and perform actions in one step (`find role button click --name "Submit"`)
 
 **Screenshots** — Full page or element screenshots (PNG/JPEG)
 
@@ -102,16 +104,26 @@ browser-cli status
 browser-cli navigate https://example.com
 
 # Get an accessibility snapshot with element refs
-browser-cli snapshot --interactive
+browser-cli snapshot -i              # short for --interactive
+browser-cli snapshot -i -c           # interactive + compact
+browser-cli snapshot -d 3            # max depth 3
+browser-cli snapshot -s "role=nav"   # scoped to element
 
 # Click an element using a ref, semantic locator, or CSS selector
 browser-cli click @e1
-browser-cli click "role:button:Submit"
+browser-cli click 'role=button[name="Submit"]'
 browser-cli click "#submit-button"
 
+# Find and interact in one step (AgentBrowser-compatible)
+browser-cli find role button click --name "Submit"
+browser-cli find text "Sign In" click
+browser-cli find label "Email" fill "user@example.com"
+browser-cli find first ".item" click
+browser-cli find nth 2 ".item" click
+
 # Fill a form field using label, placeholder, or CSS selector
-browser-cli fill "label:Email" "user@example.com"
-browser-cli fill "placeholder:Search..." "query"
+browser-cli fill "label=Email" "user@example.com"
+browser-cli fill "placeholder=Search..." "query"
 browser-cli fill "input[name=email]" "user@example.com"
 
 # Upload files (supports data URLs, blob URLs, or HTTP URLs)
@@ -145,30 +157,34 @@ browser-cli stop
 
 ### Semantic Locators
 
-Browser-CLI supports Testing Library-style semantic locators for finding elements:
+Browser-CLI supports AgentBrowser-compatible semantic locators for finding elements:
 
 ```bash
 # By role and accessible name
-browser-cli click "role:button:Submit:exact"
-browser-cli click "role:textbox:Email"
+browser-cli click "role=button[name=\"Submit\"][exact]"
+browser-cli click "role=textbox[name=\"Email\"]"
 
-# By text content
-browser-cli click "text:Sign In"
+# By text content (substring match by default)
+browser-cli click "text=Sign In"
+browser-cli click 'text="Sign In"'   # exact match (quoted)
 
 # By label text (for form inputs)
-browser-cli fill "label:Password" "secret123"
+browser-cli fill "label=Password" "secret123"
 
 # By placeholder
-browser-cli fill "placeholder:Search..." "query"
+browser-cli fill "placeholder=Search..." "query"
 
 # By alt text (images)
-browser-cli click "alt:Company Logo"
+browser-cli click "alt=Company Logo"
 
 # By title attribute
-browser-cli hover "title:Help Center"
+browser-cli hover "title=Help Center"
 
 # By data-testid
-browser-cli click "testid:login-button"
+browser-cli click "testid=login-button"
+
+# By XPath
+browser-cli click 'xpath=//button[@type="submit"]'
 ```
 
 See [SEMANTIC_LOCATORS.md](SEMANTIC_LOCATORS.md) for detailed documentation.

@@ -150,18 +150,19 @@ Change: +17 commands (+18% coverage)
 |------|------------|---------------|----------|
 | **CSS 选择器** | ✅ | ✅ | 功能相同 |
 | **元素引用 (@e1)** | ✅ (from snapshot) | ✅ (from snapshot) | 功能相同 |
-| **文本选择器** | ❌ | ✅ `text=Submit` | **Agent-Browser 独有** |
-| **XPath** | ❌ | ✅ `xpath=//button` | **Agent-Browser 独有** |
-| **ARIA 角色定位** | ✅ `role:button:Submit` | ✅ `find role <role>` | 功能相同（语法不同）|
-| **文本内容定位** | ✅ `text:Sign In` | ✅ `find text <text>` | 功能相同（语法不同）|
-| **Label 定位** | ✅ `label:Email` | ✅ `find label <label>` | 功能相同（语法不同）|
-| **Placeholder 定位** | ✅ `placeholder:Search` | ✅ `find placeholder <ph>` | 功能相同（语法不同）|
-| **Alt 文本定位** | ✅ `alt:Logo` | ✅ `find alt <text>` | 功能相同（语法不同）|
-| **Title 定位** | ✅ `title:Help` | ✅ `find title <text>` | 功能相同（语法不同）|
-| **TestID 定位** | ✅ `testid:login-btn` | ✅ `find testid <id>` | 功能相同（语法不同）|
-| **First/Last/Nth** | ❌ | ✅ `find first/last/nth` | **Agent-Browser 独有** |
+| **文本选择器** | ✅ `text=Submit` | ✅ `text=Submit` | **语法兼容** |
+| **XPath** | ✅ `xpath=//button` | ✅ `xpath=//button` | **语法兼容** |
+| **ARIA 角色定位** | ✅ `role=button[name="Submit"]` | ✅ `find role <role>` | 功能相同 |
+| **文本内容定位** | ✅ `text=Sign In` | ✅ `find text <text>` | 功能相同 |
+| **Label 定位** | ✅ `label=Email` | ✅ `find label <label>` | 功能相同 |
+| **Placeholder 定位** | ✅ `placeholder=Search` | ✅ `find placeholder <ph>` | 功能相同 |
+| **Alt 文本定位** | ✅ `alt=Logo` | ✅ `find alt <text>` | 功能相同 |
+| **Title 定位** | ✅ `title=Help` | ✅ `find title <text>` | 功能相同 |
+| **TestID 定位** | ✅ `testid=login-btn` | ✅ `find testid <id>` | 功能相同 |
+| **First/Last/Nth** | ✅ `find first/last/nth` | ✅ `find first/last/nth` | **语法兼容** |
+| **find 命令** | ✅ `find role button click` | ✅ `find role button click` | **语法兼容** |
 
-**差距分析**: ✅ Browser-CLI 现已实现语义定位器！支持 7 种定位器类型（role/text/label/placeholder/alt/title/testid），语法稍有不同但功能相同
+**差距分析**: ✅ Browser-CLI 使用 AgentBrowser 兼容的 `=` 语法（Playwright 风格），支持 8 种定位器类型（role/text/label/placeholder/alt/title/testid/xpath），完整 `find` 命令支持 first/last/nth 位置选择器
 
 ---
 
@@ -215,7 +216,7 @@ Change: +17 commands (+18% coverage)
 |------|------------|---------------|----------|
 | **截图** | ✅ `screenshot` (full/element, png/jpeg) | ✅ `screenshot` (--full) | 功能相同 |
 | **PDF 导出** | ❌ | ✅ `pdf <path>` | **Agent-Browser 独有** |
-| **快照 (Accessibility Tree)** | ✅ `snapshot` (interactive/compact/depth) | ✅ `snapshot` (-i/-C/-c/-d/-s) | Browser-CLI 更简洁 |
+| **快照 (Accessibility Tree)** | ✅ `snapshot` (-i/-c/-d/-s) | ✅ `snapshot` (-i/-C/-c/-d/-s) | **语法兼容** |
 | **元素高亮** | ✅ `highlight` (color/duration) | ✅ `highlight` | 功能相同 |
 
 **差距分析**: Agent-Browser 支持 PDF 导出
@@ -390,19 +391,17 @@ Change: +17 commands (+18% coverage)
 1. ✅ **拖拽操作** (`drag`)
 2. ✅ **底层鼠标控制** (`mouse move/down/up/wheel`)
 3. ✅ **按键分步控制** (`keydown/keyup`)
-4. ✅ **XPath 和文本选择器**
-5. ✅ **等待文本/加载状态/条件函数**
-6. ✅ **PDF 导出** (`pdf`)
-7. ✅ **First/Last/Nth 选择器** (`find first/last/nth`)
-8. ✅ **浏览器配置** (viewport/device/geo/offline/headers/credentials/media)
-9. ✅ **多窗口管理** (`window new`)
-10. ✅ **持久化 Profile** (`--profile`)
-11. ✅ **认证状态保存** (`state save/load`)
-12. ✅ **会话追踪** (`trace`)
-13. ✅ **CDP 连接** (`--cdp`)
-14. ✅ **云浏览器集成** (Browserbase/Browser Use/Kernel/iOS)
-15. ✅ **Headless/Headed 切换** (`--headed`)
-16. ✅ **网络响应体修改** (Browser-CLI 受 MV3 限制)
+4. ✅ **等待文本/加载状态/条件函数**
+5. ✅ **PDF 导出** (`pdf`)
+6. ✅ **浏览器配置** (viewport/device/geo/offline/headers/credentials/media)
+7. ✅ **多窗口管理** (`window new`)
+8. ✅ **持久化 Profile** (`--profile`)
+9. ✅ **认证状态保存** (`state save/load`)
+10. ✅ **会话追踪** (`trace`)
+11. ✅ **CDP 连接** (`--cdp`)
+12. ✅ **云浏览器集成** (Browserbase/Browser Use/Kernel/iOS)
+13. ✅ **Headless/Headed 切换** (`--headed`)
+14. ✅ **网络响应体修改** (Browser-CLI 受 MV3 限制)
 
 ---
 
@@ -502,7 +501,7 @@ Change: +17 commands (+18% coverage)
 |------|-------------|---------------|------|
 | **导航** | 6 | 7 | -1 |
 | **交互** | 12 (+1 upload) | 16 | -4 |
-| **选择器** | 9 (+7 semantic) | 12 | -3 |
+| **选择器** | 12 (+find/first/last/nth) | 12 | 0 |
 | **数据查询** | 9 | 9 | 0 |
 | **等待** | 3 (+1 duration) | 6 | -3 |
 | **视觉** | 3 | 4 | -1 |
@@ -537,6 +536,5 @@ Browser-CLI 是一个**架构创新**的项目（Extension-based），在轻量�
 主要差距现在集中在：
 1. **浏览器配置** (viewport/device/geo/offline) — 跨设备测试
 2. **底层控制** (鼠标精细控制、拖拽) — 复杂交互
-3. **高级选择器** (XPath、first/last/nth) — 选择器扩展
 
 **Browser-CLI 已具备在 AI Agent 自动化场景的核心竞争力**，特别是轻量级部署和真实浏览器环境的独特优势。

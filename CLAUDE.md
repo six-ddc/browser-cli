@@ -46,7 +46,27 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 ### ARIA Implementation
 - Uses standard libraries (aria-api, dom-accessibility-api) for W3C compliance
 - Provides fallback for test environments (happy-dom) that don't support all CSS selectors
-- Label/placeholder locators default to exact matching (aligns with Playwright/Testing Library)
+
+### Semantic Locator Syntax (AgentBrowser-compatible)
+- Uses `=` delimiter: `text=Submit`, `role=button`, `label=Email`, `xpath=//button`
+- Role name via bracket: `role=button[name="Submit"]`
+- Quoted value for exact match: `text="Submit"`, `label="Email"`
+- Bracket options: `[exact]`, `[hidden]`
+- XPath: `xpath=//button[@type="submit"]`
+- TestID always exact, case-sensitive: `testid=login-button`
+
+### Find Command (AgentBrowser-compatible)
+- `find <engine> <value> <action> [action-value]` — locate + act in one step
+- Engines: role, text, label, placeholder, alt, title, testid, xpath
+- Position selectors: first, last, nth (e.g., `find nth 2 ".item" click`)
+- Options: `--name` (for role), `--exact` (exact text match)
+- Actions: click, dblclick, fill, type, hover, check, uncheck, select, press, clear, focus
+
+### Snapshot Flags (AgentBrowser-compatible)
+- `-i` / `--interactive` — only interactive elements
+- `-c` / `--compact` — compact output
+- `-d` / `--depth <n>` — max tree depth
+- `-s` / `--selector <sel>` — scope to element
 
 ## Gotchas
 - WXT + Vite 7 requires Node >= 20 (crypto.hash API)

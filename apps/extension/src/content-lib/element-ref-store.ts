@@ -3,7 +3,7 @@
  * Maps @e1, @e2, etc. to CSS selectors.
  * Re-generated on each snapshot call.
  *
- * Also resolves semantic locators (role:button:Submit, text:Sign In, etc.)
+ * Also resolves semantic locators (role=button, text=Submit, xpath=//button, etc.)
  */
 
 import { isElementRef, isSemanticLocator, parseSemanticLocator } from '@browser-cli/shared';
@@ -52,7 +52,7 @@ export function resolveElement(selectorOrRef: string): Element | null {
     return document.querySelector(entry.selector);
   }
 
-  // Handle semantic locators (role:button:Submit, text:Sign In, etc.)
+  // Handle semantic locators (role=button, text=Submit, xpath=//button, etc.)
   if (isSemanticLocator(selectorOrRef)) {
     const locator = parseSemanticLocator(selectorOrRef);
     if (!locator) return null;
@@ -73,7 +73,7 @@ export function resolveElements(selectorOrRef: string): Element[] {
     return el ? [el] : [];
   }
 
-  // Handle semantic locators (role:button:Submit, text:Sign In, etc.)
+  // Handle semantic locators (role=button, text=Submit, xpath=//button, etc.)
   if (isSemanticLocator(selectorOrRef)) {
     const locator = parseSemanticLocator(selectorOrRef);
     if (!locator) return [];

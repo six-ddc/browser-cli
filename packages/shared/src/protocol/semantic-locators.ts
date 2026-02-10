@@ -1,25 +1,34 @@
 /**
- * Semantic locator system: role:button:Submit:exact, text:Sign In, label:Email, etc.
+ * Semantic locator system — AgentBrowser-compatible syntax.
  *
- * Semantic locators provide a more user-centric way to identify elements,
- * similar to Testing Library's approach. They complement CSS selectors and refs.
+ * Uses `=` delimiter (Playwright/AgentBrowser style):
+ *   text=Submit, role=button, label=Email, xpath=//button, etc.
  *
  * Syntax:
- *   role:<role>:<name>:<options>
- *   text:<text>:<options>
- *   label:<labelText>:<options>
- *   placeholder:<text>:<options>
- *   alt:<text>:<options>
- *   title:<text>:<options>
- *   testid:<value>
+ *   text=<value>                        — substring match (default)
+ *   text="<value>"                      — exact match (quoted)
+ *   text=<value>[exact]                 — exact match (bracket)
+ *   text=<value>[exact][hidden]         — exact + include hidden
+ *   role=<role>                         — match by ARIA role
+ *   role=<role>[name="<name>"]          — role + accessible name
+ *   role=<role>[name="<name>"][exact]   — role + exact name match
+ *   label=<value>                       — match by label text
+ *   placeholder=<value>                 — match by placeholder
+ *   alt=<value>                         — match by alt text
+ *   title=<value>                       — match by title attribute
+ *   testid=<value>                      — match by data-testid (always exact)
+ *   xpath=<expression>                  — XPath expression
  *
  * Examples:
- *   role:button:Submit:exact
- *   role:textbox:Email
- *   text:Sign In
- *   label:Password
- *   placeholder:Search...
- *   testid:login-button
+ *   role=button
+ *   role=button[name="Submit"]
+ *   role=button[name="Submit"][exact]
+ *   text=Sign In
+ *   text="Sign In"
+ *   label=Email
+ *   placeholder=Search...
+ *   testid=login-button
+ *   xpath=//button[@type="submit"]
  */
 
 /** Semantic locator types */
@@ -30,13 +39,14 @@ export type SemanticLocatorType =
   | 'placeholder'
   | 'alt'
   | 'title'
-  | 'testid';
+  | 'testid'
+  | 'xpath';
 
 /** Options for semantic locators */
 export interface SemanticLocatorOptions {
-  /** Exact match (default: false for text-based, true for others) */
+  /** Exact match (default: false for most, true for testid) */
   exact?: boolean;
-  /** Case-insensitive match (default: true) */
+  /** Case-insensitive match (default: true, false for testid) */
   ignoreCase?: boolean;
   /** Match hidden elements (default: false) */
   includeHidden?: boolean;
@@ -48,7 +58,7 @@ interface BaseSemanticLocator {
   options: SemanticLocatorOptions;
 }
 
-/** Role-based locator */
+/** Role-based locator: role=button, role=button[name="Submit"] */
 export interface RoleLocator extends BaseSemanticLocator {
   type: 'role';
   role: string;
@@ -86,6 +96,12 @@ export interface TestIdLocator extends BaseSemanticLocator {
   value: string;
 }
 
+/** XPath locator: xpath=//button[@type="submit"] */
+export interface XPathLocator extends BaseSemanticLocator {
+  type: 'xpath';
+  expression: string;
+}
+
 /** Union of all semantic locators */
 export type SemanticLocator =
   | RoleLocator
@@ -94,10 +110,11 @@ export type SemanticLocator =
   | PlaceholderLocator
   | AltLocator
   | TitleLocator
-  | TestIdLocator;
+  | TestIdLocator
+  | XPathLocator;
 
-/** Regex pattern for semantic locator strings */
-const SEMANTIC_PATTERN = /^(role|text|label|placeholder|alt|title|testid):(.+)$/;
+/** Regex: <engine>=<rest> where engine is a known keyword */
+const SEMANTIC_PATTERN = /^(role|text|label|placeholder|alt|title|testid|xpath)=(.+)$/;
 
 /** Check if a string is a semantic locator */
 export function isSemanticLocator(value: string): boolean {
@@ -107,156 +124,250 @@ export function isSemanticLocator(value: string): boolean {
 /**
  * Parse a semantic locator string into a structured locator object.
  *
- * @param value Semantic locator string
+ * @param value Semantic locator string (e.g. "text=Submit", "role=button[name=\"Submit\"]")
  * @returns Parsed locator or null if invalid
  *
  * @example
- * parseSemanticLocator('role:button:Submit:exact')
- * // => { type: 'role', role: 'button', name: 'Submit', options: { exact: true } }
+ * parseSemanticLocator('role=button[name="Submit"]')
+ * // => { type: 'role', role: 'button', name: 'Submit', options: { exact: false } }
  *
- * parseSemanticLocator('text:Sign In')
- * // => { type: 'text', text: 'Sign In', options: { exact: false, ignoreCase: true } }
+ * parseSemanticLocator('text=Sign In')
+ * // => { type: 'text', text: 'Sign In', options: { exact: false } }
  *
- * parseSemanticLocator('testid:login-button')
+ * parseSemanticLocator('text="Sign In"')
+ * // => { type: 'text', text: 'Sign In', options: { exact: true } }
+ *
+ * parseSemanticLocator('testid=login-button')
  * // => { type: 'testid', value: 'login-button', options: { exact: true } }
  */
 export function parseSemanticLocator(value: string): SemanticLocator | null {
   const match = value.match(SEMANTIC_PATTERN);
   if (!match) return null;
 
-  const [, type, rest] = match;
-  const parts = rest.split(':');
+  const [, engine, rest] = match;
 
-  const locatorType = type as SemanticLocatorType;
-
-  switch (locatorType) {
-    case 'role': {
-      const [role, name, ...optParts] = parts;
-      if (!role) return null;
-
-      const options = parseOptions(optParts, { exact: true, ignoreCase: true, includeHidden: false });
-      return {
-        type: 'role',
-        role: role.toLowerCase(),
-        name: name || undefined,
-        options,
-      };
-    }
-
-    case 'text': {
-      const lastPart = parts[parts.length - 1];
-      const hasOptions = lastPart && isOptionString(lastPart);
-
-      const actualText = hasOptions ? parts.slice(0, -1).join(':') : parts.join(':');
-      const options = hasOptions
-        ? parseOptions([lastPart], { exact: false, ignoreCase: true, includeHidden: false })
-        : { exact: false, ignoreCase: true, includeHidden: false };
-
-      return {
-        type: 'text',
-        text: actualText,
-        options,
-      };
-    }
-
-    case 'label': {
-      const lastPart = parts[parts.length - 1];
-      const hasOptions = lastPart && isOptionString(lastPart);
-
-      const actualText = hasOptions ? parts.slice(0, -1).join(':') : parts.join(':');
-      const options = hasOptions
-        ? parseOptions([lastPart], { exact: true, ignoreCase: true, includeHidden: false })
-        : { exact: true, ignoreCase: true, includeHidden: false };
-
-      return {
-        type: 'label',
-        labelText: actualText,
-        options,
-      };
-    }
-
-    case 'placeholder': {
-      const lastPart = parts[parts.length - 1];
-      const hasOptions = lastPart && isOptionString(lastPart);
-
-      const actualText = hasOptions ? parts.slice(0, -1).join(':') : parts.join(':');
-      const options = hasOptions
-        ? parseOptions([lastPart], { exact: true, ignoreCase: true, includeHidden: false })
-        : { exact: true, ignoreCase: true, includeHidden: false };
-
-      return {
-        type: locatorType,
-        text: actualText,
-        options,
-      };
-    }
-
+  switch (engine as SemanticLocatorType) {
+    case 'role':
+      return parseRoleLocator(rest);
+    case 'text':
+      return parseTextBasedLocator('text', rest, { exact: false, ignoreCase: true, includeHidden: false });
+    case 'label':
+      return parseLabelLocator(rest);
+    case 'placeholder':
+      return parseTextBasedLocator('placeholder', rest, { exact: false, ignoreCase: true, includeHidden: false });
     case 'alt':
-    case 'title': {
-      const lastPart = parts[parts.length - 1];
-      const hasOptions = lastPart && isOptionString(lastPart);
-
-      const actualText = hasOptions ? parts.slice(0, -1).join(':') : parts.join(':');
-      const options = hasOptions
-        ? parseOptions([lastPart], { exact: false, ignoreCase: true, includeHidden: false })
-        : { exact: false, ignoreCase: true, includeHidden: false };
-
-      return {
-        type: locatorType,
-        text: actualText,
-        options,
-      };
-    }
-
-    case 'testid': {
-      const value = parts.join(':');
-      return {
-        type: 'testid',
-        value,
-        options: { exact: true, ignoreCase: false, includeHidden: false },
-      };
-    }
-
+      return parseTextBasedLocator('alt', rest, { exact: false, ignoreCase: true, includeHidden: false });
+    case 'title':
+      return parseTextBasedLocator('title', rest, { exact: false, ignoreCase: true, includeHidden: false });
+    case 'testid':
+      return parseTestIdLocator(rest);
+    case 'xpath':
+      return parseXPathLocator(rest);
     default:
       return null;
   }
 }
 
-/** Check if a string part represents options (exact, case, etc.) */
-function isOptionString(part: string): boolean {
-  const lower = part.toLowerCase();
-  return ['exact', 'contains', 'case', 'nocase', 'hidden'].includes(lower);
-}
+/**
+ * Parse role locator: button, button[name="Submit"], button[name="Submit"][exact][hidden]
+ */
+function parseRoleLocator(rest: string): RoleLocator | null {
+  const { value: role, brackets } = extractBrackets(rest);
+  if (!role) return null;
 
-/** Parse option strings into SemanticLocatorOptions */
-function parseOptions(
-  parts: string[],
-  defaults: SemanticLocatorOptions,
-): SemanticLocatorOptions {
-  const options = { ...defaults };
+  let name: string | undefined;
+  const options: SemanticLocatorOptions = { exact: false, ignoreCase: true, includeHidden: false };
 
-  for (const part of parts) {
-    const lower = part.toLowerCase();
-    switch (lower) {
-      case 'exact':
-        options.exact = true;
-        break;
-      case 'contains':
-        options.exact = false;
-        break;
-      case 'case':
-        options.ignoreCase = false;
-        break;
-      case 'nocase':
-        options.ignoreCase = true;
-        break;
-      case 'hidden':
-        options.includeHidden = true;
-        break;
+  for (const bracket of brackets) {
+    const lower = bracket.toLowerCase();
+    if (lower.startsWith('name=')) {
+      name = unquote(bracket.substring(5));
+    } else if (lower === 'exact') {
+      options.exact = true;
+    } else if (lower === 'hidden') {
+      options.includeHidden = true;
     }
   }
 
-  return options;
+  return {
+    type: 'role',
+    role: role.toLowerCase(),
+    name,
+    options,
+  };
+}
+
+/**
+ * Parse text-based locators (text, placeholder, alt, title).
+ * Supports quoted values for exact match: text="Submit"
+ * Supports bracket options: text=Submit[exact][hidden]
+ */
+function parseTextBasedLocator(
+  type: 'text' | 'placeholder' | 'alt' | 'title',
+  rest: string,
+  defaults: SemanticLocatorOptions,
+): TextLocator | PlaceholderLocator | AltLocator | TitleLocator | null {
+  const { value: rawValue, brackets } = extractBrackets(rest);
+  if (!rawValue) return null;
+
+  // Check if the value is quoted (exact match)
+  const isQuoted = rawValue.startsWith('"') && rawValue.endsWith('"') && rawValue.length >= 2;
+  const text = isQuoted ? rawValue.slice(1, -1) : rawValue;
+
+  const options = { ...defaults };
+  if (isQuoted) {
+    options.exact = true;
+  }
+
+  // Apply bracket options
+  for (const bracket of brackets) {
+    applyBracketOption(options, bracket);
+  }
+
+  if (type === 'text') {
+    return { type: 'text', text, options };
+  }
+  if (type === 'placeholder' || type === 'alt' || type === 'title') {
+    return { type, text, options };
+  }
+  return null;
+}
+
+/**
+ * Parse label locator: Email, "Email", Email[exact]
+ */
+function parseLabelLocator(rest: string): LabelLocator | null {
+  const { value: rawValue, brackets } = extractBrackets(rest);
+  if (!rawValue) return null;
+
+  const isQuoted = rawValue.startsWith('"') && rawValue.endsWith('"') && rawValue.length >= 2;
+  const labelText = isQuoted ? rawValue.slice(1, -1) : rawValue;
+
+  const options: SemanticLocatorOptions = { exact: false, ignoreCase: true, includeHidden: false };
+  if (isQuoted) {
+    options.exact = true;
+  }
+
+  for (const bracket of brackets) {
+    applyBracketOption(options, bracket);
+  }
+
+  return { type: 'label', labelText, options };
+}
+
+/**
+ * Parse testid locator: always exact, case-sensitive.
+ * testid=login-button, testid=btn.submit.primary
+ */
+function parseTestIdLocator(rest: string): TestIdLocator | null {
+  if (!rest) return null;
+
+  // testid supports [hidden] bracket only
+  const { value, brackets } = extractBrackets(rest);
+  if (!value) return null;
+
+  const options: SemanticLocatorOptions = { exact: true, ignoreCase: false, includeHidden: false };
+
+  for (const bracket of brackets) {
+    const lower = bracket.toLowerCase();
+    if (lower === 'hidden') {
+      options.includeHidden = true;
+    }
+  }
+
+  return { type: 'testid', value, options };
+}
+
+/**
+ * Parse XPath locator: raw XPath expression, no bracket options.
+ * xpath=//button[@type="submit"]
+ */
+function parseXPathLocator(rest: string): XPathLocator | null {
+  if (!rest) return null;
+
+  return {
+    type: 'xpath',
+    expression: rest,
+    options: { exact: true, ignoreCase: false, includeHidden: false },
+  };
+}
+
+/** Known bracket option keywords */
+const BRACKET_OPTIONS = new Set(['exact', 'hidden']);
+
+/**
+ * Extract trailing [...] brackets from a string.
+ * Only extracts brackets whose content is a known option or name=... attribute.
+ *
+ * "button[name=\"Submit\"][exact]" → { value: "button", brackets: ["name=\"Submit\"", "exact"] }
+ * "//button[@type=\"submit\"]"    → { value: "//button[@type=\"submit\"]", brackets: [] }
+ */
+function extractBrackets(input: string): { value: string; brackets: string[] } {
+  const brackets: string[] = [];
+  let remaining = input;
+
+  // Extract brackets from the end, right-to-left
+  while (remaining.endsWith(']')) {
+    // Find matching opening bracket — need to handle nested brackets for XPath etc.
+    const closeIdx = remaining.length - 1;
+    let openIdx = -1;
+    let depth = 0;
+
+    for (let i = closeIdx; i >= 0; i--) {
+      if (remaining[i] === ']') {
+        depth++;
+      } else if (remaining[i] === '[') {
+        depth--;
+        if (depth === 0) {
+          openIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (openIdx === -1) break;
+
+    const bracketContent = remaining.substring(openIdx + 1, closeIdx);
+
+    // Only extract if it's a recognized option or name= attribute
+    if (isKnownBracket(bracketContent)) {
+      brackets.unshift(bracketContent);
+      remaining = remaining.substring(0, openIdx);
+    } else {
+      break;
+    }
+  }
+
+  return { value: remaining, brackets };
+}
+
+/** Check if bracket content is a known option */
+function isKnownBracket(content: string): boolean {
+  const lower = content.toLowerCase();
+  if (BRACKET_OPTIONS.has(lower)) return true;
+  if (lower.startsWith('name=')) return true;
+  return false;
+}
+
+/** Remove surrounding quotes from a string */
+function unquote(value: string): string {
+  if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
+    return value.slice(1, -1);
+  }
+  if (value.startsWith("'") && value.endsWith("'") && value.length >= 2) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
+/** Apply a bracket option to options object */
+function applyBracketOption(options: SemanticLocatorOptions, bracket: string): void {
+  const lower = bracket.toLowerCase();
+  if (lower === 'exact') {
+    options.exact = true;
+  } else if (lower === 'hidden') {
+    options.includeHidden = true;
+  }
 }
 
 /**
@@ -266,42 +377,63 @@ function parseOptions(
  * @returns Formatted string
  *
  * @example
- * formatSemanticLocator({ type: 'role', role: 'button', name: 'Submit', options: { exact: true } })
- * // => 'role:button:Submit:exact'
+ * formatSemanticLocator({ type: 'role', role: 'button', name: 'Submit', options: {} })
+ * // => 'role=button[name="Submit"]'
+ *
+ * formatSemanticLocator({ type: 'text', text: 'Sign In', options: { exact: true } })
+ * // => 'text="Sign In"'
  */
 export function formatSemanticLocator(locator: SemanticLocator): string {
-  const optionParts: string[] = [];
+  const optionBrackets: string[] = [];
 
-  if (locator.options.exact !== undefined) {
-    optionParts.push(locator.options.exact ? 'exact' : 'contains');
-  }
-  if (locator.options.ignoreCase === false) {
-    optionParts.push('case');
+  if (locator.options.exact) {
+    // For text-based locators, prefer quoted syntax over [exact] bracket
+    // Role locators always use [exact] bracket since they have name brackets
   }
   if (locator.options.includeHidden) {
-    optionParts.push('hidden');
+    optionBrackets.push('[hidden]');
   }
 
   switch (locator.type) {
     case 'role': {
-      const parts = ['role', locator.role];
-      if (locator.name) parts.push(locator.name);
-      parts.push(...optionParts);
-      return parts.join(':');
+      let result = `role=${locator.role}`;
+      if (locator.name) {
+        result += `[name="${locator.name}"]`;
+      }
+      if (locator.options.exact) {
+        result += '[exact]';
+      }
+      result += optionBrackets.join('');
+      return result;
     }
 
-    case 'text':
-      return ['text', locator.text, ...optionParts].join(':');
+    case 'text': {
+      if (locator.options.exact) {
+        return `text="${locator.text}"` + optionBrackets.join('');
+      }
+      return `text=${locator.text}` + optionBrackets.join('');
+    }
 
-    case 'label':
-      return ['label', locator.labelText, ...optionParts].join(':');
+    case 'label': {
+      if (locator.options.exact) {
+        return `label="${locator.labelText}"` + optionBrackets.join('');
+      }
+      return `label=${locator.labelText}` + optionBrackets.join('');
+    }
 
     case 'placeholder':
     case 'alt':
-    case 'title':
-      return [locator.type, locator.text, ...optionParts].join(':');
+    case 'title': {
+      if (locator.options.exact) {
+        return `${locator.type}="${locator.text}"` + optionBrackets.join('');
+      }
+      return `${locator.type}=${locator.text}` + optionBrackets.join('');
+    }
 
     case 'testid':
-      return `testid:${locator.value}`;
+      return `testid=${locator.value}` + optionBrackets.join('');
+
+    case 'xpath':
+      return `xpath=${locator.expression}`;
   }
 }
