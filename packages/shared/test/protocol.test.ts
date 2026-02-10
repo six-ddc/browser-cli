@@ -61,8 +61,14 @@ describe('errors', () => {
   });
 
   it('creates errors with details', () => {
-    const err = createError(ErrorCode.TIMEOUT, 'timed out', { ms: 5000 });
+    const err = createError(ErrorCode.TIMEOUT, 'timed out', undefined, { ms: 5000 });
     expect(err.details).toEqual({ ms: 5000 });
+  });
+
+  it('creates errors with hint', () => {
+    const err = createError(ErrorCode.TIMEOUT, 'timed out', 'Try increasing the timeout');
+    expect(err.hint).toBe('Try increasing the timeout');
+    expect(err.details).toBeUndefined();
   });
 });
 

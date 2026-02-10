@@ -37,6 +37,38 @@ getCmd
     if (result) console.log(result.value ?? 'null');
   });
 
+getCmd
+  .command('url')
+  .description('Get the current page URL')
+  .action(async (_opts: unknown, cmd: Command) => {
+    const result = await sendCommand(cmd, { action: 'getUrl', params: {} });
+    if (result) console.log(result.url);
+  });
+
+getCmd
+  .command('title')
+  .description('Get the current page title')
+  .action(async (_opts: unknown, cmd: Command) => {
+    const result = await sendCommand(cmd, { action: 'getTitle', params: {} });
+    if (result) console.log(result.title);
+  });
+
+getCmd
+  .command('count <selector>')
+  .description('Count matching elements')
+  .action(async (selector: string, _opts: unknown, cmd: Command) => {
+    const result = await sendCommand(cmd, { action: 'count', params: { selector } });
+    if (result) console.log(result.count);
+  });
+
+getCmd
+  .command('box <selector>')
+  .description('Get bounding box of an element')
+  .action(async (selector: string, _opts: unknown, cmd: Command) => {
+    const result = await sendCommand(cmd, { action: 'boundingBox', params: { selector } });
+    if (result) console.log(`x=${result.x} y=${result.y} w=${result.width} h=${result.height}`);
+  });
+
 export { getCmd as getCommand };
 
 // is commands
@@ -68,19 +100,3 @@ isCmd
   });
 
 export { isCmd as isCommand };
-
-export const countCommand = new Command('count')
-  .description('Count matching elements')
-  .argument('<selector>', 'CSS selector')
-  .action(async (selector: string, _opts: unknown, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'count', params: { selector } });
-    if (result) console.log(result.count);
-  });
-
-export const boundingBoxCommand = new Command('boundingbox')
-  .description('Get bounding box of an element')
-  .argument('<selector>', 'CSS selector or @ref')
-  .action(async (selector: string, _opts: unknown, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'boundingBox', params: { selector } });
-    if (result) console.log(`x=${result.x} y=${result.y} w=${result.width} h=${result.height}`);
-  });

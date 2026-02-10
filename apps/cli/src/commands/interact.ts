@@ -47,11 +47,11 @@ export const typeCommand = new Command('type')
   });
 
 export const pressCommand = new Command('press')
-  .description('Press a key on an element')
-  .argument('<selector>', 'CSS selector or @ref')
+  .description('Press a key')
   .argument('<key>', 'Key to press (e.g., Enter, Escape, Tab)')
-  .action(async (selector: string, key: string, _opts: unknown, cmd: Command) => {
-    await sendCommand(cmd, { action: 'press', params: { selector, key } });
+  .alias('key')
+  .action(async (key: string, _opts: unknown, cmd: Command) => {
+    await sendCommand(cmd, { action: 'press', params: { key } });
     console.log('Pressed');
   });
 

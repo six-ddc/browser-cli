@@ -7,6 +7,8 @@
  *   find role button click
  *   find role button click --name "Submit"
  *   find text "Sign In" click
+ *   find text "Sign In"                   # defaults to click
+ *   find role button --name "Submit"       # defaults to click
  *   find label "Email" fill "test@test.com"
  *   find xpath "//button[@type='submit']" click
  *   find first ".item" click
@@ -73,8 +75,8 @@ function buildLocator(engine: Engine, value: string, opts: { name?: string; exac
  *   nth <n> <selector> <action> [actionValue]
  */
 export function parseFindArgs(args: string[], opts: { name?: string; exact?: boolean }): ParsedFind {
-  if (args.length < 3) {
-    throw new Error('Usage: find <engine> <value> <action> [action-value]\n  or:  find first|last <selector> <action> [action-value]\n  or:  find nth <n> <selector> <action> [action-value]');
+  if (args.length < 2) {
+    throw new Error('Usage: find <engine> <value> [action] [action-value]\n  or:  find first|last <selector> [action] [action-value]\n  or:  find nth <n> <selector> [action] [action-value]');
   }
 
   const first = args[0];
@@ -82,13 +84,14 @@ export function parseFindArgs(args: string[], opts: { name?: string; exact?: boo
   // Position selectors: first, last, nth
   if (first === 'first' || first === 'last') {
     const [, selector, action, ...rest] = args;
-    if (!selector || !action) {
-      throw new Error(`Usage: find ${first} <selector> <action> [action-value]`);
+    if (!selector) {
+      throw new Error(`Usage: find ${first} <selector> [action] [action-value]`);
     }
-    validateAction(action);
+    const resolvedAction = action || 'click';
+    validateAction(resolvedAction);
     return {
       selector,
-      action,
+      action: resolvedAction,
       actionValue: rest[0],
       position: { type: first as PositionSelector },
     };
@@ -96,17 +99,18 @@ export function parseFindArgs(args: string[], opts: { name?: string; exact?: boo
 
   if (first === 'nth') {
     const [, indexStr, selector, action, ...rest] = args;
-    if (!indexStr || !selector || !action) {
-      throw new Error('Usage: find nth <n> <selector> <action> [action-value]');
+    if (!indexStr || !selector) {
+      throw new Error('Usage: find nth <n> <selector> [action] [action-value]');
     }
     const index = parseInt(indexStr, 10);
     if (isNaN(index) || index < 0) {
       throw new Error(`Invalid index: ${indexStr}. Must be a non-negative integer.`);
     }
-    validateAction(action);
+    const resolvedAction = action || 'click';
+    validateAction(resolvedAction);
     return {
       selector,
-      action,
+      action: resolvedAction,
       actionValue: rest[0],
       position: { type: 'nth', index },
     };
@@ -119,15 +123,16 @@ export function parseFindArgs(args: string[], opts: { name?: string; exact?: boo
   }
 
   const [, value, action, ...rest] = args;
-  if (!value || !action) {
-    throw new Error(`Usage: find ${engine} <value> <action> [action-value]`);
+  if (!value) {
+    throw new Error(`Usage: find ${engine} <value> [action] [action-value]`);
   }
-  validateAction(action);
+  const resolvedAction = action || 'click';
+  validateAction(resolvedAction);
 
   const selector = buildLocator(engine, value, opts);
   return {
     selector,
-    action,
+    action: resolvedAction,
     actionValue: rest[0],
   };
 }
@@ -181,7 +186,7 @@ const ACTION_LABELS: Record<string, string> = {
 
 export const findCommand = new Command('find')
   .description('Find an element by semantic locator and perform an action')
-  .argument('<args...>', 'Engine, value, action, and optional action-value')
+  .argument('<args...>', 'Engine, value, optional action, and optional action-value')
   .option('--name <name>', 'Filter by accessible name (for role engine)')
   .option('--exact', 'Require exact text match')
   .action(async (args: string[], opts: { name?: string; exact?: boolean }, cmd: Command) => {

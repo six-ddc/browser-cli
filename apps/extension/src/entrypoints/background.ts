@@ -1,7 +1,8 @@
 import { WsClient } from '../lib/ws-client';
 import { getPort, setState } from '../lib/state';
 import type { RequestMessage, ResponseMessage } from '@browser-cli/shared';
-import { ErrorCode, createError } from '@browser-cli/shared';
+import { ErrorCode } from '@browser-cli/shared';
+import { classifyError } from '../lib/error-classifier';
 import { NetworkManager } from '../lib/network-manager';
 
 let wsClient: WsClient | null = null;
@@ -62,10 +63,7 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
       id,
       type: 'response',
       success: false,
-      error: createError(
-        ErrorCode.CONTENT_SCRIPT_ERROR,
-        (err as Error).message || 'Unknown error',
-      ),
+      error: classifyError(err, ErrorCode.CONTENT_SCRIPT_ERROR),
     };
   }
 }

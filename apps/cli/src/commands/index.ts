@@ -8,8 +8,6 @@ import {
   backCommand,
   forwardCommand,
   reloadCommand,
-  urlCommand,
-  titleCommand,
 } from './navigate.js';
 // Interaction
 import {
@@ -28,7 +26,7 @@ import { uploadCommand } from './upload.js';
 // Scroll
 import { scrollCommand, scrollIntoViewCommand } from './scroll.js';
 // Data queries
-import { getCommand, isCommand, countCommand, boundingBoxCommand } from './query.js';
+import { getCommand, isCommand } from './query.js';
 // Snapshot
 import { snapshotCommand } from './snapshot.js';
 // Screenshot
@@ -67,8 +65,6 @@ export function registerCommands(program: Command): void {
   program.addCommand(backCommand);
   program.addCommand(forwardCommand);
   program.addCommand(reloadCommand);
-  program.addCommand(urlCommand);
-  program.addCommand(titleCommand);
 
   // Interaction
   program.addCommand(clickCommand);
@@ -93,8 +89,6 @@ export function registerCommands(program: Command): void {
   // Data queries
   program.addCommand(getCommand);
   program.addCommand(isCommand);
-  program.addCommand(countCommand);
-  program.addCommand(boundingBoxCommand);
 
   // Snapshot
   program.addCommand(snapshotCommand);

@@ -56,17 +56,37 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - TestID always exact, case-sensitive: `testid=login-button`
 
 ### Find Command (AgentBrowser-compatible)
-- `find <engine> <value> <action> [action-value]` — locate + act in one step
+- `find <engine> <value> [action] [action-value]` — locate + act in one step
+- Action defaults to `click` when omitted
 - Engines: role, text, label, placeholder, alt, title, testid, xpath
 - Position selectors: first, last, nth (e.g., `find nth 2 ".item" click`)
 - Options: `--name` (for role), `--exact` (exact text match)
 - Actions: click, dblclick, fill, type, hover, check, uncheck, select, press, clear, focus
 
+### Error Message Design
+- Error messages are consumed by AI agents, not just humans
+- Every error must include a clear description of what went wrong
+- Every error should include a `hint` suggesting what the AI should do next
+- Use specific error codes (not catch-all `CONTENT_SCRIPT_ERROR`) — map to the closest `ErrorCode`
+- Translate browser-internal errors (e.g., "Receiving end does not exist") into understandable language
+- Error classifier in `apps/extension/src/lib/error-classifier.ts` maps Chrome errors to structured errors
+
 ### Snapshot Flags (AgentBrowser-compatible)
 - `-i` / `--interactive` — only interactive elements
 - `-c` / `--compact` — compact output
+- `-C` / `--cursor` — include cursor-interactive elements (cursor:pointer)
 - `-d` / `--depth <n>` — max tree depth
 - `-s` / `--selector <sel>` — scope to element
+
+### Command Syntax (AgentBrowser-compatible)
+- `press <key>` — page-level key press (no selector, alias: `key`)
+- `wait <selector>` / `wait <ms>` / `wait --url <pattern>` — unified wait
+- `tab` / `tab <n>` / `tab new` / `tab close` — tab management
+- `frame <selector>` / `frame main` / `frame list` — frame management
+- `get url` / `get title` / `get count` / `get box` — data queries as subcommands
+- `cookies set <name> <value> --url <url>` — positional args for cookie set
+- `storage local [key]` / `storage session [key]` — area as subcommand
+- `network route <pattern> --abort` — use --abort (not --block)
 
 ## Gotchas
 - WXT + Vite 7 requires Node >= 20 (crypto.hash API)

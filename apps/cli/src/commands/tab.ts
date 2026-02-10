@@ -2,7 +2,29 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const tabCmd = new Command('tab')
-  .description('Tab management');
+  .description('Tab management')
+  .argument('[tabId]', 'Tab ID to switch to (or subcommand)')
+  .action(async (tabId: string | undefined, _opts: unknown, cmd: Command) => {
+    // If tabId is a number, switch to that tab
+    if (tabId && !isNaN(parseInt(tabId, 10))) {
+      const result = await sendCommand(cmd, { action: 'tabSwitch', params: { tabId: parseInt(tabId, 10) } });
+      if (result) console.log(`Switched to tab ${result.tabId}: ${result.title}`);
+      return;
+    }
+
+    // Default: list tabs (when no args or unrecognized arg)
+    if (!tabId) {
+      const result = await sendCommand(cmd, { action: 'tabList', params: {} });
+      if (result) {
+        const tabs = result.tabs as Array<{ id: number; url: string; title: string; active: boolean }>;
+        for (const tab of tabs) {
+          const marker = tab.active ? '→' : ' ';
+          console.log(`${marker} [${tab.id}] ${tab.title}`);
+          console.log(`   ${tab.url}`);
+        }
+      }
+    }
+  });
 
 tabCmd
   .command('new [url]')
@@ -25,14 +47,6 @@ tabCmd
         console.log(`   ${tab.url}`);
       }
     }
-  });
-
-tabCmd
-  .command('switch <tabId>')
-  .description('Switch to a tab')
-  .action(async (tabId: string, _opts: unknown, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'tabSwitch', params: { tabId: parseInt(tabId, 10) } });
-    if (result) console.log(`Switched to tab ${result.tabId}: ${result.title}`);
   });
 
 tabCmd

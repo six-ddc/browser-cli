@@ -2,42 +2,57 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 export const waitCommand = new Command('wait')
-  .description('Wait for a selector to appear or for a duration')
-  .argument('[selector]', 'CSS selector (optional if --duration is used)')
-  .option('--duration <ms>', 'Time to wait in milliseconds')
-  .option('--timeout <ms>', 'Timeout in ms (for selector wait)', '10000')
+  .description('Wait for a selector, duration, or URL pattern')
+  .argument('[selectorOrMs]', 'CSS selector or duration in ms')
+  .option('--timeout <ms>', 'Timeout in ms (for selector/URL wait)', '10000')
   .option('--hidden', 'Wait until hidden (not visible)')
-  .action(async (selector: string | undefined, opts: { duration?: string; timeout: string; hidden?: boolean }, cmd: Command) => {
-    // Validate that either selector or duration is provided
-    if (!selector && !opts.duration) {
-      console.error('Error: Either <selector> or --duration must be provided');
+  .option('--url <pattern>', 'Wait for URL to match pattern')
+  .action(async (selectorOrMs: string | undefined, opts: { timeout: string; hidden?: boolean; url?: string }, cmd: Command) => {
+    // URL wait mode
+    if (opts.url) {
+      const result = await sendCommand(cmd, {
+        action: 'waitForUrl',
+        params: {
+          pattern: opts.url,
+          timeout: parseInt(opts.timeout, 10),
+        },
+      });
+      if (result) console.log(result.url);
+      return;
+    }
+
+    if (!selectorOrMs) {
+      console.error('Error: Provide a selector, duration (ms), or --url <pattern>');
       process.exit(1);
     }
 
-    const params: { selector?: string; duration?: number; timeout?: number; visible?: boolean } = {};
-
-    if (opts.duration) {
-      params.duration = parseInt(opts.duration, 10);
-    } else if (selector) {
-      params.selector = selector;
-      params.timeout = parseInt(opts.timeout, 10);
-      params.visible = !opts.hidden;
+    // Check if it's a numeric duration
+    const maybeMs = parseInt(selectorOrMs, 10);
+    if (!isNaN(maybeMs) && String(maybeMs) === selectorOrMs) {
+      // Duration wait
+      await sendCommand(cmd, {
+        action: 'wait',
+        params: { duration: maybeMs },
+      });
+      console.log(`Waited for ${maybeMs}ms`);
+      return;
     }
 
+    // Selector wait
     await sendCommand(cmd, {
       action: 'wait',
-      params,
+      params: {
+        selector: selectorOrMs,
+        timeout: parseInt(opts.timeout, 10),
+        visible: !opts.hidden,
+      },
     });
-
-    if (opts.duration) {
-      console.log(`Waited for ${opts.duration}ms`);
-    } else {
-      console.log(`Found: ${selector}`);
-    }
+    console.log(`Found: ${selectorOrMs}`);
   });
 
+// Keep waitForUrlCommand as an alias for backward compatibility
 export const waitForUrlCommand = new Command('waitforurl')
-  .description('Wait for URL to match a pattern')
+  .description('Wait for URL to match a pattern (alias for wait --url)')
   .argument('<pattern>', 'URL regex pattern')
   .option('--timeout <ms>', 'Timeout in ms', '10000')
   .action(async (pattern: string, opts: { timeout: string }, cmd: Command) => {

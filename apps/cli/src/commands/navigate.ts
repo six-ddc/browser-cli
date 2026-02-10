@@ -32,16 +32,3 @@ export const reloadCommand = new Command('reload')
     if (result) console.log(`${result.title}\n${result.url}`);
   });
 
-export const urlCommand = new Command('url')
-  .description('Get the current page URL')
-  .action(async (_opts: unknown, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'getUrl', params: {} });
-    if (result) console.log(result.url);
-  });
-
-export const titleCommand = new Command('title')
-  .description('Get the current page title')
-  .action(async (_opts: unknown, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'getTitle', params: {} });
-    if (result) console.log(result.title);
-  });

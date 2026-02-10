@@ -23,6 +23,7 @@ export class Bridge {
         error: createError(
           ErrorCode.EXTENSION_NOT_CONNECTED,
           'Extension is not connected. Please ensure the Browser-CLI extension is installed and enabled.',
+          "Check that the Browser-CLI extension is installed, enabled, and the browser is open. Run 'browser-cli status' to verify.",
         ),
       };
     }
