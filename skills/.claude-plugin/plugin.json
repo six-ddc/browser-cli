@@ -1,0 +1,6 @@
+{
+  "name": "browser-cli",
+  "version": "0.1.0",
+  "description": "Browser automation via CLI — navigate, interact, query, and control a real browser using the browser-cli extension-based architecture",
+  "skills": ["browser-cli"]
+}
