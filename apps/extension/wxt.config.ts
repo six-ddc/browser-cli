@@ -6,7 +6,17 @@ export default defineConfig({
   manifest: {
     name: 'Browser-CLI',
     description: 'Browser automation from the command line — extension bridge',
-    permissions: ['activeTab', 'tabs', 'cookies', 'scripting', 'storage', 'alarms'],
+    permissions: [
+      'activeTab',
+      'tabs',
+      'cookies',
+      'scripting',
+      'storage',
+      'alarms',
+      'declarativeNetRequest',
+      'declarativeNetRequestFeedback',
+      'webRequest',
+    ],
     host_permissions: ['<all_urls>'],
     content_security_policy: {
       extension_pages:

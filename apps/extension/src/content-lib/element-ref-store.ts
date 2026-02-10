@@ -2,9 +2,12 @@
  * Element reference store for the current page.
  * Maps @e1, @e2, etc. to CSS selectors.
  * Re-generated on each snapshot call.
+ *
+ * Also resolves semantic locators (role:button:Submit, text:Sign In, etc.)
  */
 
-import { isElementRef } from '@browser-cli/shared';
+import { isElementRef, isSemanticLocator, parseSemanticLocator } from '@browser-cli/shared';
+import { resolveSemanticLocator } from './semantic-locators';
 
 interface RefEntry {
   ref: string;
@@ -34,8 +37,9 @@ export function getRefCount(): number {
   return refCounter;
 }
 
-/** Resolve a selector (may be @e1 or a CSS selector) to a DOM element */
+/** Resolve a selector (may be @e1, semantic locator, or CSS selector) to a DOM element */
 export function resolveElement(selectorOrRef: string): Element | null {
+  // Handle element refs (@e1, @e2, etc.)
   if (isElementRef(selectorOrRef)) {
     const entry = refMap.get(selectorOrRef);
     if (!entry) return null;
@@ -48,16 +52,36 @@ export function resolveElement(selectorOrRef: string): Element | null {
     return document.querySelector(entry.selector);
   }
 
+  // Handle semantic locators (role:button:Submit, text:Sign In, etc.)
+  if (isSemanticLocator(selectorOrRef)) {
+    const locator = parseSemanticLocator(selectorOrRef);
+    if (!locator) return null;
+
+    const elements = resolveSemanticLocator(locator);
+    return elements[0] || null;
+  }
+
   // Plain CSS selector
   return document.querySelector(selectorOrRef);
 }
 
 /** Resolve to all matching elements (for count, etc.) */
 export function resolveElements(selectorOrRef: string): Element[] {
+  // Handle element refs (@e1, @e2, etc.)
   if (isElementRef(selectorOrRef)) {
     const el = resolveElement(selectorOrRef);
     return el ? [el] : [];
   }
+
+  // Handle semantic locators (role:button:Submit, text:Sign In, etc.)
+  if (isSemanticLocator(selectorOrRef)) {
+    const locator = parseSemanticLocator(selectorOrRef);
+    if (!locator) return [];
+
+    return resolveSemanticLocator(locator);
+  }
+
+  // Plain CSS selector
   return Array.from(document.querySelectorAll(selectorOrRef));
 }
 

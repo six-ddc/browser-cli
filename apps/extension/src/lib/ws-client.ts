@@ -22,6 +22,7 @@ export interface WsClientOptions {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onHandshake?: (ack: HandshakeAckMessage) => void;
+  onReconnecting?: (nextRetryMs: number) => void;
   messageHandler?: MessageHandler;
 }
 
@@ -37,6 +38,8 @@ export class WsClient {
   private sessionId: string | null = null;
   private options: WsClientOptions;
   private stopped = false;
+  /** Monotonic counter to detect stale WebSocket callbacks */
+  private generation = 0;
 
   constructor(options: WsClientOptions = {}) {
     this.port = options.port ?? DEFAULT_WS_PORT;
@@ -51,6 +54,14 @@ export class WsClient {
     return this.sessionId;
   }
 
+  get isReconnecting(): boolean {
+    return this.reconnectTimer !== null;
+  }
+
+  get nextRetryMs(): number {
+    return this.backoff;
+  }
+
   start(): void {
     this.stopped = false;
     this.connect();
@@ -58,38 +69,55 @@ export class WsClient {
 
   stop(): void {
     this.stopped = true;
+    this.cleanup();
+  }
+
+  updatePort(port: number): void {
+    this.port = port;
+    this.cleanup();
+    this.stopped = false;
+    this.backoff = INITIAL_BACKOFF_MS;
+    this.connect();
+  }
+
+  private cleanup(): void {
+    // Bump generation so any pending callbacks from the old ws become no-ops
+    this.generation++;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
     if (this.ws) {
+      // Remove handlers before closing to prevent stale callbacks
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onclose = null;
+      this.ws.onerror = null;
       this.ws.close();
       this.ws = null;
     }
     this.connected = false;
-  }
-
-  updatePort(port: number): void {
-    this.port = port;
-    // Reconnect with new port
-    this.stop();
-    this.stopped = false;
-    this.connect();
+    this.sessionId = null;
   }
 
   private connect(): void {
     if (this.stopped) return;
 
+    const gen = ++this.generation;
+    console.log(`[browser-cli] Connecting to ws://127.0.0.1:${this.port}...`);
+
     try {
       this.ws = new WebSocket(`ws://127.0.0.1:${this.port}`);
-    } catch {
+    } catch (err) {
+      console.error('[browser-cli] Failed to create WebSocket:', err);
       this.scheduleReconnect();
       return;
     }
 
     this.ws.onopen = () => {
+      if (gen !== this.generation) return;
+      console.log('[browser-cli] WebSocket opened, sending handshake...');
       this.backoff = INITIAL_BACKOFF_MS;
-      // Send handshake
       const handshake = {
         type: 'handshake' as const,
         protocolVersion: PROTOCOL_VERSION,
@@ -99,15 +127,19 @@ export class WsClient {
     };
 
     this.ws.onmessage = (event) => {
+      if (gen !== this.generation) return;
       try {
         const msg = JSON.parse(event.data as string) as WsMessage;
+        console.log('[browser-cli] Received message:', msg.type, msg);
         this.handleMessage(msg);
-      } catch {
-        console.error('[browser-cli] Failed to parse WS message');
+      } catch (err) {
+        console.error('[browser-cli] Failed to parse WS message:', err, event.data);
       }
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = (event) => {
+      if (gen !== this.generation) return;
+      console.log('[browser-cli] WebSocket closed:', event.code, event.reason);
       const wasConnected = this.connected;
       this.connected = false;
       this.sessionId = null;
@@ -117,8 +149,9 @@ export class WsClient {
       this.scheduleReconnect();
     };
 
-    this.ws.onerror = () => {
-      // onclose will fire after this
+    this.ws.onerror = (event) => {
+      if (gen !== this.generation) return;
+      console.error('[browser-cli] WebSocket error:', event);
     };
   }
 
@@ -163,9 +196,18 @@ export class WsClient {
 
   private scheduleReconnect(): void {
     if (this.stopped) return;
+    this.options.onReconnecting?.(this.backoff);
     this.reconnectTimer = setTimeout(() => {
       this.connect();
     }, this.backoff);
     this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF_MS);
+  }
+
+  /** Manually trigger reconnection (resets backoff) */
+  reconnect(): void {
+    this.cleanup();
+    this.stopped = false;
+    this.backoff = INITIAL_BACKOFF_MS;
+    this.connect();
   }
 }

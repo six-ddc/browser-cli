@@ -24,6 +24,7 @@ import {
 } from './interact.js';
 // Form
 import { checkCommand, uncheckCommand, selectCommand } from './form.js';
+import { uploadCommand } from './upload.js';
 // Scroll
 import { scrollCommand, scrollIntoViewCommand } from './scroll.js';
 // Data queries
@@ -48,6 +49,10 @@ import { storageCommand } from './storage.js';
 import { dialogCommand } from './dialog.js';
 // Highlight
 import { highlightCommand } from './highlight.js';
+// Frame
+import { frameCommand } from './frame.js';
+// Network
+import { networkCommand } from './network.js';
 
 export function registerCommands(program: Command): void {
   // Lifecycle
@@ -77,6 +82,7 @@ export function registerCommands(program: Command): void {
   program.addCommand(checkCommand);
   program.addCommand(uncheckCommand);
   program.addCommand(selectCommand);
+  program.addCommand(uploadCommand);
 
   // Scroll
   program.addCommand(scrollCommand);
@@ -119,4 +125,10 @@ export function registerCommands(program: Command): void {
 
   // Highlight
   program.addCommand(highlightCommand);
+
+  // Frame
+  program.addCommand(frameCommand);
+
+  // Network
+  program.addCommand(networkCommand);
 }

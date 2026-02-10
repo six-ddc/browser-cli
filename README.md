@@ -31,6 +31,8 @@ Browser-CLI uses a browser extension as a bridge instead of a browser driver, gi
 
 **Snapshots** — Accessibility tree snapshot with interactive element refs (`@e1`, `@e2`, ...)
 
+**Semantic Locators** — Find elements by role, text, label, placeholder, alt, title, or testid (Testing Library-style queries)
+
 **Screenshots** — Full page or element screenshots (PNG/JPEG)
 
 **Wait** — Wait for selector, URL pattern, or custom condition
@@ -64,7 +66,12 @@ git clone https://github.com/six-ddc/browser-cli.git
 cd browser-cli
 pnpm install
 pnpm build
+
+# Link the CLI command globally for local development
+cd apps/cli && pnpm link --global
 ```
+
+After linking, the `browser-cli` command will be available system-wide. Changes to the code will be reflected after running `pnpm build` (no need to re-link).
 
 ### Load the Extension
 
@@ -97,12 +104,19 @@ browser-cli navigate https://example.com
 # Get an accessibility snapshot with element refs
 browser-cli snapshot --interactive
 
-# Click an element using a ref or CSS selector
+# Click an element using a ref, semantic locator, or CSS selector
 browser-cli click @e1
+browser-cli click "role:button:Submit"
 browser-cli click "#submit-button"
 
-# Fill a form field
+# Fill a form field using label, placeholder, or CSS selector
+browser-cli fill "label:Email" "user@example.com"
+browser-cli fill "placeholder:Search..." "query"
 browser-cli fill "input[name=email]" "user@example.com"
+
+# Upload files (supports data URLs, blob URLs, or HTTP URLs)
+browser-cli upload "input[type=file]" "data:text/plain;base64,SGVsbG8="
+# See UPLOAD_TESTING.md for detailed usage and limitations
 
 # Take a screenshot
 browser-cli screenshot --path page.png
@@ -129,6 +143,36 @@ browser-cli stop
 --json             Output results in JSON format
 ```
 
+### Semantic Locators
+
+Browser-CLI supports Testing Library-style semantic locators for finding elements:
+
+```bash
+# By role and accessible name
+browser-cli click "role:button:Submit:exact"
+browser-cli click "role:textbox:Email"
+
+# By text content
+browser-cli click "text:Sign In"
+
+# By label text (for form inputs)
+browser-cli fill "label:Password" "secret123"
+
+# By placeholder
+browser-cli fill "placeholder:Search..." "query"
+
+# By alt text (images)
+browser-cli click "alt:Company Logo"
+
+# By title attribute
+browser-cli hover "title:Help Center"
+
+# By data-testid
+browser-cli click "testid:login-button"
+```
+
+See [SEMANTIC_LOCATORS.md](SEMANTIC_LOCATORS.md) for detailed documentation.
+
 ## Development
 
 ```bash
@@ -145,6 +189,27 @@ pnpm test          # Vitest
 
 # Format code
 pnpm format
+```
+
+### Running the CLI locally
+
+After building, you can run the CLI in several ways:
+
+```bash
+# Option 1: Use the globally linked command (recommended)
+browser-cli start
+
+# Option 2: Run directly via node
+node apps/cli/bin/cli.js start
+
+# Option 3: Run via pnpm
+pnpm --filter @browser-cli/cli exec browser-cli start
+```
+
+To unlink the global command:
+
+```bash
+cd apps/cli && pnpm unlink --global
 ```
 
 ## Packages
