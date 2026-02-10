@@ -242,6 +242,8 @@ export interface SnapshotParams {
   compact?: boolean;
   /** Max depth of tree traversal */
   depth?: number;
+  /** Scope snapshot to a specific selector (CSS, @ref, or semantic locator) */
+  selector?: string;
 }
 export interface SnapshotResult {
   snapshot: string;

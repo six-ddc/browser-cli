@@ -1,6 +1,6 @@
 /**
- * Semantic locator resolution: find elements by role, text, label, etc.
- * Provides Testing Library-style element queries.
+ * Semantic locator resolution: find elements by role, text, label, xpath, etc.
+ * Uses AgentBrowser-compatible = syntax (e.g. text=Submit, role=button[name="Submit"]).
  */
 
 import type {
@@ -12,6 +12,7 @@ import type {
   AltLocator,
   TitleLocator,
   TestIdLocator,
+  XPathLocator,
 } from '@browser-cli/shared';
 import {
   getAriaRole,
@@ -46,6 +47,8 @@ export function resolveSemanticLocator(
       return findByTitle(locator, root);
     case 'testid':
       return findByTestId(locator, root);
+    case 'xpath':
+      return findByXPath(locator, root);
   }
 }
 
@@ -353,6 +356,42 @@ export function findByTestId(locator: TestIdLocator, root: Element = document.bo
 
       results.push(el);
     }
+  }
+
+  return results;
+}
+
+/**
+ * Find elements by XPath expression.
+ *
+ * @example
+ * findByXPath({ type: 'xpath', expression: '//button[@type="submit"]', options: {} })
+ * // Finds: <button type="submit">Submit</button>
+ */
+export function findByXPath(locator: XPathLocator, root: Element = document.body): Element[] {
+  const { expression } = locator;
+  const results: Element[] = [];
+
+  // Guard: XPath not available in some test environments (happy-dom)
+  if (typeof XPathResult === 'undefined' || typeof document.evaluate !== 'function') {
+    return results;
+  }
+
+  const contextNode = root === document.body ? document : root;
+  const xpathResult = document.evaluate(
+    expression,
+    contextNode,
+    null,
+    XPathResult.ORDERED_NODE_ITERATOR_TYPE,
+    null,
+  );
+
+  let node = xpathResult.iterateNext();
+  while (node) {
+    if (node instanceof Element) {
+      results.push(node);
+    }
+    node = xpathResult.iterateNext();
   }
 
   return results;

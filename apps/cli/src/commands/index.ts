@@ -53,6 +53,8 @@ import { highlightCommand } from './highlight.js';
 import { frameCommand } from './frame.js';
 // Network
 import { networkCommand } from './network.js';
+// Find
+import { findCommand } from './find.js';
 
 export function registerCommands(program: Command): void {
   // Lifecycle
@@ -131,4 +133,7 @@ export function registerCommands(program: Command): void {
 
   // Network
   program.addCommand(networkCommand);
+
+  // Find (AgentBrowser-compatible)
+  program.addCommand(findCommand);
 }

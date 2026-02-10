@@ -13,30 +13,33 @@ import {
 
 const tests = [
   // Role locators
-  { input: 'role:button:Submit:exact', expected: { type: 'role', role: 'button', name: 'Submit', options: { exact: true, ignoreCase: true } } },
-  { input: 'role:button:Submit', expected: { type: 'role', role: 'button', name: 'Submit', options: { exact: true, ignoreCase: true } } },
-  { input: 'role:textbox:Email', expected: { type: 'role', role: 'textbox', name: 'Email', options: { exact: true, ignoreCase: true } } },
-  { input: 'role:button', expected: { type: 'role', role: 'button', name: undefined, options: { exact: true, ignoreCase: true } } },
+  { input: 'role=button[name="Submit"][exact]', expected: { type: 'role', role: 'button', name: 'Submit', options: { exact: true, ignoreCase: true } } },
+  { input: 'role=button[name="Submit"]', expected: { type: 'role', role: 'button', name: 'Submit', options: { exact: false, ignoreCase: true } } },
+  { input: 'role=textbox[name="Email"]', expected: { type: 'role', role: 'textbox', name: 'Email', options: { exact: false, ignoreCase: true } } },
+  { input: 'role=button', expected: { type: 'role', role: 'button', name: undefined, options: { exact: false, ignoreCase: true } } },
 
   // Text locators
-  { input: 'text:Sign In', expected: { type: 'text', text: 'Sign In', options: { exact: false, ignoreCase: true } } },
-  { input: 'text:Click here:exact', expected: { type: 'text', text: 'Click here', options: { exact: true, ignoreCase: true } } },
+  { input: 'text=Sign In', expected: { type: 'text', text: 'Sign In', options: { exact: false, ignoreCase: true } } },
+  { input: 'text="Click here"', expected: { type: 'text', text: 'Click here', options: { exact: true, ignoreCase: true } } },
 
   // Label locators
-  { input: 'label:Email', expected: { type: 'label', labelText: 'Email', options: { exact: false, ignoreCase: true } } },
-  { input: 'label:Password:exact', expected: { type: 'label', labelText: 'Password', options: { exact: true, ignoreCase: true } } },
+  { input: 'label=Email', expected: { type: 'label', labelText: 'Email', options: { exact: false, ignoreCase: true } } },
+  { input: 'label="Password"', expected: { type: 'label', labelText: 'Password', options: { exact: true, ignoreCase: true } } },
 
   // Placeholder locators
-  { input: 'placeholder:Search...', expected: { type: 'placeholder', text: 'Search...', options: { exact: false, ignoreCase: true } } },
+  { input: 'placeholder=Search...', expected: { type: 'placeholder', text: 'Search...', options: { exact: false, ignoreCase: true } } },
 
   // Alt locators
-  { input: 'alt:Logo', expected: { type: 'alt', text: 'Logo', options: { exact: false, ignoreCase: true } } },
+  { input: 'alt=Logo', expected: { type: 'alt', text: 'Logo', options: { exact: false, ignoreCase: true } } },
 
   // Title locators
-  { input: 'title:Help', expected: { type: 'title', text: 'Help', options: { exact: false, ignoreCase: true } } },
+  { input: 'title=Help', expected: { type: 'title', text: 'Help', options: { exact: false, ignoreCase: true } } },
 
   // TestID locators
-  { input: 'testid:login-button', expected: { type: 'testid', value: 'login-button', options: { exact: true, ignoreCase: false } } },
+  { input: 'testid=login-button', expected: { type: 'testid', value: 'login-button', options: { exact: true, ignoreCase: false } } },
+
+  // XPath locators
+  { input: 'xpath=//button', expected: { type: 'xpath', expression: '//button' } },
 ];
 
 console.log('Testing semantic locator parser...\n');
@@ -97,6 +100,12 @@ for (const test of tests) {
     continue;
   }
 
+  if (test.expected.type === 'xpath' && result.expression !== test.expected.expression) {
+    console.log(`  ❌ FAIL: Expression mismatch. Expected ${test.expected.expression}, got ${result.expression}`);
+    failed++;
+    continue;
+  }
+
   // Format and check round-trip (optional)
   const formatted = formatSemanticLocator(result);
   console.log(`  ✅ PASS (formatted: ${formatted})`);
@@ -108,9 +117,9 @@ console.log(`Tests passed: ${passed}/${tests.length}`);
 console.log(`Tests failed: ${failed}/${tests.length}`);
 
 if (failed === 0) {
-  console.log('🎉 All tests passed!');
+  console.log('All tests passed!');
   process.exit(0);
 } else {
-  console.log('❌ Some tests failed');
+  console.log('Some tests failed');
   process.exit(1);
 }

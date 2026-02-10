@@ -33,8 +33,19 @@ export async function handleSnapshot(params: SnapshotParams): Promise<{
   // Clear existing refs
   clearRefs();
 
+  // Determine root element (scoped by selector or full body)
+  let rootElement: Element = document.body;
+  if (params.selector) {
+    const { resolveElement } = await import('./element-ref-store');
+    const scoped = resolveElement(params.selector);
+    if (!scoped) {
+      return { snapshot: '(no element matched selector)', refCount: 0 };
+    }
+    rootElement = scoped;
+  }
+
   // Build the tree
-  const root = buildSnapshotTree(document.body, options, 0);
+  const root = buildSnapshotTree(rootElement, options, 0);
   const nodes = root ? [wrapPage(root)] : [];
 
   const snapshot = serializeSnapshot(nodes, { compact: options.compact });
