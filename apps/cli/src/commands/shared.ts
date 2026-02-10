@@ -11,7 +11,7 @@ import { getSocketPath } from '../util/paths.js';
 import { logger } from '../util/logger.js';
 
 /** Get root program options */
-function getRootOpts(cmd: Command): { session?: string; json?: boolean } {
+export function getRootOpts(cmd: Command): { session?: string; json?: boolean } {
   // Walk up to root
   let root = cmd;
   while (root.parent) root = root.parent;
@@ -54,7 +54,8 @@ export async function sendCommand(
 
     if (rootOpts.json) {
       console.log(JSON.stringify(response, null, 2));
-      return response.success ? (response.data as Record<string, unknown>) : null;
+      client.disconnect();
+      process.exit(response.success ? 0 : 1);
     }
 
     if (!response.success) {
