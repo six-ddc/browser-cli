@@ -115,8 +115,8 @@ browser-cli click 'role=button[name="Submit"]'
 browser-cli click "#submit-button"
 
 # Find and interact in one step (AgentBrowser-compatible)
-browser-cli find role button click --name "Submit"
-browser-cli find text "Sign In" click
+browser-cli find role button --name "Submit"        # defaults to click
+browser-cli find text "Sign In"                     # defaults to click
 browser-cli find label "Email" fill "user@example.com"
 browser-cli find first ".item" click
 browser-cli find nth 2 ".item" click
@@ -136,13 +136,40 @@ browser-cli screenshot --path page.png
 # Evaluate JavaScript in the page
 browser-cli eval "document.title"
 
+# Press keys (page-level)
+browser-cli press Enter
+browser-cli press Tab
+
+# Wait for selector, duration, or URL
+browser-cli wait ".loaded"
+browser-cli wait 1000
+browser-cli wait --url "*/dashboard"
+
 # Manage tabs
-browser-cli tab list
+browser-cli tab                          # list all tabs
+browser-cli tab 2                        # switch to tab 2
 browser-cli tab new https://github.com
 
 # Manage cookies
-browser-cli cookies get --domain example.com
+browser-cli cookies                      # list all cookies
+browser-cli cookies set session abc --url https://example.com
 browser-cli cookies clear --domain example.com
+
+# Manage storage
+browser-cli storage local                # list all localStorage
+browser-cli storage local set key value
+browser-cli storage session clear
+
+# Frame management
+browser-cli frame "iframe#content"       # switch to iframe
+browser-cli frame main                   # back to main frame
+
+# Query data
+browser-cli get url
+browser-cli get title
+browser-cli get text ".heading"
+browser-cli get count ".item"
+browser-cli get box "#element"
 
 # Stop the daemon
 browser-cli stop

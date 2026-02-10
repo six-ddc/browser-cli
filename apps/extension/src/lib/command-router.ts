@@ -5,7 +5,8 @@
  */
 
 import type { RequestMessage, ResponseMessage, Command } from '@browser-cli/shared';
-import { ErrorCode, createError } from '@browser-cli/shared';
+import { ErrorCode } from '@browser-cli/shared';
+import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
 
 export async function handleBackgroundCommand(
@@ -19,14 +20,12 @@ export async function handleBackgroundCommand(
     const data = await routeCommand(command, targetTabId, networkManager);
     return { id, type: 'response', success: true, data };
   } catch (err) {
+    const fallbackCode = getFallbackErrorCode(command.action);
     return {
       id,
       type: 'response',
       success: false,
-      error: createError(
-        ErrorCode.CONTENT_SCRIPT_ERROR,
-        (err as Error).message || 'Unknown error',
-      ),
+      error: classifyError(err, fallbackCode),
     };
   }
 }
@@ -260,6 +259,19 @@ async function routeCommand(
     default:
       throw new Error(`Unknown background command: ${command.action}`);
   }
+}
+
+function getFallbackErrorCode(action: string): ErrorCode {
+  if (['navigate', 'goBack', 'goForward', 'reload'].includes(action)) {
+    return ErrorCode.NAVIGATION_FAILED;
+  }
+  if (['tabNew', 'tabList', 'tabSwitch', 'tabClose'].includes(action)) {
+    return ErrorCode.TAB_NOT_FOUND;
+  }
+  if (action === 'screenshot') {
+    return ErrorCode.SCREENSHOT_FAILED;
+  }
+  return ErrorCode.UNKNOWN;
 }
 
 function cookieToInfo(c: Browser.cookies.Cookie) {

@@ -13,6 +13,7 @@ export const elementRefSchema = z.string().regex(/^@e\d+$/);
 export const protocolErrorSchema = z.object({
   code: z.string(),
   message: z.string(),
+  hint: z.string().optional(),
   details: z.unknown().optional(),
 });
 

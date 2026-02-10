@@ -94,7 +94,7 @@ export function getHeadingLevel(el: Element): number | undefined {
 /**
  * Check if element is interactive (should receive focus/clicks).
  */
-export function isInteractiveElement(el: Element): boolean {
+export function isInteractiveElement(el: Element, options?: { cursor?: boolean }): boolean {
   const tag = el.tagName.toLowerCase();
 
   // Standard interactive elements
@@ -127,9 +127,11 @@ export function isInteractiveElement(el: Element): boolean {
   // onclick attribute
   if (el.hasAttribute('onclick')) return true;
 
-  // cursor: pointer (expensive, but useful)
-  const style = window.getComputedStyle(el);
-  if (style.cursor === 'pointer' && tag !== 'html' && tag !== 'body') return true;
+  // cursor: pointer — only when cursor flag is enabled
+  if (options?.cursor) {
+    const style = window.getComputedStyle(el);
+    if (style.cursor === 'pointer' && tag !== 'html' && tag !== 'body') return true;
+  }
 
   return false;
 }

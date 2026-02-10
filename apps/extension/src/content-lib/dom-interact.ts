@@ -41,8 +41,8 @@ export async function handleInteraction(command: Command): Promise<unknown> {
       return { typed: true };
     }
     case 'press': {
-      const { selector, key } = command.params as { selector: string; key: string };
-      const el = requireElement(selector);
+      const { selector, key } = command.params as { selector?: string; key: string };
+      const el = selector ? requireElement(selector) : (document.activeElement as Element || document.body);
       await performPress(el, key);
       return { pressed: true };
     }

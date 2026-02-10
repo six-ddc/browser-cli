@@ -239,8 +239,14 @@ describe('parseFindArgs', () => {
   // ─── Error Cases ───────────────────────────────────────────────────
 
   describe('error cases', () => {
-    it('rejects too few arguments', () => {
-      expect(() => parseFindArgs(['role', 'button'], {})).toThrow('Usage');
+    it('defaults to click when action is omitted', () => {
+      const result = parseFindArgs(['role', 'button'], {});
+      expect(result.selector).toBe('role=button');
+      expect(result.action).toBe('click');
+    });
+
+    it('rejects single argument', () => {
+      expect(() => parseFindArgs(['role'], {})).toThrow('Usage');
     });
 
     it('rejects empty args', () => {

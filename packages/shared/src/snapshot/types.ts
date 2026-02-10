@@ -33,6 +33,8 @@ export interface SnapshotOptions {
   interactive?: boolean;
   /** Compact output (reduce whitespace) */
   compact?: boolean;
+  /** Include cursor-interactive elements (cursor:pointer) */
+  cursor?: boolean;
   /** Max depth of tree traversal (0 = unlimited) */
   depth?: number;
 }

@@ -7,19 +7,19 @@ const networkCmd = new Command('network')
 networkCmd
   .command('route <pattern>')
   .description('Add a network route (block or redirect requests matching pattern)')
-  .option('--block', 'Block requests matching this pattern')
+  .option('--abort', 'Abort requests matching this pattern')
   .option('--redirect <url>', 'Redirect requests to this URL')
-  .action(async (pattern: string, opts: { block?: boolean; redirect?: string }, cmd: Command) => {
-    if (!opts.block && !opts.redirect) {
-      console.error('Error: Must specify either --block or --redirect <url>');
+  .action(async (pattern: string, opts: { abort?: boolean; redirect?: string }, cmd: Command) => {
+    if (!opts.abort && !opts.redirect) {
+      console.error('Error: Must specify either --abort or --redirect <url>');
       process.exit(1);
     }
-    if (opts.block && opts.redirect) {
-      console.error('Error: Cannot specify both --block and --redirect');
+    if (opts.abort && opts.redirect) {
+      console.error('Error: Cannot specify both --abort and --redirect');
       process.exit(1);
     }
 
-    const action = opts.block ? 'block' : 'redirect';
+    const action = opts.abort ? 'block' : 'redirect';
     const result = await sendCommand(cmd, {
       action: 'route',
       params: {

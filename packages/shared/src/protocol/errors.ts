@@ -28,6 +28,7 @@ export enum ErrorCode {
 
   // Tab
   TAB_NOT_FOUND = 'TAB_NOT_FOUND',
+  TAB_CLOSED = 'TAB_CLOSED',
   NO_ACTIVE_TAB = 'NO_ACTIVE_TAB',
 
   // Execution
@@ -49,13 +50,20 @@ export enum ErrorCode {
 export interface ProtocolError {
   code: ErrorCode;
   message: string;
+  hint?: string;
   details?: unknown;
 }
 
 export function createError(
   code: ErrorCode,
   message: string,
+  hint?: string,
   details?: unknown,
 ): ProtocolError {
-  return { code, message, ...(details !== undefined ? { details } : {}) };
+  return {
+    code,
+    message,
+    ...(hint !== undefined ? { hint } : {}),
+    ...(details !== undefined ? { details } : {}),
+  };
 }

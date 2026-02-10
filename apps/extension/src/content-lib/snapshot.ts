@@ -27,6 +27,7 @@ export async function handleSnapshot(params: SnapshotParams): Promise<{
   const options: SnapshotOptions = {
     interactive: params.interactive,
     compact: params.compact,
+    cursor: params.cursor,
     depth: params.depth,
   };
 
@@ -77,7 +78,7 @@ function buildSnapshotTree(
 
   const role = getAriaRole(element);
   const name = getAccessibleName(element);
-  const isInteractive = isInteractiveElement(element);
+  const isInteractive = isInteractiveElement(element, { cursor: options.cursor });
 
   // Assign ref if interactive
   let ref: string | undefined;

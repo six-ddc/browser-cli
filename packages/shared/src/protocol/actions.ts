@@ -85,7 +85,8 @@ export interface TypeResult {
 }
 
 export interface PressParams {
-  selector: string;
+  /** Selector of element to press key on (defaults to active element) */
+  selector?: string;
   key: string;
 }
 export interface PressResult {
@@ -240,6 +241,8 @@ export interface SnapshotParams {
   interactive?: boolean;
   /** Compact output (fewer whitespace) */
   compact?: boolean;
+  /** Include cursor-interactive elements (cursor:pointer) */
+  cursor?: boolean;
   /** Max depth of tree traversal */
   depth?: number;
   /** Scope snapshot to a specific selector (CSS, @ref, or semantic locator) */
