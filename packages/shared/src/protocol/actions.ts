@@ -714,6 +714,35 @@ export interface SetHeadersResult {
   ruleCount: number;
 }
 
+// ─── State Management ───────────────────────────────────────────────
+
+export type StateExportParams = Record<string, never>;
+export interface StateExportResult {
+  url: string;
+  cookies: CookieInfo[];
+  localStorage: Record<string, string>;
+  sessionStorage: Record<string, string>;
+}
+
+export interface StateImportParams {
+  cookies?: Array<{
+    url: string;
+    name: string;
+    value: string;
+    domain?: string;
+    path?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+    sameSite?: 'no_restriction' | 'lax' | 'strict';
+    expirationDate?: number;
+  }>;
+  localStorage?: Record<string, string>;
+  sessionStorage?: Record<string, string>;
+}
+export interface StateImportResult {
+  imported: { cookies: number; localStorage: number; sessionStorage: number };
+}
+
 // ─── Action Type Union ───────────────────────────────────────────────
 
 export type ActionType =
@@ -807,7 +836,10 @@ export type ActionType =
   | 'setViewport'
   | 'setGeo'
   | 'setMedia'
-  | 'setHeaders';
+  | 'setHeaders'
+  // State Management
+  | 'stateExport'
+  | 'stateImport';
 
 /**
  * Discriminated union of all commands.
@@ -884,7 +916,9 @@ export type Command =
   | { action: 'setViewport'; params: SetViewportParams }
   | { action: 'setGeo'; params: SetGeoParams }
   | { action: 'setMedia'; params: SetMediaParams }
-  | { action: 'setHeaders'; params: SetHeadersParams };
+  | { action: 'setHeaders'; params: SetHeadersParams }
+  | { action: 'stateExport'; params: StateExportParams }
+  | { action: 'stateImport'; params: StateImportParams };
 
 /** Map action type → result type */
 export interface ActionResultMap {
@@ -959,4 +993,6 @@ export interface ActionResultMap {
   setGeo: SetGeoResult;
   setMedia: SetMediaResult;
   setHeaders: SetHeadersResult;
+  stateExport: StateExportResult;
+  stateImport: StateImportResult;
 }

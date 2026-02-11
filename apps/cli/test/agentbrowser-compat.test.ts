@@ -18,8 +18,20 @@ import { registerCommands } from '../src/commands/index.js';
 
 let lastCommand: { action: string; params: Record<string, unknown> } | null = null;
 let sendCommandMock: Mock;
+let stopDaemonMock: Mock;
+
+vi.mock('../src/daemon/process.js', () => ({
+  stopDaemon: (...args: unknown[]) => {
+    stopDaemonMock(...args);
+    return true;
+  },
+  getDaemonPid: () => null,
+  startDaemon: () => 12345,
+  ensureDaemon: () => {},
+}));
 
 vi.mock('../src/commands/shared.js', () => ({
+  getRootOpts: () => ({ session: 'default', json: false }),
   sendCommand: (...args: unknown[]) => {
     sendCommandMock(...args);
     lastCommand = args[1] as { action: string; params: Record<string, unknown> };
@@ -52,6 +64,10 @@ vi.mock('../src/commands/shared.js', () => ({
       routeId: 1,
       pattern: '*',
       action: 'block',
+      // State management
+      localStorage: {},
+      sessionStorage: {},
+      imported: { cookies: 0, localStorage: 0, sessionStorage: 0 },
       // New features
       dragged: true,
       released: true,
@@ -107,6 +123,7 @@ function expectCommand(action: string, params: Record<string, unknown>): void {
 beforeEach(() => {
   lastCommand = null;
   sendCommandMock = vi.fn();
+  stopDaemonMock = vi.fn();
 });
 
 describe('AgentBrowser CLI syntax compatibility', () => {
@@ -977,6 +994,76 @@ describe('AgentBrowser CLI syntax compatibility', () => {
     it('set headers <json>', async () => {
       await parseArgs('set', 'headers', '{"X-Custom":"value"}');
       expectCommand('setHeaders', { headers: { 'X-Custom': 'value' } });
+    });
+  });
+
+  // ─── Close / Quit / Exit ────────────────────────────────────────────
+
+  describe('close / quit / exit', () => {
+    it('close — stops daemon', async () => {
+      await parseArgs('close');
+      expect(stopDaemonMock).toHaveBeenCalled();
+    });
+
+    it('quit — alias for close', async () => {
+      await parseArgs('quit');
+      expect(stopDaemonMock).toHaveBeenCalled();
+    });
+
+    it('exit — alias for close', async () => {
+      await parseArgs('exit');
+      expect(stopDaemonMock).toHaveBeenCalled();
+    });
+  });
+
+  // ─── State save/load ──────────────────────────────────────────────
+
+  describe('state', () => {
+    it('state save <path>', async () => {
+      await parseArgs('state', 'save', '/tmp/test-state.json');
+      expectCommand('stateExport', {});
+    });
+
+    it('state load <path>', async () => {
+      // Create a temp state file for the load command to read
+      const { writeFileSync } = await import('node:fs');
+      const tmpPath = '/tmp/test-state-load.json';
+      writeFileSync(tmpPath, JSON.stringify({
+        version: 1,
+        timestamp: new Date().toISOString(),
+        url: 'https://example.com',
+        cookies: [],
+        localStorage: { key: 'value' },
+        sessionStorage: {},
+      }));
+
+      await parseArgs('state', 'load', tmpPath);
+      expectCommand('stateImport', {
+        cookies: [],
+        localStorage: { key: 'value' },
+        sessionStorage: {},
+      });
+    });
+  });
+
+  // ─── Eval enhancements ────────────────────────────────────────────
+
+  describe('eval', () => {
+    it('eval <expression>', async () => {
+      await parseArgs('eval', 'document.title');
+      expectCommand('evaluate', { expression: 'document.title' });
+    });
+
+    it('eval -b <base64>', async () => {
+      const encoded = Buffer.from('document.title').toString('base64');
+      await parseArgs('eval', '-b', encoded);
+      expectCommand('evaluate', { expression: 'document.title' });
+    });
+
+    it('eval --base64 <base64>', async () => {
+      const encoded = Buffer.from('1 + 2').toString('base64');
+      await parseArgs('eval', '--base64', encoded);
+      expectCommand('evaluate', { expression: '1 + 2' });
     });
   });
 

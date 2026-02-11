@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 
 // Lifecycle
-import { startCommand, stopCommand, statusCommand } from './lifecycle.js';
+import { startCommand, stopCommand, closeCommand, statusCommand } from './lifecycle.js';
 // Navigation
 import {
   navigateCommand,
@@ -61,6 +61,8 @@ import { highlightCommand } from './highlight.js';
 import { frameCommand } from './frame.js';
 // Network
 import { networkCommand } from './network.js';
+// State
+import { stateCommand } from './state.js';
 // Find
 import { findCommand } from './find.js';
 
@@ -68,6 +70,7 @@ export function registerCommands(program: Command): void {
   // Lifecycle
   program.addCommand(startCommand);
   program.addCommand(stopCommand);
+  program.addCommand(closeCommand);
   program.addCommand(statusCommand);
 
   // Navigation
@@ -149,6 +152,9 @@ export function registerCommands(program: Command): void {
 
   // Browser Config
   program.addCommand(setCommand);
+
+  // State
+  program.addCommand(stateCommand);
 
   // Find (AgentBrowser-compatible)
   program.addCommand(findCommand);

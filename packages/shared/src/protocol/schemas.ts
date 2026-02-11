@@ -233,6 +233,24 @@ export const setHeadersParamsSchema = z.object({
   headers: z.record(z.string(), z.string()),
 });
 
+// State Management
+export const stateExportParamsSchema = z.object({});
+export const stateImportParamsSchema = z.object({
+  cookies: z.array(z.object({
+    url: z.string(),
+    name: z.string(),
+    value: z.string(),
+    domain: z.string().optional(),
+    path: z.string().optional(),
+    secure: z.boolean().optional(),
+    httpOnly: z.boolean().optional(),
+    sameSite: z.enum(['no_restriction', 'lax', 'strict']).optional(),
+    expirationDate: z.number().optional(),
+  })).optional(),
+  localStorage: z.record(z.string(), z.string()).optional(),
+  sessionStorage: z.record(z.string(), z.string()).optional(),
+});
+
 // ─── Command Schema ──────────────────────────────────────────────────
 
 export const commandSchema = z.discriminatedUnion('action', [
@@ -307,6 +325,8 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('setGeo'), params: setGeoParamsSchema }),
   z.object({ action: z.literal('setMedia'), params: setMediaParamsSchema }),
   z.object({ action: z.literal('setHeaders'), params: setHeadersParamsSchema }),
+  z.object({ action: z.literal('stateExport'), params: stateExportParamsSchema }),
+  z.object({ action: z.literal('stateImport'), params: stateImportParamsSchema }),
 ]);
 
 // ─── Message Schemas ─────────────────────────────────────────────────
