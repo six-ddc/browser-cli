@@ -17,6 +17,7 @@ const BG_ACTIONS = new Set([
   'route', 'unroute', 'getRequests', 'getRoutes', 'clearRequests',
   'windowNew', 'windowList', 'windowClose',
   'setViewport', 'setHeaders',
+  'stateExport', 'stateImport',
 ]);
 
 async function resolveTargetTab(tabId?: number): Promise<number> {

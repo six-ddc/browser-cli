@@ -290,6 +290,94 @@ async function routeCommand(
       return { closed: true };
     }
 
+    // ─── State Management ──────────────────────────────────────
+    case 'stateExport': {
+      const tab = await browser.tabs.get(targetTabId);
+      const tabUrl = tab.url || '';
+
+      // Get all cookies for the current tab's URL
+      let cookies: Array<{
+        name: string; value: string; domain: string; path: string;
+        secure: boolean; httpOnly: boolean; sameSite: string;
+        expirationDate?: number;
+      }> = [];
+      if (tabUrl && (tabUrl.startsWith('http://') || tabUrl.startsWith('https://'))) {
+        const rawCookies = await browser.cookies.getAll({ url: tabUrl });
+        cookies = rawCookies.map(cookieToInfo);
+      }
+
+      // Get localStorage and sessionStorage via content script
+      const localStorageResp = await browser.tabs.sendMessage(targetTabId, {
+        type: 'browser-cli-command',
+        id: `state-export-local-${Date.now()}`,
+        command: { action: 'storageGet', params: { area: 'local' } },
+      });
+      const sessionStorageResp = await browser.tabs.sendMessage(targetTabId, {
+        type: 'browser-cli-command',
+        id: `state-export-session-${Date.now()}`,
+        command: { action: 'storageGet', params: { area: 'session' } },
+      });
+
+      return {
+        url: tabUrl,
+        cookies,
+        localStorage: localStorageResp.success ? (localStorageResp.data as { entries: Record<string, string> }).entries : {},
+        sessionStorage: sessionStorageResp.success ? (sessionStorageResp.data as { entries: Record<string, string> }).entries : {},
+      };
+    }
+    case 'stateImport': {
+      const params = command.params as {
+        cookies?: Array<{
+          url: string; name: string; value: string;
+          domain?: string; path?: string; secure?: boolean;
+          httpOnly?: boolean; sameSite?: 'no_restriction' | 'lax' | 'strict';
+          expirationDate?: number;
+        }>;
+        localStorage?: Record<string, string>;
+        sessionStorage?: Record<string, string>;
+      };
+
+      let cookieCount = 0;
+      let localCount = 0;
+      let sessionCount = 0;
+
+      // Import cookies
+      if (params.cookies) {
+        for (const cookie of params.cookies) {
+          await browser.cookies.set(cookie);
+          cookieCount++;
+        }
+      }
+
+      // Import localStorage
+      if (params.localStorage) {
+        for (const [key, value] of Object.entries(params.localStorage)) {
+          await browser.tabs.sendMessage(targetTabId, {
+            type: 'browser-cli-command',
+            id: `state-import-local-${Date.now()}-${key}`,
+            command: { action: 'storageSet', params: { key, value, area: 'local' } },
+          });
+          localCount++;
+        }
+      }
+
+      // Import sessionStorage
+      if (params.sessionStorage) {
+        for (const [key, value] of Object.entries(params.sessionStorage)) {
+          await browser.tabs.sendMessage(targetTabId, {
+            type: 'browser-cli-command',
+            id: `state-import-session-${Date.now()}-${key}`,
+            command: { action: 'storageSet', params: { key, value, area: 'session' } },
+          });
+          sessionCount++;
+        }
+      }
+
+      return {
+        imported: { cookies: cookieCount, localStorage: localCount, sessionStorage: sessionCount },
+      };
+    }
+
     // ─── Browser Config ─────────────────────────────────────────
     case 'setViewport': {
       const { width, height } = command.params as { width: number; height: number };
