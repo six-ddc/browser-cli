@@ -12,7 +12,8 @@ Automate a real browser from the command line. Browser-CLI uses a Chrome/Firefox
 
 Start the daemon before issuing commands:
 ```bash
-browser-cli start
+browser-cli start              # default port 9222
+browser-cli start --port 9333  # custom WebSocket port
 ```
 
 Check connection status (daemon + extension):
@@ -23,6 +24,11 @@ browser-cli status
 Stop the daemon when done:
 ```bash
 browser-cli stop
+```
+
+Close the session (aliases: `quit`, `exit`):
+```bash
+browser-cli close
 ```
 
 > The browser extension must be installed and connected. Run `browser-cli status` to verify.
@@ -99,6 +105,8 @@ browser-cli fill @e5 "hello"      # Fill element ref
 | `select <selector> <value>` | Select dropdown option |
 | `upload <selector> <files...>` | Upload files (`--clear` to clear first) |
 | `drag <source> <target>` | Drag element to target |
+| `keydown <key>` | Press key down without releasing |
+| `keyup <key>` | Release a held key |
 
 ### Find Command (Semantic Locate + Act)
 
@@ -179,6 +187,9 @@ browser-cli screenshot [options]
 | `wait <selector>` | Wait for element to appear (`--timeout <ms>`, `--hidden`) |
 | `wait <ms>` | Wait for duration (auto-detects numeric) |
 | `wait --url <pattern>` | Wait for URL to match |
+| `wait --text <text>` | Wait for text to appear on page |
+| `wait --load [state]` | Wait for load state: `load`, `domcontentloaded`, `networkidle` |
+| `wait --fn <expression>` | Wait for JS expression to return truthy |
 | `waitforurl <pattern>` | Alias for `wait --url` |
 
 ### Tab Management
@@ -242,6 +253,8 @@ browser-cli screenshot [options]
 
 ```bash
 browser-cli eval '<expression>'
+browser-cli eval -b/--base64 '<base64-encoded-expression>'  # decode from base64
+echo '<expression>' | browser-cli eval --stdin       # read from stdin
 ```
 
 Evaluates JavaScript in the page context and returns the result.
@@ -292,6 +305,13 @@ browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 | `set geo <lat> <lng>` | Override geolocation (`--accuracy <m>`) |
 | `set media <colorScheme>` | Override media preference (dark/light) |
 | `set headers <json>` | Set extra HTTP headers |
+
+### State Management (Save/Load)
+
+| Command | Description |
+|---------|-------------|
+| `state save <path>` | Export cookies + localStorage + sessionStorage to JSON file |
+| `state load <path>` | Import cookies + storage from JSON file |
 
 ## Selector Types
 

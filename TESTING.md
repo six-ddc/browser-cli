@@ -22,13 +22,19 @@ pnpm --filter @browser-cli/shared test --watch
 ```
 browser-cli/
 ├── packages/shared/test/
-│   ├── protocol.test.ts           # Protocol types and schemas
+│   ├── protocol.test.ts           # Protocol types and schemas (61 tests)
 │   └── semantic-locators.test.ts  # Parser and formatter tests (83 tests)
 ├── apps/extension/test/
-│   └── semantic-locators.test.ts  # DOM resolution tests (39 tests)
+│   ├── semantic-locators.test.ts  # DOM resolution tests (39 tests)
+│   ├── dom-interact.test.ts       # DOM interaction tests (13 tests)
+│   ├── mouse.test.ts              # Mouse control tests (14 tests)
+│   ├── browser-config.test.ts     # Browser config tests (10 tests)
+│   └── wait-extensions.test.ts    # Wait extensions tests (16 tests)
 └── apps/cli/test/
-    ├── hello.test.ts              # Basic CLI tests
-    └── find.test.ts               # Find command parsing tests
+    ├── hello.test.ts              # Basic CLI tests (2 tests)
+    ├── find.test.ts               # Find command parsing tests (43 tests)
+    ├── json-output.test.ts        # JSON output tests (11 tests)
+    └── agentbrowser-compat.test.ts # AgentBrowser compatibility tests (164 tests)
 ```
 
 ## Semantic Locators Tests
@@ -250,11 +256,19 @@ All tests must pass before merging.
 
 ## Test Coverage
 
-Current test coverage:
+Current test coverage (456 tests total):
 
-- **Parser tests:** 83 tests
-- **DOM resolution tests:** 39 tests
-- **Total semantic locator tests:** 122 tests
+- **AgentBrowser compatibility tests:** 164 tests
+- **Semantic locator parser tests:** 83 tests
+- **Protocol schema tests:** 61 tests
+- **Find command parsing tests:** 43 tests
+- **Semantic locator DOM resolution tests:** 39 tests
+- **Wait extensions tests:** 16 tests
+- **Mouse control tests:** 14 tests
+- **DOM interaction tests:** 13 tests
+- **JSON output tests:** 11 tests
+- **Browser config tests:** 10 tests
+- **Basic CLI tests:** 2 tests
 
 ## Known Issues
 
