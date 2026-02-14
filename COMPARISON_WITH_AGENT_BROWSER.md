@@ -1,23 +1,26 @@
 # Browser-CLI vs Agent-Browser 功能对比分析
 
-> **最后更新**: 2026-02-11
-> **功能覆盖率**: 91% (从 73% 提升)
-> **CLI 语法对齐**: ✅ 与 AgentBrowser 完全一致（156 项兼容性测试验证）
+> **最后更新**: 2026-02-14
+> **功能覆盖率**: 95% (从 73% 提升)
+> **CLI 语法对齐**: ✅ 与 AgentBrowser 完全一致（164 项兼容性测试验证）
 
 ---
 
 ## 📊 最新进展摘要（2026-02）
 
-### ✅ 新增 6 个功能组（15+ 新 actions）
+### ✅ 新增 9 个功能组（20+ 新 actions）
 
 | 功能 | 状态 | 实现详情 | 测试覆盖 |
 |------|------|----------|---------|
-| **拖拽操作** | ✅ 完成 | `drag <source> <target>`（DataTransfer API） | ✅ 3 tests |
-| **按键分步** | ✅ 完成 | `keydown/keyup <key>`（独立 keydown/keyup 事件） | ✅ 4 tests |
-| **鼠标控制** | ✅ 完成 | `mouse move/down/up/wheel`（坐标 + elementFromPoint） | ✅ 7 tests |
-| **等待扩展** | ✅ 完成 | `wait --text/--load/--fn`（MutationObserver + MAIN world） | ✅ 5 tests |
+| **拖拽操作** | ✅ 完成 | `drag <source> <target>`（DataTransfer API） | ✅ 4 tests |
+| **按键分步** | ✅ 完成 | `keydown/keyup <key>`（独立 keydown/keyup 事件） | ✅ 7 tests |
+| **鼠标控制** | ✅ 完成 | `mouse move/down/up/wheel`（坐标 + elementFromPoint） | ✅ 14 tests |
+| **等待扩展** | ✅ 完成 | `wait --text/--load/--fn`（MutationObserver + MAIN world） | ✅ 16 tests |
 | **窗口管理** | ✅ 完成 | `window new/list/close`（browser.windows API） | ✅ 6 tests |
-| **浏览器配置** | ✅ 完成 | `set viewport/geo/media/headers`（混合 BG + content） | ✅ 6 tests |
+| **浏览器配置** | ✅ 完成 | `set viewport/geo/media/headers`（混合 BG + content） | ✅ 10 tests |
+| **会话关闭** | ✅ 完成 | `close/quit/exit`（停止 daemon 会话） | ✅ 3 tests |
+| **状态保存** | ✅ 完成 | `state save/load`（cookies + localStorage + sessionStorage） | ✅ 4 tests |
+| **Eval 增强** | ✅ 完成 | `eval -b/--base64/--stdin`（base64 + stdin 输入） | ✅ 3 tests |
 
 ### ✅ 之前已实现的功能
 
@@ -33,8 +36,8 @@
 
 ```
 Before: 67 commands / 92 total = 73%
-After:  84 commands / 92 total = 91%
-Change: +17 new capabilities (+18% coverage)
+After:  87 commands / 92 total = 95%
+Change: +20 new capabilities (+22% coverage)
 ```
 
 ### 🎯 核心能力对比
@@ -46,14 +49,12 @@ Change: +17 new capabilities (+18% coverage)
 | **网络控制** | ✅ 基础 | ✅ 完整 | Agent-Browser 更强 |
 | **iframe 支持** | ✅ 完整 | ✅ 基础 | Browser-CLI 更强 |
 | **鼠标控制** | ✅ 完整 | ✅ 完整 | 平等 |
-| **浏览器配置** | ✅ 部分 | ✅ 完整 | Agent-Browser 更强（device/offline/credentials） |
+| **浏览器配置** | ✅ 部分 | ✅ 完整 | Agent-Browser 更强（device/offline/credentials 受 MV3 限制） |
 | **窗口管理** | ✅ 完整 | ✅ 完整 | 平等 |
 
 ### 📚 文档与测试
 
-- ✅ **SEMANTIC_LOCATORS.md** - 语义定位器完整指南
-- ✅ **UPLOAD_TESTING.md** - 文件上传测试指南（含限制说明）
-- ✅ **TESTING.md** - 测试套件文档（304 tests passing）
+- ✅ **TESTING.md** - 测试套件文档（456 tests passing）
 - ✅ **test-semantic-locators.html** - 语义定位器测试页面
 - ✅ **test-iframe.html** - iframe 测试页面
 
@@ -114,9 +115,9 @@ Change: +17 new capabilities (+18% coverage)
 | **刷新页面** | ✅ `reload` | ✅ `reload` | **语法一致** |
 | **获取 URL** | ✅ `get url` | ✅ `get url` | **语法一致** |
 | **获取标题** | ✅ `get title` | ✅ `get title` | **语法一致** |
-| **关闭浏览器** | ❌ (需 stop daemon) | ✅ `close/quit/exit` | **Agent-Browser 更好** |
+| **关闭会话** | ✅ `close/quit/exit` | ✅ `close/quit/exit` | **语法一致** |
 
-**差距分析**: Agent-Browser 支持直接关闭浏览器会话
+**差距分析**: ✅ 功能完全对齐
 
 ---
 
@@ -214,8 +215,8 @@ Change: +17 new capabilities (+18% coverage)
 
 | 功能 | Browser-CLI | Agent-Browser | 对比说明 |
 |------|------------|---------------|----------|
-| **滚动页面/元素** | ✅ `scroll` (up/down/left/right, amount, selector) | ✅ `scroll <dir> [px]` | 功能相同 |
-| **滚动到元素** | ✅ `scrollIntoView` | ✅ `scrollintoview` | 功能相同 |
+| **滚动页面/元素** | ✅ `scroll` (up/down/left/right, --amount, --selector) | ✅ `scroll <dir> [px]` | 功能相同 |
+| **滚动到元素** | ✅ `scrollintoview` | ✅ `scrollintoview` | **语法一致** |
 
 **差距分析**: 功能基本一致
 
@@ -238,9 +239,9 @@ Change: +17 new capabilities (+18% coverage)
 
 | 功能 | Browser-CLI | Agent-Browser | 对比说明 |
 |------|------------|---------------|----------|
-| **执行表达式** | ✅ `evaluate` | ✅ `eval` (支持 -b base64, --stdin) | Agent-Browser 更灵活 |
+| **执行表达式** | ✅ `eval` (支持 -b base64, --stdin) | ✅ `eval` (支持 -b base64, --stdin) | **语法一致** |
 
-**差距分析**: Agent-Browser 支持 base64 和 stdin 输入
+**差距分析**: ✅ 功能完全对齐（均支持 base64 和 stdin 输入）
 
 ---
 
@@ -248,8 +249,8 @@ Change: +17 new capabilities (+18% coverage)
 
 | 功能 | Browser-CLI | Agent-Browser | 对比说明 |
 |------|------------|---------------|----------|
-| **获取控制台日志** | ✅ `getConsole` (level/clear) | ✅ `console` (--clear) | 功能相同 |
-| **获取错误** | ✅ `getErrors` | ✅ `errors` (--clear) | 功能相同 |
+| **获取控制台日志** | ✅ `console` (--level/--clear) | ✅ `console` (--clear) | **语法一致** |
+| **获取错误** | ✅ `errors` | ✅ `errors` (--clear) | **语法一致** |
 
 **差距分析**: 功能基本一致
 
@@ -259,7 +260,7 @@ Change: +17 new capabilities (+18% coverage)
 
 | 功能 | Browser-CLI | Agent-Browser | 对比说明 |
 |------|------------|---------------|----------|
-| **列出标签** | ✅ `tab` (裸命令) | ✅ `tab` | **语法一致** |
+| **列出标签** | ✅ `tab` / `tab list` | ✅ `tab` | **语法一致** |
 | **切换标签** | ✅ `tab <n>` | ✅ `tab <n>` | **语法一致** |
 | **新建标签** | ✅ `tab new [url]` | ✅ `tab new [url]` | **语法一致** |
 | **关闭标签** | ✅ `tab close [n]` | ✅ `tab close [n]` | **语法一致** |
@@ -273,7 +274,7 @@ Change: +17 new capabilities (+18% coverage)
 | 功能 | Browser-CLI | Agent-Browser | 对比说明 |
 |------|------------|---------------|----------|
 | **新建窗口** | ✅ `window new [url]` | ✅ `window new` | **语法一致** |
-| **列出窗口** | ✅ `window list` | ✅ `window list` | **语法一致** |
+| **列出窗口** | ✅ `window` / `window list` | ✅ `window list` | **语法一致** |
 | **关闭窗口** | ✅ `window close [id]` | ✅ `window close` | **语法一致** |
 
 **差距分析**: ✅ 功能完全对齐
@@ -287,6 +288,7 @@ Change: +17 new capabilities (+18% coverage)
 | **切换到 iframe** | ✅ `frame <sel>` | ✅ `frame <sel>` | **语法一致** |
 | **返回主文档** | ✅ `frame main` | ✅ `frame main` | **语法一致** |
 | **列出所有框架** | ✅ `frame list` | ❌ | **Browser-CLI 独有** |
+| **当前框架信息** | ✅ `frame current` | ❌ | **Browser-CLI 独有** |
 
 **差距分析**: ✅ Browser-CLI 现已完全支持 iframe 操作
 
@@ -320,8 +322,8 @@ Change: +17 new capabilities (+18% coverage)
 
 | 功能 | Browser-CLI | Agent-Browser | 对比说明 |
 |------|------------|---------------|----------|
-| **接受对话框** | ✅ `dialogAccept` (text) | ✅ `dialog accept [text]` | 功能相同 |
-| **拒绝对话框** | ✅ `dialogDismiss` | ✅ `dialog dismiss` | 功能相同 |
+| **接受对话框** | ✅ `dialog accept [text]` | ✅ `dialog accept [text]` | **语法一致** |
+| **拒绝对话框** | ✅ `dialog dismiss` | ✅ `dialog dismiss` | **语法一致** |
 
 **差距分析**: 功能基本一致
 
@@ -335,7 +337,9 @@ Change: +17 new capabilities (+18% coverage)
 | **阻止请求** | ✅ `network route --abort` | ✅ `network route --abort` | **语法一致** |
 | **重定向请求** | ✅ `network route --redirect` | ✅ `network route --body` | Browser-CLI 只能重定向 |
 | **取消拦截** | ✅ `network unroute` | ✅ `network unroute` | 功能相同 |
-| **查看请求** | ✅ `network requests` | ✅ `network requests` | 功能相同 |
+| **查看活跃路由** | ✅ `network routes` | ✅ `network routes` | 功能相同 |
+| **查看请求** | ✅ `network requests` (--pattern/--tab/--blocked/--limit) | ✅ `network requests` | 功能相同 |
+| **清除请求** | ✅ `network clear` | ✅ `network clear` | 功能相同 |
 
 **差距分析**: ✅ Browser-CLI 现已支持网络拦截（使用 MV3 declarativeNetRequest），但不支持修改请求/响应体（MV3 限制）
 
@@ -351,7 +355,7 @@ Change: +17 new capabilities (+18% coverage)
 | **离线模式** | ❌ | ✅ `set offline [on/off]` | **Agent-Browser 独有** (MV3 限制) |
 | **HTTP 头** | ✅ `set headers <json>` | ✅ `set headers <json>` | **语法一致** |
 | **HTTP 认证** | ❌ | ✅ `set credentials <u> <p>` | **Agent-Browser 独有** (MV3 限制) |
-| **媒体偏好** | ✅ `set media [dark/light]` | ✅ `set media [dark/light]` | **语法一致** |
+| **媒体偏好** | ✅ `set media <colorScheme>` | ✅ `set media [dark/light]` | **语法一致** |
 
 **差距分析**: ✅ Browser-CLI 支持 4/7 配置项（viewport/geo/headers/media）；3 项因 MV3 限制无法实现（device/offline/credentials）
 
@@ -363,9 +367,9 @@ Change: +17 new capabilities (+18% coverage)
 |------|------------|---------------|----------|
 | **多会话支持** | ✅ `--session <name>` | ✅ `--session <name>` | 功能相同 |
 | **持久化 Profile** | ❌ | ✅ `--profile <path>` | **Agent-Browser 独有** |
-| **认证状态保存** | ❌ | ✅ `state save/load` | **Agent-Browser 独有** |
+| **状态保存/加载** | ✅ `state save/load` | ✅ `state save/load` | **语法一致** |
 
-**差距分析**: Agent-Browser 的会话管理更完整
+**差距分析**: ✅ state save/load 功能对齐；Agent-Browser 额外支持 --profile 持久化
 
 ---
 
@@ -407,12 +411,11 @@ Change: +17 new capabilities (+18% coverage)
 3. ✅ **离线模式** (`set offline`) — MV3 不支持
 4. ✅ **HTTP 认证** (`set credentials`) — MV3 不支持
 5. ✅ **持久化 Profile** (`--profile`)
-6. ✅ **认证状态保存** (`state save/load`)
-7. ✅ **会话追踪** (`trace`)
-8. ✅ **CDP 连接** (`--cdp`)
-9. ✅ **云浏览器集成** (Browserbase/Browser Use/Kernel/iOS)
-10. ✅ **Headless/Headed 切换** (`--headed`)
-11. ✅ **网络响应体修改** (Browser-CLI 受 MV3 限制)
+6. ✅ **会话追踪** (`trace`)
+7. ✅ **CDP 连接** (`--cdp`)
+8. ✅ **云浏览器集成** (Browserbase/Browser Use/Kernel/iOS)
+9. ✅ **Headless/Headed 切换** (`--headed`)
+10. ✅ **网络响应体修改** (Browser-CLI 受 MV3 限制)
 
 ---
 
@@ -426,14 +429,12 @@ Change: +17 new capabilities (+18% coverage)
 5. ✅ **快速原型验证** (无需配置 Playwright 环境)
 
 ### Agent-Browser 更适合:
-1. ✅ **AI Agent 自动化** (语义定位器更适合 AI 理解)
-2. ✅ **复杂交互场景** (拖拽、文件上传、鼠标精细控制)
-3. ✅ **网络测试** (拦截请求、模拟响应)
-4. ✅ **多浏览器兼容** (Chromium/Firefox/WebKit)
-5. ✅ **Headless 自动化** (无 GUI 环境)
-6. ✅ **云端浏览器** (Browserbase/Browser Use 等)
-7. ✅ **专业调试** (CDP 连接、trace)
-8. ✅ **跨设备测试** (viewport/device 模拟、iOS Simulator)
+1. ✅ **Headless 自动化** (无 GUI 环境)
+2. ✅ **多浏览器兼容** (Chromium/Firefox/WebKit)
+3. ✅ **云端浏览器** (Browserbase/Browser Use 等)
+4. ✅ **专业调试** (CDP 连接、trace)
+5. ✅ **设备模拟/离线模式** (device/offline/credentials — MV3 限制)
+6. ✅ **网络响应体修改** (Browser-CLI 受 MV3 限制)
 
 ---
 
@@ -463,12 +464,13 @@ Change: +17 new capabilities (+18% coverage)
 5. ✅ **等待时长** (`wait <ms>`) — 简单但实用 **[已实现]**
 6. ✅ **CLI 语法对齐** — 全部命令与 AgentBrowser 语法一致 **[已实现]**
 
-### 中优先级 (Important) — ✅ 已全部完成！
+### 中优先级 (Important) — ✅ 大部分完成
 6. ✅ **浏览器配置** (`set viewport/geo/media/headers`) **[已实现]**
-7. **持久化 Profile** (`--profile`) — 会话管理
+7. **持久化 Profile** (`--profile`) — 架构差异
 8. ✅ **拖拽操作** (`drag`) **[已实现]**
 9. **PDF 导出** (`pdf`) — MV3 不支持
 10. ✅ **多窗口支持** (`window new/list/close`) **[已实现]**
+11. ✅ **状态保存/加载** (`state save/load`) **[已实现]**
 
 ### 低优先级 (Nice to Have) — ✅ 部分完成
 11. ✅ **底层鼠标控制** (`mouse move/down/up/wheel`) **[已实现]**
@@ -485,7 +487,7 @@ Change: +17 new capabilities (+18% coverage)
 - ✅ 轻量级部署
 - ✅ 真实浏览器环境
 - ✅ 支持 Firefox（无 Playwright）
-- ✅ 功能覆盖率 91%
+- ✅ 功能覆盖率 95%
 
 ### Browser-CLI 劣势
 - ⚠️ 部分配置受 MV3 限制（device/offline/credentials）
@@ -493,12 +495,12 @@ Change: +17 new capabilities (+18% coverage)
 - ❌ 无 PDF 导出（MV3 限制）
 
 ### 建议
-1. ✅ **核心功能已补齐**: 全部交互、鼠标控制、等待、窗口管理、浏览器配置已实现
-2. ✅ **CLI 语法已完全对齐**: 所有命令语法与 AgentBrowser 一致（156 项兼容性测试验证）
+1. ✅ **核心功能已补齐**: 全部交互、鼠标控制、等待、窗口管理、浏览器配置、状态保存已实现
+2. ✅ **CLI 语法已完全对齐**: 所有命令语法与 AgentBrowser 一致（164 项兼容性测试验证）
 3. **剩余差距主要是 MV3 限制**: device/offline/credentials/PDF 在扩展架构下无法实现
 4. **突出独特价值**:
    - 强调"轻量级"、"无需 Playwright"、"真实浏览器环境"
-   - 功能覆盖率已从 73% 提升到 91%
+   - 功能覆盖率已从 73% 提升到 95%
    - CLI 语法与 AgentBrowser 完全一致，可无缝切换
 
 ---
@@ -507,7 +509,7 @@ Change: +17 new capabilities (+18% coverage)
 
 | 分类 | Browser-CLI | Agent-Browser | 差距 |
 |------|-------------|---------------|------|
-| **导航** | 6 | 7 | -1 |
+| **导航** | 7 (+close/quit/exit) | 7 | 0 |
 | **交互** | 16 (+drag/keydown/keyup) | 15 | +1 |
 | **鼠标控制** | 4 (move/down/up/wheel) | 4 | 0 |
 | **选择器** | 12 (+find/first/last/nth) | 12 | 0 |
@@ -519,11 +521,11 @@ Change: +17 new capabilities (+18% coverage)
 | **iframe** | 3 | 2 | +1 |
 | **网络** | 5 | 5 | 0 |
 | **配置** | 4 (viewport/geo/media/headers) | 7 | -3 |
-| **会话** | 1 | 3 | -2 |
+| **会话** | 3 (+state save/load) | 3 | 0 |
 | **调试** | 2 | 4 | -2 |
-| **总计** | **84** (+17) | **92** | **-8** |
+| **总计** | **87** (+20) | **92** | **-5** |
 
-**功能覆盖率**: Browser-CLI 约为 Agent-Browser 的 **91%** (从 73% 提升)
+**功能覆盖率**: Browser-CLI 约为 Agent-Browser 的 **95%** (从 73% 提升)
 
 ---
 
@@ -532,20 +534,24 @@ Change: +17 new capabilities (+18% coverage)
 Browser-CLI 是一个**架构创新**的项目（Extension-based），在轻量级部署和真实浏览器环境方面有独特优势。
 
 ### 🎉 重大进展（2026-02）
-经过最新开发，Browser-CLI 新增 **6 个功能组（15+ 新 actions）**：
+经过最新开发，Browser-CLI 新增 **9 个功能组（20+ 新 actions）**：
 1. ✅ **拖拽操作** (`drag <source> <target>`) — DataTransfer API
 2. ✅ **按键分步** (`keydown/keyup`) — 独立 keydown/keyup 事件
 3. ✅ **鼠标控制** (`mouse move/down/up/wheel`) — 坐标级别控制
 4. ✅ **等待扩展** (`wait --text/--load/--fn`) — 文本/加载状态/条件函数
 5. ✅ **窗口管理** (`window new/list/close`) — browser.windows API
 6. ✅ **浏览器配置** (`set viewport/geo/media/headers`) — 混合 BG + content
+7. ✅ **会话关闭** (`close/quit/exit`) — 停止 daemon 会话
+8. ✅ **状态保存** (`state save/load`) — cookies + localStorage + sessionStorage
+9. ✅ **Eval 增强** (`eval -b/--base64/--stdin`) — base64 + stdin 输入
 
-**功能覆盖率从 73% 提升到 91%**（+17 个新 capabilities），**156 项兼容性测试覆盖**
+**功能覆盖率从 73% 提升到 95%**（+20 个新 capabilities），**164 项兼容性测试覆盖**
 
-### 当前差距
+### 当前差距（仅剩 5 项）
 主要差距为 MV3 扩展架构限制：
 1. **PDF 导出** — MV3 不支持
 2. **设备模拟/离线/认证** — MV3 不支持
-3. **云浏览器集成/CDP** — 架构差异
+3. **持久化 Profile** — 架构差异
+4. **云浏览器集成/CDP/Trace** — 架构差异
 
 **Browser-CLI 已具备在 AI Agent 自动化场景的核心竞争力**，CLI 语法与 AgentBrowser 完全一致可无缝切换，轻量级部署和真实浏览器环境是其独特优势。
