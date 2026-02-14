@@ -32,7 +32,30 @@ export async function handleForm(command: Command): Promise<unknown> {
       if (!(el instanceof HTMLSelectElement)) {
         throw new Error(`Element is not a <select>: ${selector}`);
       }
-      el.value = value;
+
+      // Try matching by value first, then by text/label (like Playwright's selectOption)
+      let matched = false;
+      for (const option of el.options) {
+        if (option.value === value) {
+          el.value = option.value;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        for (const option of el.options) {
+          if (option.text === value || option.label === value) {
+            el.value = option.value;
+            matched = true;
+            break;
+          }
+        }
+      }
+      if (!matched) {
+        const available = Array.from(el.options).map(o => `"${o.text}" (value="${o.value}")`).join(', ');
+        throw new Error(`No option matching "${value}" in <select>. Available options: ${available}`);
+      }
+
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
       return { selected: true, value: el.value };

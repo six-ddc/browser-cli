@@ -31,3 +31,6 @@ pnpm-debug.log*
 
 # Test coverage
 coverage/
+
+# Reference repos
+.agent-browser-ref/

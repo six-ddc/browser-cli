@@ -51,6 +51,12 @@ const ERROR_PATTERNS: ErrorPattern[] = [
     message: 'The browser window no longer exists.',
     hint: "Use 'tabList' to see available tabs.",
   },
+  {
+    pattern: /Cannot find a (next|previous) page in history/i,
+    code: ErrorCode.NAVIGATION_FAILED,
+    message: 'No page in browser history to navigate to.',
+    hint: 'The tab has no history to go back/forward to. Navigate to more pages first.',
+  },
 ];
 
 /**

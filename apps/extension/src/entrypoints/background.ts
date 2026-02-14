@@ -18,6 +18,7 @@ const BG_ACTIONS = new Set([
   'windowNew', 'windowList', 'windowClose',
   'setViewport', 'setHeaders',
   'stateExport', 'stateImport',
+  'evaluate',
 ]);
 
 async function resolveTargetTab(tabId?: number): Promise<number> {
@@ -119,7 +120,7 @@ export default defineBackground(async () => {
     }
   });
 
-  // Listen for manual reconnect requests from popup
+  // Listen for manual reconnect requests from popup and eval-in-main from content scripts
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'reconnect' && wsClient) {
       wsClient.reconnect();
@@ -129,6 +130,18 @@ export default defineBackground(async () => {
       sendResponse({
         connected: wsClient.isConnected,
         sessionId: wsClient.currentSessionId,
+      });
+    } else if (message.type === 'browser-cli-eval-in-main' && sender.tab?.id) {
+      // Evaluate expression in MAIN world for content scripts (bypasses CSP)
+      browser.scripting.executeScript({
+        target: { tabId: sender.tab.id },
+        world: 'MAIN',
+        func: (expr: string) => (0, eval)(expr),
+        args: [message.expression],
+      }).then((results) => {
+        sendResponse({ result: results?.[0]?.result });
+      }).catch(() => {
+        sendResponse({ result: null, error: 'eval failed' });
       });
     }
     // Return true to indicate we'll send a response asynchronously

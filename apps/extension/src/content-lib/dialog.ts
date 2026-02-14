@@ -1,133 +1,99 @@
 /**
- * Dialog handling via MAIN world window patching.
- * Patches window.alert, window.confirm, window.prompt to intercept native dialogs.
- * Uses window.postMessage to communicate between MAIN world and content script.
+ * Dialog handling via background script's chrome.scripting.executeScript.
+ * Patches window.alert, window.confirm, window.prompt in the MAIN world
+ * to intercept native dialogs. Config is stored on window.__browserCliDialogConfig.
+ * This approach bypasses CSP restrictions that block inline <script> injection.
  */
 
 import type { Command } from '@browser-cli/shared';
 
-const DIALOG_MSG_TYPE = 'browser-cli-dialog';
-
-interface DialogState {
-  autoAccept: boolean;
-  autoDismiss: boolean;
-  promptText: string | undefined;
-  injected: boolean;
-}
-
-const state: DialogState = {
-  autoAccept: false,
-  autoDismiss: false,
-  promptText: undefined,
-  injected: false,
-};
-
-function ensureInjected(): void {
-  if (state.injected) return;
-  state.injected = true;
-
-  // Listen for dialog config updates from content script
-  window.addEventListener('message', (event) => {
-    if (event.data?.type === `${DIALOG_MSG_TYPE}-response`) {
-      // Handled by MAIN world script
-    }
+/**
+ * Ensure the dialog patcher is injected into the MAIN world.
+ */
+async function ensureInjected(): Promise<void> {
+  const checkResponse = await browser.runtime.sendMessage({
+    type: 'browser-cli-eval-in-main',
+    expression: '!!window.__browserCliDialogPatched',
   });
 
-  // Inject MAIN world script that patches dialog functions
-  const script = document.createElement('script');
-  script.textContent = `
-    (function() {
-      const DIALOG_MSG_TYPE = ${JSON.stringify(DIALOG_MSG_TYPE)};
-      let dialogConfig = { autoAccept: false, autoDismiss: false, promptText: undefined };
+  if (checkResponse?.result) return;
 
-      // Listen for config updates from content script
-      window.addEventListener('message', function(event) {
-        if (event.data && event.data.type === DIALOG_MSG_TYPE + '-config') {
-          dialogConfig = event.data.config;
-        }
-      });
+  await browser.runtime.sendMessage({
+    type: 'browser-cli-eval-in-main',
+    expression: `(function() {
+      if (window.__browserCliDialogPatched) return;
+      window.__browserCliDialogPatched = true;
+      window.__browserCliDialogConfig = { autoAccept: false, autoDismiss: false, promptText: undefined };
 
-      const originalAlert = window.alert;
-      const originalConfirm = window.confirm;
-      const originalPrompt = window.prompt;
+      var originalAlert = window.alert;
+      var originalConfirm = window.confirm;
+      var originalPrompt = window.prompt;
 
       window.alert = function(message) {
-        window.postMessage({
-          type: DIALOG_MSG_TYPE + '-event',
-          dialogType: 'alert',
-          message: String(message),
-        }, '*');
-        // Auto-dismiss alerts (they only have OK)
-        if (dialogConfig.autoAccept || dialogConfig.autoDismiss) {
+        var config = window.__browserCliDialogConfig;
+        if (config.autoAccept || config.autoDismiss) {
           return;
         }
         return originalAlert.call(window, message);
       };
 
       window.confirm = function(message) {
-        window.postMessage({
-          type: DIALOG_MSG_TYPE + '-event',
-          dialogType: 'confirm',
-          message: String(message),
-        }, '*');
-        if (dialogConfig.autoAccept) {
+        var config = window.__browserCliDialogConfig;
+        if (config.autoAccept) {
           return true;
         }
-        if (dialogConfig.autoDismiss) {
+        if (config.autoDismiss) {
           return false;
         }
         return originalConfirm.call(window, message);
       };
 
       window.prompt = function(message, defaultValue) {
-        window.postMessage({
-          type: DIALOG_MSG_TYPE + '-event',
-          dialogType: 'prompt',
-          message: String(message),
-          defaultValue: defaultValue,
-        }, '*');
-        if (dialogConfig.autoAccept) {
-          return dialogConfig.promptText !== undefined ? dialogConfig.promptText : (defaultValue || '');
+        var config = window.__browserCliDialogConfig;
+        if (config.autoAccept) {
+          return config.promptText !== undefined ? config.promptText : (defaultValue || '');
         }
-        if (dialogConfig.autoDismiss) {
+        if (config.autoDismiss) {
           return null;
         }
         return originalPrompt.call(window, message, defaultValue);
       };
-    })();
-  `;
-  document.documentElement.appendChild(script);
-  script.remove();
+    })()`,
+  });
 }
 
-function sendConfig(): void {
-  window.postMessage({
-    type: `${DIALOG_MSG_TYPE}-config`,
-    config: {
-      autoAccept: state.autoAccept,
-      autoDismiss: state.autoDismiss,
-      promptText: state.promptText,
-    },
-  }, '*');
+/**
+ * Update dialog config in the MAIN world.
+ */
+async function updateConfig(config: {
+  autoAccept: boolean;
+  autoDismiss: boolean;
+  promptText?: string;
+}): Promise<void> {
+  await browser.runtime.sendMessage({
+    type: 'browser-cli-eval-in-main',
+    expression: `window.__browserCliDialogConfig = ${JSON.stringify(config)}`,
+  });
 }
 
 export async function handleDialog(command: Command): Promise<unknown> {
-  ensureInjected();
+  await ensureInjected();
 
   switch (command.action) {
     case 'dialogAccept': {
       const { text } = command.params as { text?: string };
-      state.autoAccept = true;
-      state.autoDismiss = false;
-      state.promptText = text;
-      sendConfig();
+      await updateConfig({
+        autoAccept: true,
+        autoDismiss: false,
+        promptText: text,
+      });
       return { accepted: true };
     }
     case 'dialogDismiss': {
-      state.autoAccept = false;
-      state.autoDismiss = true;
-      state.promptText = undefined;
-      sendConfig();
+      await updateConfig({
+        autoAccept: false,
+        autoDismiss: true,
+      });
       return { dismissed: true };
     }
     default:
