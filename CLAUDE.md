@@ -31,7 +31,7 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - Extension typecheck: wxt prepare && tsc --noEmit
 - All actions defined as discriminated union on 'action' field in packages/shared/src/protocol/actions.ts
 - Element refs (@e1, @e2) map to CSS selectors via RefMap in content script
-- Content script runs in isolated world; evaluate/console use MAIN world injection
+- Content script runs in isolated world; evaluate uses background `chrome.scripting.executeScript({ world: 'MAIN' })` to bypass CSP
 - CLI ↔ Daemon uses NDJSON over Unix socket
 - Daemon ↔ Extension uses JSON over WebSocket
 
@@ -87,6 +87,10 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - `cookies set <name> <value> --url <url>` — positional args for cookie set
 - `storage local [key]` / `storage session [key]` — area as subcommand
 - `network route <pattern> --abort` — use --abort (not --block)
+
+## Testing
+- Full manual E2E testing guide: see `TESTING_E2E.md`
+- Reference implementation: `.agent-browser-ref/` (clone of vercel-labs/agent-browser, in .gitignore)
 
 ## Gotchas
 - WXT + Vite 7 requires Node >= 20 (crypto.hash API)

@@ -46,16 +46,26 @@ async function routeCommand(
       return { url: tab.url, title: tab.title };
     }
     case 'goBack': {
-      await browser.tabs.goBack(targetTabId);
-      await waitForTabLoad(targetTabId);
+      const beforeBack = await browser.tabs.get(targetTabId);
+      await browser.scripting.executeScript({
+        target: { tabId: targetTabId },
+        world: 'MAIN',
+        func: () => history.back(),
+      });
+      await waitForUrlChange(targetTabId, beforeBack.url || '');
       const tab = await browser.tabs.get(targetTabId);
-      return { url: tab.url, title: tab.title };
+      return { url: tab.url };
     }
     case 'goForward': {
-      await browser.tabs.goForward(targetTabId);
-      await waitForTabLoad(targetTabId);
+      const beforeFwd = await browser.tabs.get(targetTabId);
+      await browser.scripting.executeScript({
+        target: { tabId: targetTabId },
+        world: 'MAIN',
+        func: () => history.forward(),
+      });
+      await waitForUrlChange(targetTabId, beforeFwd.url || '');
       const tab = await browser.tabs.get(targetTabId);
-      return { url: tab.url, title: tab.title };
+      return { url: tab.url };
     }
     case 'reload': {
       await browser.tabs.reload(targetTabId);
@@ -198,6 +208,21 @@ async function routeCommand(
         format: format || 'png',
         quality: quality,
       });
+
+      // If we have a cropRect, crop the image using OffscreenCanvas
+      if (cropRect) {
+        const dpr = await getDevicePixelRatio(targetTabId);
+        const cropped = await cropImage(dataUrl, cropRect, dpr, format || 'png', quality);
+        const [croppedHeader, croppedBase64] = cropped.split(',');
+        const croppedMime = croppedHeader.split(':')[1].split(';')[0];
+        return {
+          data: croppedBase64,
+          mimeType: croppedMime,
+          width: Math.round(cropRect.width),
+          height: Math.round(cropRect.height),
+        };
+      }
+
       // Parse data URL: data:image/png;base64,xxxxx
       const [header, base64Data] = dataUrl.split(',');
       const mimeType = header.split(':')[1].split(';')[0];
@@ -212,8 +237,22 @@ async function routeCommand(
         mimeType,
         width: viewportWidth,
         height: viewportHeight,
-        ...(cropRect ? { cropRect } : {}),
       };
+    }
+
+    // ─── Evaluate ──────────────────────────────────────────────
+    case 'evaluate': {
+      const { expression } = command.params as { expression: string };
+      const results = await browser.scripting.executeScript({
+        target: { tabId: targetTabId },
+        world: 'MAIN',
+        func: (expr: string) => {
+          return (0, eval)(expr);
+        },
+        args: [expression],
+      });
+      const result = results?.[0]?.result;
+      return { value: result };
     }
 
     // ─── Network ───────────────────────────────────────────────
@@ -458,6 +497,49 @@ function cookieToInfo(c: Browser.cookies.Cookie) {
   };
 }
 
+/**
+ * Wait for the tab URL to change from `previousUrl`, then wait for load to complete.
+ * Used for goBack/goForward where `tabs.goBack()` resolves before navigation starts.
+ */
+function waitForUrlChange(
+  tabId: number,
+  previousUrl: string,
+  timeoutMs = 15_000,
+): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      browser.tabs.onUpdated.removeListener(listener);
+      resolve(); // Resolve anyway on timeout — page may have no history
+    }, timeoutMs);
+
+    let navigationStarted = false;
+
+    const listener = (
+      updatedTabId: number,
+      changeInfo: Browser.tabs.OnUpdatedInfo,
+    ) => {
+      if (updatedTabId !== tabId) return;
+
+      // Detect navigation start via URL change or loading status
+      if (changeInfo.url && changeInfo.url !== previousUrl) {
+        navigationStarted = true;
+      }
+      if (changeInfo.status === 'loading') {
+        navigationStarted = true;
+      }
+
+      // Once navigation started, wait for complete
+      if (navigationStarted && changeInfo.status === 'complete') {
+        clearTimeout(timer);
+        browser.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    };
+
+    browser.tabs.onUpdated.addListener(listener);
+  });
+}
+
 function waitForTabLoad(tabId: number, timeoutMs = 15_000): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -487,4 +569,61 @@ function waitForTabLoad(tabId: number, timeoutMs = 15_000): Promise<void> {
       }
     });
   });
+}
+
+async function getDevicePixelRatio(tabId: number): Promise<number> {
+  try {
+    const results = await browser.scripting.executeScript({
+      target: { tabId },
+      func: () => window.devicePixelRatio,
+    });
+    return results?.[0]?.result ?? 1;
+  } catch {
+    return 1;
+  }
+}
+
+async function cropImage(
+  dataUrl: string,
+  rect: { x: number; y: number; width: number; height: number },
+  dpr: number,
+  format: string,
+  quality?: number,
+): Promise<string> {
+  // Convert data URL to blob without fetch (not supported in MV3 service worker)
+  const [header, base64] = dataUrl.split(',');
+  const mimeMatch = header.match(/:(.*?);/);
+  const srcMime = mimeMatch ? mimeMatch[1] : 'image/png';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const blob = new Blob([bytes], { type: srcMime });
+  const bitmap = await createImageBitmap(blob);
+
+  const sx = Math.round(rect.x * dpr);
+  const sy = Math.round(rect.y * dpr);
+  const sw = Math.round(rect.width * dpr);
+  const sh = Math.round(rect.height * dpr);
+
+  const canvas = new OffscreenCanvas(sw, sh);
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, sw, sh);
+  bitmap.close();
+
+  const outMime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+  const outBlob = await canvas.convertToBlob({
+    type: outMime,
+    quality: quality ? quality / 100 : undefined,
+  });
+
+  // Convert blob to data URL without FileReader (not available in service worker)
+  const buffer = await outBlob.arrayBuffer();
+  const outBytes = new Uint8Array(buffer);
+  let outBinary = '';
+  for (let i = 0; i < outBytes.length; i++) {
+    outBinary += String.fromCharCode(outBytes[i]);
+  }
+  return `data:${outMime};base64,${btoa(outBinary)}`;
 }

@@ -135,7 +135,7 @@ function isVisible(el: Element): boolean {
 
 function waitForUrl(pattern: string, timeout: number): Promise<string> {
   return new Promise((resolve, reject) => {
-    const regex = new RegExp(pattern);
+    const regex = patternToRegex(pattern);
 
     // Check immediately
     if (regex.test(location.href)) {
@@ -246,35 +246,21 @@ function waitForLoadState(
 
 function waitForFunction(expression: string, timeout: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    const messageId = `browser-cli-waitfn-${Date.now()}-${Math.random()}`;
-
-    const poll = setInterval(() => {
-      const handler = (event: MessageEvent) => {
-        if (event.data?.type === messageId) {
-          window.removeEventListener('message', handler);
-          if (event.data.result) {
-            clearInterval(poll);
-            clearTimeout(timer);
-            resolve();
-          }
+    const poll = setInterval(async () => {
+      try {
+        // Use background script to evaluate in MAIN world (bypasses CSP)
+        const response = await browser.runtime.sendMessage({
+          type: 'browser-cli-eval-in-main',
+          expression: `!!(${expression})`,
+        });
+        if (response?.result) {
+          clearInterval(poll);
+          clearTimeout(timer);
+          resolve();
         }
-      };
-      window.addEventListener('message', handler);
-
-      // Inject evaluation into MAIN world
-      const script = document.createElement('script');
-      script.textContent = `
-        (function() {
-          try {
-            const __result = !!(${expression});
-            window.postMessage({ type: ${JSON.stringify(messageId)}, result: __result }, '*');
-          } catch(e) {
-            window.postMessage({ type: ${JSON.stringify(messageId)}, result: false }, '*');
-          }
-        })();
-      `;
-      document.documentElement.appendChild(script);
-      script.remove();
+      } catch {
+        // Ignore errors during polling
+      }
     }, POLL_INTERVAL);
 
     const timer = setTimeout(() => {
@@ -282,4 +268,23 @@ function waitForFunction(expression: string, timeout: number): Promise<void> {
       reject(new Error(`Timeout waiting for function "${expression}" after ${timeout}ms`));
     }, timeout);
   });
+}
+
+/**
+ * Convert a pattern to a RegExp. Supports:
+ * - Glob patterns (containing `*` or `**`): `**` → `.*`, `*` → `[^/]*`
+ * - Regular expressions (passed through as-is if valid regex)
+ */
+function patternToRegex(pattern: string): RegExp {
+  // If it looks like a glob pattern (contains unescaped * or **), convert to regex
+  if (pattern.includes('*')) {
+    const escaped = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // escape regex special chars (except *)
+      .replace(/\*\*/g, '\0')                  // placeholder for **
+      .replace(/\*/g, '[^/]*')                 // * → match non-slash
+      .replace(/\0/g, '.*');                   // ** → match anything
+    return new RegExp(escaped);
+  }
+  // Otherwise treat as regex
+  return new RegExp(pattern);
 }

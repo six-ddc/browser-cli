@@ -36,7 +36,7 @@ export const typeParamsSchema = z.object({
   text: z.string(),
   delay: z.number().optional(),
 });
-export const pressParamsSchema = z.object({ selector: z.string(), key: z.string() });
+export const pressParamsSchema = z.object({ selector: z.string().optional(), key: z.string() });
 export const clearParamsSchema = z.object({ selector: z.string() });
 export const focusParamsSchema = z.object({ selector: z.string() });
 
@@ -74,7 +74,9 @@ export const boundingBoxParamsSchema = z.object({ selector: z.string() });
 export const snapshotParamsSchema = z.object({
   interactive: z.boolean().optional(),
   compact: z.boolean().optional(),
+  cursor: z.boolean().optional(),
   depth: z.number().optional(),
+  selector: z.string().optional(),
 });
 
 // Screenshot
