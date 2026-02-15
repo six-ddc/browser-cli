@@ -1,6 +1,5 @@
 import { Command } from 'commander';
 import { readFileSync, writeFileSync } from 'node:fs';
-import type { StateImportParams } from '@browser-cli/shared';
 import { sendCommand } from './shared.js';
 import { logger } from '../util/logger.js';
 
@@ -44,7 +43,16 @@ stateCommand
       process.exit(1);
     }
 
-    let stateData: { version?: number; cookies?: StateImportParams['cookies']; localStorage?: Record<string, string>; sessionStorage?: Record<string, string> };
+    let stateData: {
+      version?: number;
+      cookies?: Array<{
+        url?: string; name: string; value: string;
+        domain?: string; path?: string; secure?: boolean; httpOnly?: boolean;
+        sameSite?: string; expirationDate?: number;
+      }>;
+      localStorage?: Record<string, string>;
+      sessionStorage?: Record<string, string>;
+    };
     try {
       stateData = JSON.parse(raw);
     } catch {
@@ -57,10 +65,21 @@ stateCommand
       process.exit(1);
     }
 
+    // Transform cookies for import: add url from domain if missing, normalize sameSite
+    type SameSite = 'no_restriction' | 'lax' | 'strict' | 'unspecified';
+    const validSameSite = new Set<string>(['no_restriction', 'lax', 'strict', 'unspecified']);
+    const cookies = stateData.cookies?.map((c) => {
+      const domain = c.domain?.replace(/^\./, '') || '';
+      const protocol = c.secure ? 'https' : 'http';
+      const url = c.url || `${protocol}://${domain}${c.path || '/'}`;
+      const sameSite = (c.sameSite && validSameSite.has(c.sameSite)) ? c.sameSite as SameSite : undefined;
+      return { ...c, url, sameSite };
+    });
+
     const result = await sendCommand(cmd, {
       action: 'stateImport',
       params: {
-        cookies: stateData.cookies,
+        cookies,
         localStorage: stateData.localStorage,
         sessionStorage: stateData.sessionStorage,
       },

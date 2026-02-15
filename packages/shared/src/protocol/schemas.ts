@@ -246,7 +246,7 @@ export const stateImportParamsSchema = z.object({
     path: z.string().optional(),
     secure: z.boolean().optional(),
     httpOnly: z.boolean().optional(),
-    sameSite: z.enum(['no_restriction', 'lax', 'strict']).optional(),
+    sameSite: z.enum(['no_restriction', 'lax', 'strict', 'unspecified']).optional(),
     expirationDate: z.number().optional(),
   })).optional(),
   localStorage: z.record(z.string(), z.string()).optional(),

@@ -70,13 +70,13 @@ export async function handleInteraction(command: Command): Promise<unknown> {
     case 'keydown': {
       const { selector, key } = command.params as { selector?: string; key: string };
       const el = selector ? requireElement(selector) : (document.activeElement as Element || document.body);
-      el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      el.dispatchEvent(new KeyboardEvent('keydown', keyEventInit(key)));
       return { pressed: true };
     }
     case 'keyup': {
       const { selector, key } = command.params as { selector?: string; key: string };
       const el = selector ? requireElement(selector) : (document.activeElement as Element || document.body);
-      el.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true }));
+      el.dispatchEvent(new KeyboardEvent('keyup', keyEventInit(key)));
       return { released: true };
     }
     default:
@@ -201,12 +201,9 @@ async function performType(
   el.focus();
 
   for (const char of text) {
-    el.dispatchEvent(
-      new KeyboardEvent('keydown', { key: char, bubbles: true }),
-    );
-    el.dispatchEvent(
-      new KeyboardEvent('keypress', { key: char, bubbles: true }),
-    );
+    const init = keyEventInit(char);
+    el.dispatchEvent(new KeyboardEvent('keydown', init));
+    el.dispatchEvent(new KeyboardEvent('keypress', init));
 
     // Append character using native setter
     const nativeSetter = Object.getOwnPropertyDescriptor(
@@ -216,9 +213,7 @@ async function performType(
     nativeSetter?.call(el, el.value + char);
 
     el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(
-      new KeyboardEvent('keyup', { key: char, bubbles: true }),
-    );
+    el.dispatchEvent(new KeyboardEvent('keyup', init));
 
     if (delay && delay > 0) {
       await new Promise((r) => setTimeout(r, delay));
@@ -226,17 +221,51 @@ async function performType(
   }
 }
 
+/** Map key name to keyCode for backward-compat with sites using deprecated keyCode/which */
+function getKeyCode(key: string): number {
+  const map: Record<string, number> = {
+    Backspace: 8, Tab: 9, Enter: 13, Shift: 16, Control: 17, Alt: 18,
+    Escape: 27, ' ': 32, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40,
+    Delete: 46, Meta: 91,
+  };
+  if (map[key]) return map[key];
+  // Single character: use its char code
+  if (key.length === 1) return key.toUpperCase().charCodeAt(0);
+  // F1-F12
+  const fMatch = key.match(/^F(\d+)$/);
+  if (fMatch) return 111 + parseInt(fMatch[1]);
+  return 0;
+}
+
+/** Map key name to code (physical key identifier) */
+function getKeyCodeStr(key: string): string {
+  const map: Record<string, string> = {
+    Backspace: 'Backspace', Tab: 'Tab', Enter: 'Enter', Shift: 'ShiftLeft',
+    Control: 'ControlLeft', Alt: 'AltLeft', Escape: 'Escape', ' ': 'Space',
+    ArrowLeft: 'ArrowLeft', ArrowUp: 'ArrowUp', ArrowRight: 'ArrowRight',
+    ArrowDown: 'ArrowDown', Delete: 'Delete', Meta: 'MetaLeft',
+  };
+  if (map[key]) return map[key];
+  if (key.length === 1) {
+    const upper = key.toUpperCase();
+    if (upper >= 'A' && upper <= 'Z') return `Key${upper}`;
+    if (upper >= '0' && upper <= '9') return `Digit${upper}`;
+  }
+  return key;
+}
+
+/** Build KeyboardEvent init with key, code, keyCode, which for max compatibility */
+function keyEventInit(key: string): KeyboardEventInit {
+  const keyCode = getKeyCode(key);
+  return { key, code: getKeyCodeStr(key), keyCode, which: keyCode, bubbles: true };
+}
+
 /** Press a single key (e.g., "Enter", "Escape", "Tab") */
 async function performPress(el: Element, key: string): Promise<void> {
-  el.dispatchEvent(
-    new KeyboardEvent('keydown', { key, bubbles: true }),
-  );
-  el.dispatchEvent(
-    new KeyboardEvent('keypress', { key, bubbles: true }),
-  );
-  el.dispatchEvent(
-    new KeyboardEvent('keyup', { key, bubbles: true }),
-  );
+  const init = keyEventInit(key);
+  el.dispatchEvent(new KeyboardEvent('keydown', init));
+  el.dispatchEvent(new KeyboardEvent('keypress', init));
+  el.dispatchEvent(new KeyboardEvent('keyup', init));
 }
 
 async function performClear(el: HTMLInputElement | HTMLTextAreaElement): Promise<void> {

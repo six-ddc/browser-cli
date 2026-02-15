@@ -148,7 +148,12 @@ export function findByText(locator: TextLocator, root: Element = document.body):
     currentNode = walker.nextNode();
   }
 
-  return results;
+  // Prefer the most specific (deepest) elements: remove any element
+  // that has a descendant also in the results. This matches
+  // Playwright's getByText behavior of returning the innermost match.
+  return results.filter(
+    (el) => !results.some((other) => other !== el && el.contains(other)),
+  );
 }
 
 /**
