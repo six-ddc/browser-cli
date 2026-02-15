@@ -3,6 +3,10 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-react'],
+  runner: {
+    disabled: false,
+    chromiumArgs: ['--auto-open-devtools-for-tabs'],
+  },
   manifest: {
     name: 'Browser-CLI',
     description: 'Browser automation from the command line — extension bridge',

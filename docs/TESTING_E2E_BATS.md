@@ -74,12 +74,22 @@ test/e2e/
     01-navigation.bats      # Navigate, back, forward, reload, get url/title
     02-interaction.bats     # Click, fill, type, check, select
     03-selectors.bats       # CSS, semantic locators, element refs
-    04-snapshot.bats         # Snapshot command with flags
+    04-snapshot.bats        # Snapshot command with flags
+    05-tab-management.bats  # Tab list, new, close, switch
+    06-frame-management.bats # Frame switch, main, list, current
+    07-scroll.bats          # Scroll directions, scrollintoview
+    08-window-management.bats # Window list, new, close
   advanced/
     10-find-command.bats    # Find role/text/label + actions
     11-semantic-locators.bats  # All semantic engines
     12-element-refs.bats    # @e1, @e2 usage
     13-position-selectors.bats # first, last, nth selectors
+    14-screenshot.bats      # Screenshot with format, selector, quality
+    15-eval.bats            # JavaScript eval, --base64, --stdin
+    16-dialog.bats          # Dialog accept/dismiss
+    17-highlight.bats       # Element highlight with color/duration
+    18-upload-drag.bats     # File upload and drag-and-drop
+    19-mouse-keydown.bats   # Mouse control and keydown/keyup
   data/
     20-get-commands.bats    # get text/html/value/attr/count/box
     21-is-commands.bats     # is visible/enabled/checked
@@ -87,6 +97,13 @@ test/e2e/
   state/
     30-cookies.bats         # cookies get/set/clear
     31-storage.bats         # storage local/session
+    32-network.bats         # network route/unroute/requests/clear
+    33-console-errors.bats  # console output and page errors
+    34-state-management.bats # state save/load round-trip
+    35-browser-config.bats  # set viewport/geo/media/headers
+  cross/
+    40-cross-command.bats   # Cross-command interaction tests
+    41-global-options.bats  # --json and --session flags
 ```
 
 ## Running Tests
@@ -106,14 +123,29 @@ npx bats test/e2e/**/*.bats
 ### Run a Specific Test Suite
 
 ```bash
-# Run only navigation tests
+# By category
+pnpm test:e2e:basic        # Navigation, interaction, selectors, snapshot, tabs, frames, scroll, windows
+pnpm test:e2e:advanced     # Find, semantic locators, refs, screenshot, eval, dialog, highlight, upload, mouse
+pnpm test:e2e:data         # get, is, wait commands
+pnpm test:e2e:state        # Cookies, storage, network, console, state mgmt, browser config
+pnpm test:e2e:cross        # Cross-command interactions, --json flag
+
+# By individual test file
+pnpm test:e2e:tabs         # Tab management
+pnpm test:e2e:frames       # Frame management
+pnpm test:e2e:scroll       # Scroll operations
+pnpm test:e2e:screenshot   # Screenshot
+pnpm test:e2e:eval         # JavaScript eval
+pnpm test:e2e:dialog       # Dialog handling
+pnpm test:e2e:network      # Network interception
+pnpm test:e2e:console      # Console & errors
+pnpm test:e2e:state-mgmt   # State save/load
+pnpm test:e2e:config       # Browser config (viewport, geo, media, headers)
+
+# Or using bats directly
 npx bats test/e2e/basic/01-navigation.bats
-
-# Run only find command tests
-npx bats test/e2e/advanced/10-find-command.bats
-
-# Run all basic tests
-npx bats test/e2e/basic/
+npx bats test/e2e/advanced/
+npx bats test/e2e/cross/
 ```
 
 ### Run a Single Test by Name

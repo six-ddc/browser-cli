@@ -36,6 +36,13 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - CLI ↔ Daemon uses NDJSON over Unix socket
 - Daemon ↔ Extension uses JSON over WebSocket
 
+## Documentation
+
+### Single Source of Truth
+- **`skills/skills/browser-cli/SKILL.md`** is the authoritative CLI command reference.
+- Whenever CLI behavior changes — adding, removing, or modifying commands, options, flags, or syntax — **you MUST update SKILL.md** in the same changeset.
+- README.md only contains a brief usage snippet and links to SKILL.md; do NOT duplicate command details in README.md.
+
 ## Development Principles
 
 ### Backward Compatibility
