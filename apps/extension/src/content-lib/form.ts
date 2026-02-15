@@ -8,7 +8,11 @@ import { resolveElement } from './element-ref-store';
 export async function handleForm(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'check': {
-      const el = requireCheckable((command.params as { selector: string }).selector);
+      const { selector, position } = command.params as {
+        selector: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = requireCheckable(selector, position);
       if (!el.checked) {
         el.checked = true;
         el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -17,7 +21,11 @@ export async function handleForm(command: Command): Promise<unknown> {
       return { checked: true };
     }
     case 'uncheck': {
-      const el = requireCheckable((command.params as { selector: string }).selector);
+      const { selector, position } = command.params as {
+        selector: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = requireCheckable(selector, position);
       if (el.checked) {
         el.checked = false;
         el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -26,8 +34,12 @@ export async function handleForm(command: Command): Promise<unknown> {
       return { unchecked: true };
     }
     case 'select': {
-      const { selector, value } = command.params as { selector: string; value: string };
-      const el = resolveElement(selector);
+      const { selector, value, position } = command.params as {
+        selector: string;
+        value: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = resolveElement(selector, position);
       if (!el) throw new Error(`Element not found: ${selector}`);
       if (!(el instanceof HTMLSelectElement)) {
         throw new Error(`Element is not a <select>: ${selector}`);
@@ -65,8 +77,11 @@ export async function handleForm(command: Command): Promise<unknown> {
   }
 }
 
-function requireCheckable(selector: string): HTMLInputElement {
-  const el = resolveElement(selector);
+function requireCheckable(
+  selector: string,
+  position?: { type: 'first' | 'last' | 'nth'; index?: number }
+): HTMLInputElement {
+  const el = resolveElement(selector, position);
   if (!el) throw new Error(`Element not found: ${selector}`);
   if (!(el instanceof HTMLInputElement)) {
     throw new Error(`Element is not an <input>: ${selector}`);

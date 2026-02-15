@@ -38,7 +38,10 @@ export function getRefCount(): number {
 }
 
 /** Resolve a selector (may be @e1, semantic locator, or CSS selector) to a DOM element */
-export function resolveElement(selectorOrRef: string): Element | null {
+export function resolveElement(
+  selectorOrRef: string,
+  position?: { type: 'first' | 'last' | 'nth'; index?: number },
+): Element | null {
   // Handle element refs (@e1, @e2, etc.)
   if (isElementRef(selectorOrRef)) {
     const entry = refMap.get(selectorOrRef);
@@ -58,11 +61,36 @@ export function resolveElement(selectorOrRef: string): Element | null {
     if (!locator) return null;
 
     const elements = resolveSemanticLocator(locator);
-    return elements[0] || null;
+    return applyPositionFilter(elements, position);
   }
 
   // Plain CSS selector
+  if (position) {
+    const elements = Array.from(document.querySelectorAll(selectorOrRef));
+    return applyPositionFilter(elements, position);
+  }
   return document.querySelector(selectorOrRef);
+}
+
+/** Apply position filter to an array of elements */
+function applyPositionFilter(
+  elements: Element[],
+  position?: { type: 'first' | 'last' | 'nth'; index?: number },
+): Element | null {
+  if (!position) return elements[0] || null;
+
+  switch (position.type) {
+    case 'first':
+      return elements[0] || null;
+    case 'last':
+      return elements[elements.length - 1] || null;
+    case 'nth':
+      if (position.index === undefined) return null;
+      // nth is 1-based from user perspective, but arrays are 0-based
+      return elements[position.index - 1] || null;
+    default:
+      return elements[0] || null;
+  }
 }
 
 /** Resolve to all matching elements (for count, etc.) */

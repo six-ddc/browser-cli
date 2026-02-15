@@ -147,25 +147,25 @@ function validateAction(action: string): void {
  * Build the protocol command from parsed find args.
  */
 function buildCommand(parsed: ParsedFind): { action: string; params: Record<string, unknown> } {
-  const { selector, action, actionValue } = parsed;
+  const { selector, action, actionValue, position } = parsed;
 
   switch (action) {
     case 'fill':
       if (!actionValue) throw new Error('fill requires a value: find ... fill <value>');
-      return { action: 'fill', params: { selector, value: actionValue } };
+      return { action: 'fill', params: { selector, value: actionValue, position } };
     case 'type':
       if (!actionValue) throw new Error('type requires text: find ... type <text>');
-      return { action: 'type', params: { selector, text: actionValue, delay: 0 } };
+      return { action: 'type', params: { selector, text: actionValue, delay: 0, position } };
     case 'select':
       if (!actionValue) throw new Error('select requires a value: find ... select <value>');
-      return { action: 'select', params: { selector, value: actionValue } };
+      return { action: 'select', params: { selector, value: actionValue, position } };
     case 'press':
       if (!actionValue) throw new Error('press requires a key: find ... press <key>');
-      return { action: 'press', params: { selector, key: actionValue } };
+      return { action: 'press', params: { selector, key: actionValue, position } };
     case 'click':
-      return { action: 'click', params: { selector, button: 'left' } };
+      return { action: 'click', params: { selector, button: 'left', position } };
     default:
-      return { action, params: { selector } };
+      return { action, params: { selector, position } };
   }
 }
 

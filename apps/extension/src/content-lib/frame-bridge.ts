@@ -38,7 +38,7 @@ export function discoverFrames(): FrameInfo[] {
 
     try {
       // Try to access contentWindow.location to check same-origin
-      const _ = iframe.contentWindow?.location.href;
+      void iframe.contentWindow?.location.href;
       isSameOrigin = true;
       src = iframe.contentWindow?.location.href || src;
     } catch {
@@ -132,7 +132,7 @@ export async function executeInFrame(
   // Check if same-origin
   let isSameOrigin = false;
   try {
-    const _ = iframe.contentWindow?.location.href;
+    void iframe.contentWindow?.location.href;
     isSameOrigin = true;
   } catch {
     isSameOrigin = false;
