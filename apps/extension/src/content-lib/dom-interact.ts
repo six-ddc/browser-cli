@@ -9,54 +9,88 @@ import { resolveElement } from './element-ref-store';
 export async function handleInteraction(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'click': {
-      const { selector, button } = command.params as { selector: string; button?: string };
-      const el = requireElement(selector);
+      const { selector, button, position } = command.params as {
+        selector: string;
+        button?: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = requireElement(selector, position);
       await performClick(el, button || 'left');
       return { clicked: true };
     }
     case 'dblclick': {
-      const el = requireElement((command.params as { selector: string }).selector);
+      const { selector, position } = command.params as {
+        selector: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = requireElement(selector, position);
       await performDblClick(el);
       return { clicked: true };
     }
     case 'hover': {
-      const el = requireElement((command.params as { selector: string }).selector);
+      const { selector, position } = command.params as {
+        selector: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = requireElement(selector, position);
       await performHover(el);
       return { hovered: true };
     }
     case 'fill': {
-      const { selector, value } = command.params as { selector: string; value: string };
-      const el = requireElement(selector) as HTMLInputElement | HTMLTextAreaElement;
+      const { selector, value, position } = command.params as {
+        selector: string;
+        value: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = requireElement(selector, position);
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
+        throw new Error(`Element is not fillable (not an <input> or <textarea>): ${selector}`);
+      }
       await performFill(el, value);
       return { filled: true };
     }
     case 'type': {
-      const { selector, text, delay } = command.params as {
+      const { selector, text, delay, position } = command.params as {
         selector: string;
         text: string;
         delay?: number;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
       };
-      const el = requireElement(selector) as HTMLInputElement | HTMLTextAreaElement;
+      const el = requireElement(selector, position);
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
+        throw new Error(`Element is not typeable (not an <input> or <textarea>): ${selector}`);
+      }
       await performType(el, text, delay);
       return { typed: true };
     }
     case 'press': {
-      const { selector, key } = command.params as { selector?: string; key: string };
-      const el = selector ? requireElement(selector) : (document.activeElement as Element || document.body);
+      const { selector, key, position } = command.params as {
+        selector?: string;
+        key: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = selector ? requireElement(selector, position) : (document.activeElement as Element || document.body);
       await performPress(el, key);
       return { pressed: true };
     }
     case 'clear': {
-      const el = requireElement(
-        (command.params as { selector: string }).selector,
-      ) as HTMLInputElement | HTMLTextAreaElement;
+      const { selector, position } = command.params as {
+        selector: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = requireElement(selector, position);
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
+        throw new Error(`Element is not clearable (not an <input> or <textarea>): ${selector}`);
+      }
       await performClear(el);
       return { cleared: true };
     }
     case 'focus': {
-      const el = requireElement(
-        (command.params as { selector: string }).selector,
-      ) as HTMLElement;
+      const { selector, position } = command.params as {
+        selector: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = requireElement(selector, position) as HTMLElement;
       el.focus();
       return { focused: true };
     }
@@ -68,14 +102,22 @@ export async function handleInteraction(command: Command): Promise<unknown> {
       return { dragged: true };
     }
     case 'keydown': {
-      const { selector, key } = command.params as { selector?: string; key: string };
-      const el = selector ? requireElement(selector) : (document.activeElement as Element || document.body);
+      const { selector, key, position } = command.params as {
+        selector?: string;
+        key: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = selector ? requireElement(selector, position) : (document.activeElement as Element || document.body);
       el.dispatchEvent(new KeyboardEvent('keydown', keyEventInit(key)));
       return { pressed: true };
     }
     case 'keyup': {
-      const { selector, key } = command.params as { selector?: string; key: string };
-      const el = selector ? requireElement(selector) : (document.activeElement as Element || document.body);
+      const { selector, key, position } = command.params as {
+        selector?: string;
+        key: string;
+        position?: { type: 'first' | 'last' | 'nth'; index?: number };
+      };
+      const el = selector ? requireElement(selector, position) : (document.activeElement as Element || document.body);
       el.dispatchEvent(new KeyboardEvent('keyup', keyEventInit(key)));
       return { released: true };
     }
@@ -84,8 +126,11 @@ export async function handleInteraction(command: Command): Promise<unknown> {
   }
 }
 
-function requireElement(selector: string): Element {
-  const el = resolveElement(selector);
+function requireElement(
+  selector: string,
+  position?: { type: 'first' | 'last' | 'nth'; index?: number }
+): Element {
+  const el = resolveElement(selector, position);
   if (!el) throw new Error(`Element not found: ${selector}`);
   return el;
 }
@@ -175,17 +220,18 @@ async function performFill(
   el.focus();
 
   // Use the native value setter to bypass React/Vue interceptors
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    'value',
-  )?.set;
-  const nativeTextareaValueSetter = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    'value',
-  )?.set;
+  const prototype = el instanceof HTMLTextAreaElement
+    ? HTMLTextAreaElement.prototype
+    : HTMLInputElement.prototype;
 
-  const setter = el instanceof HTMLTextAreaElement ? nativeTextareaValueSetter : nativeInputValueSetter;
-  setter?.call(el, value);
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+  if (descriptor && descriptor.set) {
+    // Call the setter with the element as the context
+    descriptor.set.call(el, value);
+  } else {
+    // Fallback to direct assignment if descriptor not found
+    el.value = value;
+  }
 
   // Dispatch events to notify frameworks
   el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -200,17 +246,23 @@ async function performType(
 ): Promise<void> {
   el.focus();
 
+  const prototype = el instanceof HTMLTextAreaElement
+    ? HTMLTextAreaElement.prototype
+    : HTMLInputElement.prototype;
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+
   for (const char of text) {
     const init = keyEventInit(char);
     el.dispatchEvent(new KeyboardEvent('keydown', init));
     el.dispatchEvent(new KeyboardEvent('keypress', init));
 
     // Append character using native setter
-    const nativeSetter = Object.getOwnPropertyDescriptor(
-      el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-      'value',
-    )?.set;
-    nativeSetter?.call(el, el.value + char);
+    const newValue = el.value + char;
+    if (descriptor && descriptor.set) {
+      descriptor.set.call(el, newValue);
+    } else {
+      el.value = newValue;
+    }
 
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new KeyboardEvent('keyup', init));
