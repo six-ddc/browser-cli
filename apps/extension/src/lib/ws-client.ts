@@ -6,6 +6,7 @@
 import {
   DEFAULT_WS_PORT,
   PROTOCOL_VERSION,
+  schemas,
 } from '@browser-cli/shared';
 import type {
   WsMessage,
@@ -28,6 +29,10 @@ export interface WsClientOptions {
 
 const MAX_BACKOFF_MS = 30_000;
 const INITIAL_BACKOFF_MS = 1_000;
+/** Minimum delay (ms) to use chrome.alarms (Chrome enforces 1-minute minimum) */
+const ALARM_THRESHOLD_MS = 60_000;
+const HEARTBEAT_TIMEOUT_MS = 45_000;
+const MAX_PENDING_EVENTS = 50;
 
 export class WsClient {
   private ws: WebSocket | null = null;
@@ -40,6 +45,10 @@ export class WsClient {
   private stopped = false;
   /** Monotonic counter to detect stale WebSocket callbacks */
   private generation = 0;
+  /** Timestamp of last message received (for heartbeat timeout) */
+  private lastMessageTime = 0;
+  /** Queued events while disconnected */
+  private pendingEvents: string[] = [];
 
   constructor(options: WsClientOptions = {}) {
     this.port = options.port ?? DEFAULT_WS_PORT;
@@ -78,6 +87,24 @@ export class WsClient {
     this.stopped = false;
     this.backoff = INITIAL_BACKOFF_MS;
     this.connect();
+  }
+
+  /** Called by alarm handler when 'browser-cli-reconnect' fires */
+  onAlarmFired(): void {
+    if (!this.stopped && !this.connected) {
+      this.connect();
+    }
+  }
+
+  /** Check if the connection has gone stale (no messages within timeout) */
+  checkHeartbeat(): void {
+    if (!this.connected || !this.ws || this.lastMessageTime === 0) return;
+    if (Date.now() - this.lastMessageTime > HEARTBEAT_TIMEOUT_MS) {
+      console.log('[browser-cli] Heartbeat timeout — reconnecting');
+      this.cleanup();
+      this.options.onDisconnect?.();
+      this.scheduleReconnect();
+    }
   }
 
   private cleanup(): void {
@@ -128,8 +155,15 @@ export class WsClient {
 
     this.ws.onmessage = (event) => {
       if (gen !== this.generation) return;
+      this.lastMessageTime = Date.now();
       try {
-        const msg = JSON.parse(event.data as string) as WsMessage;
+        const parsed = JSON.parse(event.data as string);
+        const result = schemas.wsMessageSchema.safeParse(parsed);
+        if (!result.success) {
+          console.error('[browser-cli] Invalid WS message (schema validation failed):', result.error, parsed);
+          return;
+        }
+        const msg = result.data as WsMessage;
         console.log('[browser-cli] Received message:', msg.type, msg);
         this.handleMessage(msg);
       } catch (err) {
@@ -162,6 +196,7 @@ export class WsClient {
         this.sessionId = msg.sessionId;
         this.options.onConnect?.();
         this.options.onHandshake?.(msg as HandshakeAckMessage);
+        this.flushPendingEvents();
         break;
       }
       case 'ping': {
@@ -181,25 +216,54 @@ export class WsClient {
     }
   }
 
-  /** Send an event to the daemon */
+  /** Send an event to the daemon (queues if disconnected) */
   sendEvent(event: string, data: unknown, tabId?: number): void {
-    if (!this.connected || !this.ws) return;
-    const msg = {
+    const msg = JSON.stringify({
       type: 'event' as const,
       event,
       data,
       tabId,
       timestamp: Date.now(),
-    };
-    this.ws.send(JSON.stringify(msg));
+    });
+
+    if (!this.connected || !this.ws) {
+      if (this.pendingEvents.length < MAX_PENDING_EVENTS) {
+        this.pendingEvents.push(msg);
+      }
+      return;
+    }
+    this.ws.send(msg);
+  }
+
+  /** Flush queued events after reconnection */
+  private flushPendingEvents(): void {
+    if (!this.connected || !this.ws || this.pendingEvents.length === 0) return;
+    const events = this.pendingEvents.splice(0);
+    for (const msg of events) {
+      this.ws.send(msg);
+    }
   }
 
   private scheduleReconnect(): void {
     if (this.stopped) return;
-    this.options.onReconnecting?.(this.backoff);
+
+    // Add ±20% jitter to prevent thundering herd
+    const jitter = 1 + (Math.random() * 0.4 - 0.2);
+    const delay = Math.round(this.backoff * jitter);
+
+    this.options.onReconnecting?.(delay);
+
+    // Always use setTimeout for immediate reconnection
     this.reconnectTimer = setTimeout(() => {
       this.connect();
-    }, this.backoff);
+    }, delay);
+
+    // For long delays, also set a chrome.alarm as belt-and-suspenders
+    // (setTimeout may not fire if SW is suspended)
+    if (delay >= ALARM_THRESHOLD_MS) {
+      browser.alarms.create('browser-cli-reconnect', { delayInMinutes: delay / 60000 });
+    }
+
     this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF_MS);
   }
 

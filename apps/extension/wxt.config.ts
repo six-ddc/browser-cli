@@ -20,7 +20,7 @@ export default defineConfig({
     host_permissions: ['<all_urls>'],
     content_security_policy: {
       extension_pages:
-        "script-src 'self'; object-src 'self'; connect-src ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:*",
+        "default-src 'self'; script-src 'self'; object-src 'self'; frame-src 'self'; connect-src ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:*",
     },
   },
 });

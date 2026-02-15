@@ -378,20 +378,25 @@ export function findByXPath(locator: XPathLocator, root: Element = document.body
   }
 
   const contextNode = root === document.body ? document : root;
-  const xpathResult = document.evaluate(
-    expression,
-    contextNode,
-    null,
-    XPathResult.ORDERED_NODE_ITERATOR_TYPE,
-    null,
-  );
 
-  let node = xpathResult.iterateNext();
-  while (node) {
-    if (node instanceof Element) {
-      results.push(node);
+  try {
+    const xpathResult = document.evaluate(
+      expression,
+      contextNode,
+      null,
+      XPathResult.ORDERED_NODE_ITERATOR_TYPE,
+      null,
+    );
+
+    let node = xpathResult.iterateNext();
+    while (node) {
+      if (node instanceof Element) {
+        results.push(node);
+      }
+      node = xpathResult.iterateNext();
     }
-    node = xpathResult.iterateNext();
+  } catch (err) {
+    throw new Error(`Invalid XPath expression "${expression}": ${(err as Error).message}`);
   }
 
   return results;
