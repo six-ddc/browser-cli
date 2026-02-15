@@ -32,7 +32,17 @@ export async function handleStorage(command: Command): Promise<unknown> {
         area?: 'local' | 'session';
       };
       const storage = area === 'session' ? sessionStorage : localStorage;
-      storage.setItem(key, value);
+      try {
+        storage.setItem(key, value);
+      } catch (err) {
+        if ((err as DOMException).name === 'QuotaExceededError') {
+          throw new Error(
+            `Storage quota exceeded when setting key "${key}" (${area ?? 'local'}Storage). ` +
+            `Hint: Clear unused entries with "storage clear ${area ?? 'local'}" before adding new data.`,
+          );
+        }
+        throw err;
+      }
       return { set: true };
     }
     case 'storageClear': {

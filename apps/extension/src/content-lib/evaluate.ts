@@ -32,9 +32,9 @@ export async function handleEvaluate(params: EvaluateParams): Promise<{ value: u
       (function() {
         try {
           const __result = eval(${JSON.stringify(expression)});
-          window.postMessage({ type: ${JSON.stringify(messageId)}, result: __result }, '*');
+          window.postMessage({ type: ${JSON.stringify(messageId)}, result: __result }, window.location.origin);
         } catch(e) {
-          window.postMessage({ type: ${JSON.stringify(messageId)}, error: e.message }, '*');
+          window.postMessage({ type: ${JSON.stringify(messageId)}, error: e.message }, window.location.origin);
         }
       })();
     `;

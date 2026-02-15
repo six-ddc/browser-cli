@@ -165,6 +165,7 @@ export async function executeInFrame(
     const handler = (event: MessageEvent) => {
       if (event.data?.type !== 'browser-cli-frame-response') return;
       if (event.data?.id !== messageId) return;
+      if (event.source !== iframe.contentWindow) return;
 
       clearTimeout(timeout);
       window.removeEventListener('message', handler);
@@ -178,14 +179,14 @@ export async function executeInFrame(
 
     window.addEventListener('message', handler);
 
-    // Send command to iframe
+    // Send command to iframe (same-origin already verified above)
     iframe.contentWindow!.postMessage(
       {
         type: 'browser-cli-frame-command',
         id: messageId,
         command,
       },
-      '*',
+      iframe.contentWindow!.location.origin,
     );
   });
 }
@@ -206,6 +207,7 @@ export function initFrameBridge(): void {
 
   window.addEventListener('message', async (event: MessageEvent) => {
     if (event.data?.type !== 'browser-cli-frame-command') return;
+    if (event.source !== window.parent) return;
 
     const { id, command } = event.data;
 
@@ -278,7 +280,7 @@ export function initFrameBridge(): void {
           throw new Error(`Unsupported frame command: ${(command as { action: string }).action}`);
       }
 
-      // Send success response back to parent
+      // Send success response back to parent (same-origin: we're inside an iframe)
       window.parent.postMessage(
         {
           type: 'browser-cli-frame-response',
@@ -286,10 +288,10 @@ export function initFrameBridge(): void {
           success: true,
           data: result,
         },
-        '*',
+        window.parent.location.origin,
       );
     } catch (err) {
-      // Send error response back to parent
+      // Send error response back to parent (same-origin: we're inside an iframe)
       window.parent.postMessage(
         {
           type: 'browser-cli-frame-response',
@@ -299,7 +301,7 @@ export function initFrameBridge(): void {
             message: (err as Error).message || 'Unknown error',
           },
         },
-        '*',
+        window.parent.location.origin,
       );
     }
   });

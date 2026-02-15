@@ -1,6 +1,10 @@
 /**
  * NetworkManager: Manages network request interception using browser.declarativeNetRequest.
  * Provides blocking, redirecting, and request tracking capabilities.
+ *
+ * Note: webRequest API is used here for observation only (not blocking/modifying),
+ * which remains supported in MV3. Actual blocking/redirecting is done via
+ * declarativeNetRequest rules.
  */
 
 import type { NetworkRoute, NetworkRequest } from '@browser-cli/shared';

@@ -25,12 +25,34 @@ const DEFAULT_STATE: ConnectionState = {
 
 const STORAGE_KEY = 'browserCliState';
 
+/** Validate stored state has the expected shape */
+function isValidState(raw: unknown): raw is ConnectionState {
+  if (typeof raw !== 'object' || raw === null) return false;
+  const obj = raw as Record<string, unknown>;
+  return (
+    typeof obj.connected === 'boolean' &&
+    (typeof obj.sessionId === 'string' || obj.sessionId === null) &&
+    typeof obj.port === 'number' &&
+    (typeof obj.lastConnected === 'number' || obj.lastConnected === null) &&
+    (typeof obj.lastDisconnected === 'number' || obj.lastDisconnected === null) &&
+    typeof obj.reconnecting === 'boolean' &&
+    (typeof obj.nextRetryIn === 'number' || obj.nextRetryIn === null)
+  );
+}
+
 /** Serial queue: each setState waits for the previous one to finish */
 let pending: Promise<void> = Promise.resolve();
 
 export async function getState(): Promise<ConnectionState> {
   const result = await browser.storage.local.get(STORAGE_KEY);
-  return { ...DEFAULT_STATE, ...(result[STORAGE_KEY] ?? {}) };
+  const raw = result[STORAGE_KEY];
+  if (!raw) return { ...DEFAULT_STATE };
+
+  if (!isValidState(raw)) {
+    console.warn('[browser-cli] Invalid stored state, using defaults:', raw);
+    return { ...DEFAULT_STATE };
+  }
+  return raw;
 }
 
 export function setState(updates: Partial<ConnectionState>): Promise<void> {

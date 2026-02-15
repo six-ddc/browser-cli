@@ -161,13 +161,13 @@ function waitForUrl(pattern: string, timeout: number): Promise<string> {
 function waitForText(text: string, timeout: number): Promise<void> {
   return new Promise((resolve, reject) => {
     // Check immediately
-    if (document.body.innerText.includes(text)) {
+    if ((document.body.textContent ?? '').includes(text)) {
       resolve();
       return;
     }
 
     const observer = new MutationObserver(() => {
-      if (document.body.innerText.includes(text)) {
+      if ((document.body.textContent ?? '').includes(text)) {
         observer.disconnect();
         clearInterval(poll);
         clearTimeout(timer);
@@ -182,7 +182,7 @@ function waitForText(text: string, timeout: number): Promise<void> {
     });
 
     const poll = setInterval(() => {
-      if (document.body.innerText.includes(text)) {
+      if ((document.body.textContent ?? '').includes(text)) {
         observer.disconnect();
         clearInterval(poll);
         clearTimeout(timer);

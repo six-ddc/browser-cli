@@ -5,7 +5,7 @@
  */
 
 import type { RequestMessage, ResponseMessage, Command } from '@browser-cli/shared';
-import { ErrorCode } from '@browser-cli/shared';
+import { ErrorCode, createError } from '@browser-cli/shared';
 import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
 
@@ -39,6 +39,15 @@ async function routeCommand(
     // ─── Navigation ────────────────────────────────────────────
     case 'navigate': {
       const { url } = command.params as { url: string };
+      // Block dangerous URL schemes
+      const scheme = url.split(':')[0].toLowerCase();
+      if (['javascript', 'data', 'vbscript'].includes(scheme)) {
+        throw createError(
+          ErrorCode.INVALID_URL,
+          `Blocked navigation to "${scheme}:" URL — this scheme is not allowed for security reasons`,
+          'Use http: or https: URLs instead',
+        );
+      }
       await browser.tabs.update(targetTabId, { url });
       // Wait for navigation to complete
       await waitForTabLoad(targetTabId);

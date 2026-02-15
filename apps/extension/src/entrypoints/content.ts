@@ -1,5 +1,5 @@
 import type { Command } from '@browser-cli/shared';
-import { ErrorCode, createError } from '@browser-cli/shared';
+import { ErrorCode, createError, schemas } from '@browser-cli/shared';
 import { initFrameBridge } from '../content-lib/frame-bridge';
 
 export default defineContentScript({
@@ -17,7 +17,21 @@ export default defineContentScript({
     ) => {
       if (message.type !== 'browser-cli-command') return false;
 
-      const { command } = message;
+      // Validate the command against the schema
+      const parseResult = schemas.commandSchema.safeParse(message.command);
+      if (!parseResult.success) {
+        sendResponse({
+          success: false,
+          error: createError(
+            ErrorCode.INVALID_PARAMS,
+            `Invalid command: ${parseResult.error.message}`,
+            'Check the command action and params match the expected schema',
+          ),
+        });
+        return true;
+      }
+
+      const command = parseResult.data as Command;
 
       handleContentCommand(command)
         .then((result) => {
