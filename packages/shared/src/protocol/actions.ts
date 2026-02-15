@@ -733,7 +733,7 @@ export interface StateImportParams {
     path?: string;
     secure?: boolean;
     httpOnly?: boolean;
-    sameSite?: 'no_restriction' | 'lax' | 'strict';
+    sameSite?: 'no_restriction' | 'lax' | 'strict' | 'unspecified';
     expirationDate?: number;
   }>;
   localStorage?: Record<string, string>;

@@ -392,8 +392,16 @@ async function routeCommand(
       // Import cookies
       if (params.cookies) {
         for (const cookie of params.cookies) {
-          await browser.cookies.set(cookie);
-          cookieCount++;
+          try {
+            // chrome.cookies.set only accepts specific fields
+            const { url, name, value, domain, path, secure, httpOnly, sameSite, expirationDate } = cookie;
+            await browser.cookies.set({
+              url, name, value, domain, path, secure, httpOnly, sameSite, expirationDate,
+            });
+            cookieCount++;
+          } catch (err) {
+            console.warn(`[browser-cli] Failed to set cookie "${cookie.name}":`, err);
+          }
         }
       }
 
