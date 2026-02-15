@@ -19,6 +19,12 @@ export const protocolErrorSchema = z.object({
 
 // ─── Action Params ───────────────────────────────────────────────────
 
+// Position selector schema (reusable)
+const positionSchema = z.object({
+  type: z.enum(['first', 'last', 'nth']),
+  index: z.number().optional(),
+}).optional();
+
 // Navigation
 export const navigateParamsSchema = z.object({ url: z.string() });
 export const emptyParamsSchema = z.object({});
@@ -27,23 +33,51 @@ export const emptyParamsSchema = z.object({});
 export const clickParamsSchema = z.object({
   selector: z.string(),
   button: z.enum(['left', 'right', 'middle']).optional(),
+  position: positionSchema,
 });
-export const dblclickParamsSchema = z.object({ selector: z.string() });
-export const hoverParamsSchema = z.object({ selector: z.string() });
-export const fillParamsSchema = z.object({ selector: z.string(), value: z.string() });
+export const dblclickParamsSchema = z.object({
+  selector: z.string(),
+  position: positionSchema,
+});
+export const hoverParamsSchema = z.object({
+  selector: z.string(),
+  position: positionSchema,
+});
+export const fillParamsSchema = z.object({
+  selector: z.string(),
+  value: z.string(),
+  position: positionSchema,
+});
 export const typeParamsSchema = z.object({
   selector: z.string(),
   text: z.string(),
   delay: z.number().optional(),
+  position: positionSchema,
 });
 export const pressParamsSchema = z.object({ selector: z.string().optional(), key: z.string() });
-export const clearParamsSchema = z.object({ selector: z.string() });
-export const focusParamsSchema = z.object({ selector: z.string() });
+export const clearParamsSchema = z.object({
+  selector: z.string(),
+  position: positionSchema,
+});
+export const focusParamsSchema = z.object({
+  selector: z.string(),
+  position: positionSchema,
+});
 
 // Form
-export const checkParamsSchema = z.object({ selector: z.string() });
-export const uncheckParamsSchema = z.object({ selector: z.string() });
-export const selectParamsSchema = z.object({ selector: z.string(), value: z.string() });
+export const checkParamsSchema = z.object({
+  selector: z.string(),
+  position: positionSchema,
+});
+export const uncheckParamsSchema = z.object({
+  selector: z.string(),
+  position: positionSchema,
+});
+export const selectParamsSchema = z.object({
+  selector: z.string(),
+  value: z.string(),
+  position: positionSchema,
+});
 
 // Scroll
 export const scrollParamsSchema = z.object({

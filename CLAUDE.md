@@ -13,7 +13,8 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 
 ## Key Commands
 - pnpm install && pnpm build — full build
-- pnpm turbo lint/typecheck/test — quality checks
+- pnpm turbo lint/typecheck/test — quality checks (unit tests)
+- pnpm test:e2e — E2E tests (requires daemon + extension running)
 - pnpm --filter @browser-cli/extension dev — extension dev mode
 - pnpm --filter @browser-cli/cli build — CLI build
 - browser-cli start/stop/status — daemon lifecycle
@@ -89,7 +90,27 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - `network route <pattern> --abort` — use --abort (not --block)
 
 ## Testing
-- Full manual E2E testing guide: see `TESTING_E2E.md`
+
+### Unit Tests
+- Vitest for parsing, building, and formatting logic
+- Run with `pnpm test` or `pnpm turbo test`
+
+### E2E Tests (BATS)
+- Automated E2E tests using BATS (Bash Automated Testing System)
+- Tests full CLI → daemon → extension flow with real browser
+- Full guide and prerequisites: see `docs/TESTING_E2E_BATS.md`
+
+**Run tests:**
+```bash
+pnpm test:e2e           # All E2E tests
+pnpm test:e2e:basic     # Basic commands (navigation, interaction, selectors)
+pnpm test:e2e:advanced  # Advanced features (find, semantic locators, position selectors)
+pnpm test:e2e:data      # Data queries (get, is, wait)
+pnpm test:e2e:state     # Browser state (cookies, storage)
+```
+
+### Manual Testing
+- Manual E2E testing guide: see `TESTING_E2E.md`
 - Reference implementation: `.agent-browser-ref/` (clone of vercel-labs/agent-browser, in .gitignore)
 
 ## Gotchas

@@ -47,6 +47,8 @@ export interface ClickParams {
   selector: string;
   /** Click button: left, right, middle */
   button?: 'left' | 'right' | 'middle';
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface ClickResult {
   clicked: true;
@@ -54,6 +56,8 @@ export interface ClickResult {
 
 export interface DblClickParams {
   selector: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface DblClickResult {
   clicked: true;
@@ -61,6 +65,8 @@ export interface DblClickResult {
 
 export interface HoverParams {
   selector: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface HoverResult {
   hovered: true;
@@ -69,6 +75,8 @@ export interface HoverResult {
 export interface FillParams {
   selector: string;
   value: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface FillResult {
   filled: true;
@@ -79,6 +87,8 @@ export interface TypeParams {
   text: string;
   /** Delay between keystrokes in ms */
   delay?: number;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface TypeResult {
   typed: true;
@@ -88,6 +98,8 @@ export interface PressParams {
   /** Selector of element to press key on (defaults to active element) */
   selector?: string;
   key: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface PressResult {
   pressed: true;
@@ -95,6 +107,8 @@ export interface PressResult {
 
 export interface ClearParams {
   selector: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface ClearResult {
   cleared: true;
@@ -102,6 +116,8 @@ export interface ClearResult {
 
 export interface FocusParams {
   selector: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface FocusResult {
   focused: true;
@@ -111,6 +127,8 @@ export interface FocusResult {
 
 export interface CheckParams {
   selector: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface CheckResult {
   checked: true;
@@ -118,6 +136,8 @@ export interface CheckResult {
 
 export interface UncheckParams {
   selector: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface UncheckResult {
   unchecked: true;
@@ -126,6 +146,8 @@ export interface UncheckResult {
 export interface SelectParams {
   selector: string;
   value: string;
+  /** Position selector for filtering multiple matches */
+  position?: { type: 'first' | 'last' | 'nth'; index?: number };
 }
 export interface SelectResult {
   selected: true;
