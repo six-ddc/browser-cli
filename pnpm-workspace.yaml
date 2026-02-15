@@ -3,9 +3,9 @@ packages:
   - "packages/*"
 
 catalog:
-  "@eslint/js": "^9.18.0"
-  eslint: "^9.18.0"
+  "@eslint/js": "^10.0.1"
+  eslint: "^10.0.0"
   prettier: "^3.4.2"
   typescript: "^5.7.3"
-  typescript-eslint: "^8.20.0"
-  vitest: "^3.0.4"
+  typescript-eslint: "^8.55.0"
+  vitest: "^4.0.18"
