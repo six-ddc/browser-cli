@@ -51,9 +51,9 @@
     "bats-assert": "^2.2.4",
     "bats-support": "^0.3.0",
     "eslint": "^9.18.0",
-    "happy-dom": "^20.5.3",
+    "happy-dom": "^20.6.1",
     "prettier": "^3.4.2",
-    "turbo": "^2.3.3",
+    "turbo": "^2.8.9",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "vitest": "^3.0.4"
