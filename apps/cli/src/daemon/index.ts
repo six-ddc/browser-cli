@@ -1,6 +1,6 @@
 /**
  * Daemon entry point.
- * This file is the second tsup entry — runs as a long-lived background process.
+ * This file is the second tsdown entry — runs as a long-lived background process.
  * It starts a WebSocket server (for the extension) and a Unix socket server (for CLI clients).
  */
 

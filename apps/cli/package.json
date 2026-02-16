@@ -16,15 +16,15 @@
     }
   },
   "scripts": {
-    "dev": "tsup --watch",
-    "build": "tsup",
+    "dev": "tsdown --watch",
+    "build": "tsdown",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@browser-cli/shared": "workspace:*",
-    "commander": "^13.0.0",
+    "commander": "^14.0.0",
     "ws": "^8.19.0"
   },
   "devDependencies": {
@@ -32,7 +32,7 @@
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "eslint": "catalog:",
-    "tsup": "^8.3.6",
+    "tsdown": "^0.20.3",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"

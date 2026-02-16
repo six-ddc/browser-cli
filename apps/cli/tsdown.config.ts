@@ -1,10 +1,11 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: ['src/index.ts', 'src/daemon/index.ts'],
   format: ['esm'],
+  fixedExtension: false,
   dts: true,
-  clean: true,
   sourcemap: true,
   noExternal: ['@browser-cli/shared'],
+  inlineOnly: false,
 });

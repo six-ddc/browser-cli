@@ -19,7 +19,7 @@ export function getAriaRole(el: Element): string {
     return role || 'generic';
   } catch (error) {
     // Fallback for test environments that don't support all CSS selectors
-    // (e.g., happy-dom doesn't support namespace selectors like [*|href])
+    // (e.g., jsdom doesn't support namespace selectors like [*|href])
     console.warn('aria-api failed, using fallback role detection:', error);
     return getFallbackRole(el);
   }

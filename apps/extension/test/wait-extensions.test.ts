@@ -54,7 +54,7 @@ describe('wait selector', () => {
 
     const result = await handleWait({
       action: 'wait',
-      // visible: false because happy-dom getBoundingClientRect() returns zero dimensions
+      // visible: false because jsdom getBoundingClientRect() returns zero dimensions
       params: { selector: '.loaded', timeout: 5000, visible: false },
     } as Command);
 
@@ -183,7 +183,7 @@ describe('wait --fn', () => {
     await expect(promise).rejects.toThrow('Timeout waiting for function');
   });
 
-  // Note: MAIN world script injection via <script> tags doesn't work in happy-dom
+  // Note: MAIN world script injection via <script> tags doesn't work in jsdom
   // the same way as in a real browser. The function evaluation tests are limited
   // to timeout/error scenarios. Full integration testing requires a real browser.
 });
@@ -194,7 +194,7 @@ describe('waitForUrl', () => {
   it('resolves immediately if URL matches', async () => {
     // Use real timers — fake timers can interfere with setInterval-based polling fallback
     vi.useRealTimers();
-    // vitest happy-dom sets location.href to http://localhost:3000/
+    // vitest jsdom sets location.href to http://localhost:3000/
     const result = await handleWait({
       action: 'waitForUrl',
       params: { pattern: 'localhost', timeout: 5000 },

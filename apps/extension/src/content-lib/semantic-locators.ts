@@ -377,7 +377,7 @@ export function findByXPath(locator: XPathLocator, root: Element = document.body
   const { expression } = locator;
   const results: Element[] = [];
 
-  // Guard: XPath not available in some test environments (happy-dom)
+  // Guard: XPath not available in some test environments
   if (typeof XPathResult === 'undefined' || typeof document.evaluate !== 'function') {
     return results;
   }
