@@ -70,7 +70,7 @@ Browser-CLI uses a browser extension as a bridge instead of a browser driver, gi
 ### Prerequisites
 
 - Node.js >= 20
-- pnpm >= 9
+- pnpm >= 10
 - Chrome / Chromium or Firefox
 
 ### Install

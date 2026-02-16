@@ -32,7 +32,7 @@ const { mockSocketClient, mockDaemon } = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/client/socket-client.js', () => ({
-  SocketClient: vi.fn(() => mockSocketClient),
+  SocketClient: vi.fn(function () { return mockSocketClient; }),
 }));
 
 vi.mock('../src/daemon/process.js', () => mockDaemon);

@@ -17,8 +17,8 @@
     "@browser-cli/shared": "workspace:*",
     "aria-api": "^0.8.0",
     "dom-accessibility-api": "^0.7.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -26,11 +26,10 @@
     "@types/react-dom": "^19.0.0",
     "@wxt-dev/module-react": "^1.1.2",
     "eslint": "catalog:",
-    "happy-dom": "^20.5.3",
-    "jsdom": "^28.0.0",
+    "jsdom": "^26.0.0",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:",
-    "wxt": "^0.20.0"
+    "wxt": "^0.20.11"
   }
 }

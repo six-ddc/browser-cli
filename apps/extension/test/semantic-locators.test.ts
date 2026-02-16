@@ -97,7 +97,7 @@ describe('findByRole', () => {
       <div role="button" tabindex="0">Custom Button</div>
     `;
     const elements = resolve('role=button[name="Custom Button"]');
-    // happy-dom may have limitations with role attributes
+    // jsdom may have limitations with role attributes
     expect(elements.length).toBeGreaterThanOrEqual(0);
   });
 
@@ -359,9 +359,8 @@ describe('findByTestId', () => {
 // ─── findByXPath ─────────────────────────────────────────────────────
 
 describe('findByXPath', () => {
-  // XPath is not available in happy-dom, but works in real browsers.
-  // These tests verify graceful degradation (returns []) when XPath is unavailable,
-  // and will pass correctly in a real browser environment.
+  // jsdom supports XPath (unlike happy-dom which did not).
+  // These tests verify XPath queries work correctly.
   const xpathAvailable = typeof globalThis.XPathResult !== 'undefined';
 
   it('returns results or empty array depending on XPath support', () => {
@@ -425,7 +424,7 @@ describe('visibility filtering', () => {
       <button>Visible</button>
     `;
     const elements = resolve('role=button');
-    // happy-dom may not fully support getComputedStyle
+    // jsdom may not fully support getComputedStyle
     expect(elements.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -456,7 +455,7 @@ describe('complex scenarios', () => {
       <button aria-label="Close dialog">×</button>
     `;
     const elements = resolve('role=button[name="Close"]');
-    // happy-dom may have limited aria-label support
+    // jsdom may have limited aria-label support
     expect(elements.length).toBeGreaterThanOrEqual(0);
   });
 
