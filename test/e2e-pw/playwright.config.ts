@@ -24,7 +24,7 @@ export default defineConfig({
   },
 
   webServer: {
-    command: 'npx serve test/e2e-pw/pages -l 4173 --no-clipboard',
+    command: 'npx serve ./pages -l 4173 --no-clipboard',
     port: 4173,
     reuseExistingServer: !process.env.CI,
   },
