@@ -14,19 +14,19 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 ## Key Commands
 - pnpm install && pnpm build — full build
 - pnpm turbo lint/typecheck/test — quality checks (unit tests)
-- pnpm test:e2e — E2E tests (requires daemon + extension running)
+- pnpm test:e2e — E2E tests (Playwright, auto-starts daemon + extension)
 - pnpm --filter @browser-cli/extension dev — extension dev mode
 - pnpm --filter @browser-cli/cli build — CLI build
 - browser-cli start/stop/status — daemon lifecycle
 
 ## Packages
 - packages/shared — protocol types, Zod schemas, constants (raw .ts exports, no build)
-- apps/cli — Commander.js CLI + daemon process (tsup ESM build)
+- apps/cli — Commander.js CLI + daemon process (tsdown ESM build)
 - apps/extension — WXT + React browser extension (Vite build)
 
 ## Conventions
 - Shared package exports raw .ts (no build step), consumers bundle it
-- CLI uses tsup with noExternal: ['@browser-cli/shared'] to bundle shared code
+- CLI uses tsdown with noExternal: ['@browser-cli/shared'] to bundle shared code
 - CLI has two entry points: src/index.ts (CLI client) and src/daemon/index.ts (daemon)
 - Extension tsconfig extends .wxt/tsconfig.json (run wxt prepare first)
 - Extension typecheck: wxt prepare && tsc --noEmit
@@ -53,7 +53,7 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 
 ### ARIA Implementation
 - Uses standard libraries (aria-api, dom-accessibility-api) for W3C compliance
-- Provides fallback for test environments (happy-dom) that don't support all CSS selectors
+- Provides fallback for test environments (jsdom) that don't support all CSS selectors
 
 ### Semantic Locator Syntax (AgentBrowser-compatible)
 - Uses `=` delimiter: `text=Submit`, `role=button`, `label=Email`, `xpath=//button`
@@ -102,10 +102,12 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - Vitest for parsing, building, and formatting logic
 - Run with `pnpm test` or `pnpm turbo test`
 
-### E2E Tests (BATS)
-- Automated E2E tests using BATS (Bash Automated Testing System)
-- Tests full CLI → daemon → extension flow with real browser
-- Full guide and prerequisites: see `docs/TESTING_E2E_BATS.md`
+### E2E Tests (Playwright)
+- Automated E2E tests using Playwright with real Chrome + extension
+- CLI operates, Playwright provides independent browser state verification
+- Local HTML fixture pages (no external dependencies)
+- Auto-starts daemon and loads extension via `--load-extension`
+- Full guide: see `docs/TESTING_E2E.md`
 
 **Run tests:**
 ```bash
@@ -114,15 +116,15 @@ pnpm test:e2e:basic     # Basic commands (navigation, interaction, selectors)
 pnpm test:e2e:advanced  # Advanced features (find, semantic locators, position selectors)
 pnpm test:e2e:data      # Data queries (get, is, wait)
 pnpm test:e2e:state     # Browser state (cookies, storage)
+pnpm test:e2e:cross     # Cross-command interactions, --json flag
 ```
 
 ### Manual Testing
-- Manual E2E testing guide: see `TESTING_E2E.md`
 - Reference implementation: `.agent-browser-ref/` (clone of vercel-labs/agent-browser, in .gitignore)
 
 ## Gotchas
 - WXT + Vite 7 requires Node >= 20 (crypto.hash API)
-- tsup temp files (*.bundled_*.mjs) can race with ESLint — avoid concurrent lint + build
+- tsdown (Rolldown) requires Node ^20.19.0 for native bindings — .npmrc has node-version=20.19.0
 - Extension CSP must include `connect-src ws://localhost:*` for WS connections
 - chrome.tabs.sendMessage only works on http/https pages (not chrome://, extension pages)
 - fill() must use native value setter to work with React/Vue controlled components

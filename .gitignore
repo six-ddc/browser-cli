@@ -32,5 +32,11 @@ pnpm-debug.log*
 # Test coverage
 coverage/
 
+# Playwright
+playwright-report/
+test-results/
+.e2e-chrome-profile/
+.e2e-state.json
+
 # Reference repos
 .agent-browser-ref/

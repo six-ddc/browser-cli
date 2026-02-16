@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - Infinite Scroll</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    .jscroll-inner .scroll-item { padding: 20px; border-bottom: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <div class="example">
+    <h3>Infinite Scroll</h3>
+    <div class="jscroll-inner" id="scroll-container"></div>
+  </div>
+
+  <script>
+    let page = 0;
+    function addContent() {
+      const container = document.getElementById('scroll-container');
+      for (let i = 0; i < 5; i++) {
+        page++;
+        const item = document.createElement('div');
+        item.className = 'scroll-item';
+        item.textContent = 'Scroll item ' + page + ': Lorem ipsum dolor sit amet.';
+        container.appendChild(item);
+      }
+    }
+    addContent();
+
+    window.addEventListener('scroll', () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+        addContent();
+      }
+    });
+  </script>
+</body>
+</html>

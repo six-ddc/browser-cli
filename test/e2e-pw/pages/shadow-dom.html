@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - Shadow DOM</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+  </style>
+</head>
+<body>
+  <h3>Shadow DOM</h3>
+  <div id="shadow-host"></div>
+  <div id="shadow-host-2"></div>
+
+  <script>
+    // First shadow root
+    const host1 = document.getElementById('shadow-host');
+    const shadow1 = host1.attachShadow({ mode: 'open' });
+    shadow1.innerHTML = `
+      <div>
+        <span id="shadow-text">Let's have some different text!</span>
+        <ul>
+          <li>In a list!</li>
+        </ul>
+      </div>
+    `;
+
+    // Second shadow root
+    const host2 = document.getElementById('shadow-host-2');
+    const shadow2 = host2.attachShadow({ mode: 'open' });
+    shadow2.innerHTML = `
+      <div>
+        <span id="shadow-text-2">Let's have some different text!</span>
+        <input type="text" id="shadow-input" placeholder="Shadow input">
+        <button id="shadow-button">Shadow Button</button>
+      </div>
+    `;
+  </script>
+</body>
+</html>
