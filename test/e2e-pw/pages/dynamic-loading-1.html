@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - Dynamic Loading 1</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    button { padding: 8px 16px; cursor: pointer; }
+    #loading { display: none; margin-top: 10px; }
+    #finish { display: none; margin-top: 10px; }
+    #finish h4 { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="example">
+    <h3>Dynamically Loaded Page Elements</h3>
+    <h4>Example 1: Element on page that is hidden</h4>
+    <div id="start">
+      <button onclick="startLoading()">Start</button>
+    </div>
+    <div id="loading"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="Loading..."> Loading...</div>
+    <div id="finish"><h4>Hello World!</h4></div>
+  </div>
+
+  <script>
+    function startLoading() {
+      document.getElementById('start').style.display = 'none';
+      document.getElementById('loading').style.display = 'block';
+      setTimeout(() => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('finish').style.display = 'block';
+      }, 1500);
+    }
+  </script>
+</body>
+</html>

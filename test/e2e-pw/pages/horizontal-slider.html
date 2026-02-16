@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - Horizontal Slider</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    input[type="range"] { width: 300px; }
+    #range { margin-top: 10px; font-size: 18px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="example">
+    <h3>Horizontal Slider</h3>
+    <input type="range" min="0" max="5" step="0.5" value="0" id="slider" oninput="updateValue(this.value)">
+    <span id="range">0</span>
+  </div>
+
+  <script>
+    function updateValue(val) {
+      document.getElementById('range').textContent = val;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - Drag and Drop</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    #columns { display: flex; gap: 20px; }
+    .column {
+      width: 180px; height: 180px; border: 2px solid #ccc; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: bold; cursor: grab; background: #f9f9f9;
+    }
+    .column.over { border-color: #2b6dad; background: #e8f0fe; }
+  </style>
+</head>
+<body>
+  <div class="example">
+    <h3>Drag and Drop</h3>
+    <div id="columns">
+      <div id="column-a" class="column" draggable="true"><header>A</header></div>
+      <div id="column-b" class="column" draggable="true"><header>B</header></div>
+    </div>
+  </div>
+
+  <script>
+    const cols = document.querySelectorAll('.column');
+    let dragSrc = null;
+
+    cols.forEach(col => {
+      col.addEventListener('dragstart', (e) => {
+        dragSrc = col;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', col.innerHTML);
+      });
+      col.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        col.classList.add('over');
+      });
+      col.addEventListener('dragleave', () => col.classList.remove('over'));
+      col.addEventListener('drop', (e) => {
+        e.preventDefault();
+        col.classList.remove('over');
+        if (dragSrc !== col) {
+          dragSrc.innerHTML = col.innerHTML;
+          col.innerHTML = e.dataTransfer.getData('text/html');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

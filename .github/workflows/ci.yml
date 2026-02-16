@@ -42,7 +42,6 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     needs: ci
-    continue-on-error: true # Until extension auto-loading is stable
 
     steps:
       - uses: actions/checkout@v4
@@ -57,40 +56,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build CLI and extension
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Build
         run: pnpm turbo build
 
-      - name: Set up Chrome
-        uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: stable
-
-      - name: Install BATS
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y bats
-
-      - name: Install BATS helper libraries
-        run: |
-          sudo mkdir -p /usr/lib/bats-support /usr/lib/bats-assert
-          git clone --depth 1 https://github.com/bats-core/bats-support.git /tmp/bats-support
-          sudo cp -r /tmp/bats-support/* /usr/lib/bats-support/
-          git clone --depth 1 https://github.com/bats-core/bats-assert.git /tmp/bats-assert
-          sudo cp -r /tmp/bats-assert/* /usr/lib/bats-assert/
-
       - name: Run E2E tests
-        run: pnpm test:e2e
+        run: xvfb-run --auto-servernum pnpm test:e2e
         env:
-          BROWSER_CLI_CHROME_PATH: chrome
           CI: true
 
       - name: Upload test artifacts
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-results
+          name: playwright-report
           path: |
-            test/e2e/results/
-            test/e2e/*.log
-            ~/.browser-cli/
-          retention-days: 7
+            test/e2e-pw/playwright-report/
+            test/e2e-pw/test-results/
+          retention-days: 14

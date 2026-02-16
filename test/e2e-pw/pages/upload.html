@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - File Upload</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    button { padding: 8px 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="example">
+    <h3>File Uploader</h3>
+    <div id="drag-drop-upload" style="border: 2px dashed #ccc; padding: 40px; text-align: center; margin: 10px 0;">
+      Drag files here or
+      <input type="file" id="file-upload">
+    </div>
+    <button id="file-submit" type="button" onclick="handleUpload()">Upload</button>
+    <div id="uploaded-files" style="display: none;">
+      <h4>Uploaded File:</h4>
+      <div id="uploaded-file-name"></div>
+    </div>
+  </div>
+
+  <script>
+    function handleUpload() {
+      const input = document.getElementById('file-upload');
+      if (input.files && input.files.length > 0) {
+        document.getElementById('uploaded-file-name').textContent = input.files[0].name;
+        document.getElementById('uploaded-files').style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>

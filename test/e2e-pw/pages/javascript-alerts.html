@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - JavaScript Alerts</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    button { padding: 8px 16px; cursor: pointer; margin: 4px; display: block; }
+    #result { margin-top: 15px; font-weight: bold; min-height: 20px; }
+  </style>
+</head>
+<body>
+  <div class="example">
+    <h3>JavaScript Alerts</h3>
+    <button onclick="jsAlert()">Click for JS Alert</button>
+    <button onclick="jsConfirm()">Click for JS Confirm</button>
+    <button onclick="jsPrompt()">Click for JS Prompt</button>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    function jsAlert() {
+      alert('I am a JS Alert');
+      document.getElementById('result').textContent = 'You successfully clicked an alert';
+    }
+    function jsConfirm() {
+      const r = confirm('I am a JS Confirm');
+      document.getElementById('result').textContent = r ? 'You clicked: Ok' : 'You clicked: Cancel';
+    }
+    function jsPrompt() {
+      const r = prompt('I am a JS prompt');
+      document.getElementById('result').textContent = r ? 'You entered: ' + r : 'You entered: null';
+    }
+  </script>
+</body>
+</html>

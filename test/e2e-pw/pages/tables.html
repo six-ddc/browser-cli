@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - Sortable Data Tables</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 30px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #f5f5f5; cursor: pointer; }
+    th:hover { background: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <div class="example">
+    <h3>Data Tables</h3>
+    <table id="table1" class="tablesorter">
+      <thead>
+        <tr>
+          <th><span>Last Name</span></th>
+          <th><span>First Name</span></th>
+          <th><span>Email</span></th>
+          <th><span>Due</span></th>
+          <th><span>Web Site</span></th>
+          <th><span>Action</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="last-name">Smith</td>
+          <td class="first-name">John</td>
+          <td class="email">jsmith@gmail.com</td>
+          <td class="dues">$50.00</td>
+          <td class="web-site">http://www.jsmith.com</td>
+          <td class="action"><a href="#">edit</a> <a href="#">delete</a></td>
+        </tr>
+        <tr>
+          <td class="last-name">Bach</td>
+          <td class="first-name">Frank</td>
+          <td class="email">fbach@yahoo.com</td>
+          <td class="dues">$51.00</td>
+          <td class="web-site">http://www.frank.com</td>
+          <td class="action"><a href="#">edit</a> <a href="#">delete</a></td>
+        </tr>
+        <tr>
+          <td class="last-name">Doe</td>
+          <td class="first-name">Jason</td>
+          <td class="email">jdoe@hotmail.com</td>
+          <td class="dues">$100.00</td>
+          <td class="web-site">http://www.jdoe.com</td>
+          <td class="action"><a href="#">edit</a> <a href="#">delete</a></td>
+        </tr>
+        <tr>
+          <td class="last-name">Conway</td>
+          <td class="first-name">Tim</td>
+          <td class="email">tconway@earthlink.net</td>
+          <td class="dues">$50.00</td>
+          <td class="web-site">http://www.timconway.com</td>
+          <td class="action"><a href="#">edit</a> <a href="#">delete</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table id="table2" class="tablesorter">
+      <thead>
+        <tr>
+          <th><span>Last Name</span></th>
+          <th><span>First Name</span></th>
+          <th><span>Email</span></th>
+          <th><span>Due</span></th>
+          <th><span>Web Site</span></th>
+          <th><span>Action</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="last-name">Smith</td>
+          <td class="first-name">John</td>
+          <td class="email">jsmith@gmail.com</td>
+          <td class="dues">$50.00</td>
+          <td class="web-site">http://www.jsmith.com</td>
+          <td class="action"><a href="#">edit</a> <a href="#">delete</a></td>
+        </tr>
+        <tr>
+          <td class="last-name">Bach</td>
+          <td class="first-name">Frank</td>
+          <td class="email">fbach@yahoo.com</td>
+          <td class="dues">$51.00</td>
+          <td class="web-site">http://www.frank.com</td>
+          <td class="action"><a href="#">edit</a> <a href="#">delete</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
