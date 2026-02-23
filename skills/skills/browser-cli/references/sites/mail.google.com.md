@@ -4,12 +4,11 @@
 
 ## CSP and eval
 
-Gmail enforces strict CSP that blocks `eval()` in the MAIN world. Use
-`eval --user-script` (`-u`) to bypass CSP via the `chrome.userScripts` API.
-Requires Developer Mode (or "Allow User Scripts" on Chrome 138+) enabled
-in `chrome://extensions`.
+Gmail enforces Trusted Types (`require-trusted-types-for 'script'`).
+Browser-CLI automatically handles this via a TrustedTypes policy, so
+`eval` works on Gmail **without any flags**.
 
-If `--user-script` is not available, use these alternatives:
+If `eval` fails for any reason, use these alternatives:
 
 - **`snapshot -ic`** — interactive elements with ARIA names
 - **`snapshot -c`** — full tree including non-interactive elements
@@ -54,10 +53,10 @@ browser-cli get title
 # → "Inbox (48) - user@gmail.com - Gmail"
 ```
 
-**Extract email list** (`eval -u`):
+**Extract email list** (`eval`):
 
 ```bash
-browser-cli eval -u --stdin <<'EOF'
+browser-cli eval --stdin <<'EOF'
 JSON.stringify(Array.from(document.querySelectorAll("tr:has(span[data-thread-id])")).map(r => ({
   threadId: r.querySelector("span[data-thread-id]")?.getAttribute("data-legacy-thread-id") || "",
   unread: getComputedStyle(r.querySelector("span[email]")).fontWeight === "700",
@@ -156,10 +155,10 @@ browser-cli find text '<subject text>' click
 browser-cli wait 2000
 ```
 
-**Extract email metadata** (`eval -u`):
+**Extract email metadata** (`eval`):
 
 ```bash
-browser-cli eval -u --stdin <<'EOF'
+browser-cli eval --stdin <<'EOF'
 JSON.stringify({
   subject: document.querySelector("h2[data-thread-perm-id]")?.textContent || "",
   senderName: document.querySelector("[data-legacy-message-id] span[email]")?.getAttribute("name") || "",
@@ -170,10 +169,10 @@ JSON.stringify({
 EOF
 ```
 
-**Extract email body HTML** (`eval -u`):
+**Extract email body HTML** (`eval`):
 
 ```bash
-browser-cli eval -u --stdin <<'EOF'
+browser-cli eval --stdin <<'EOF'
 document.querySelector("[data-legacy-message-id] div.a3s")?.innerHTML
 EOF
 ```
@@ -181,7 +180,7 @@ EOF
 For threads with multiple messages:
 
 ```bash
-browser-cli eval -u --stdin <<'EOF'
+browser-cli eval --stdin <<'EOF'
 JSON.stringify(Array.from(document.querySelectorAll("[data-legacy-message-id]")).map(msg => ({
   messageId: msg.getAttribute("data-legacy-message-id") || "",
   sender: msg.querySelector("span[email]")?.getAttribute("name") || "",
@@ -274,7 +273,7 @@ browser-cli wait 3000
 
 ## Notes
 
-- **`eval` requires `-u` flag**: Gmail's strict CSP blocks `eval` in MAIN world. Use `eval -u` (userScripts API, requires Developer Mode) to bypass CSP.
+- **`eval` works without flags**: Browser-CLI auto-handles Gmail's Trusted Types policy. No `--user-script` needed.
 - **Stable selectors preferred**: This guide uses `data-*` attributes, `role`, `span[email]`, and `[title]` wherever possible. Only `div.a3s` (email body in detail view) relies on an obfuscated class name — monitor for breakage.
 - **Compose dialog not in snapshot**: The Gmail compose window does not appear in the accessibility tree snapshot.
 - **Authentication required**: Gmail requires a logged-in Google account. Redirects to accounts.google.com if not logged in.

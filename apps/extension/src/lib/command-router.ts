@@ -323,8 +323,25 @@ async function routeCommand(
         world: 'MAIN',
         func: (expr: string) => {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- eval returns any by design
-            const __r = (0, eval)(expr);
+            // On pages with Trusted Types (e.g. Gmail), eval() requires a TrustedScript.
+            // Create a policy to wrap the expression, falling back to plain eval.
+            let __r: unknown;
+            const tt = (globalThis as Record<string, unknown>).trustedTypes as
+              | {
+                  createPolicy: (
+                    name: string,
+                    rules: { createScript: (s: string) => string },
+                  ) => { createScript: (s: string) => string };
+                }
+              | undefined;
+            if (tt?.createPolicy) {
+              const __p = tt.createPolicy('browser-cli-eval', {
+                createScript: (s: string) => s,
+              });
+              __r = (0, eval)(__p.createScript(expr));
+            } else {
+              __r = (0, eval)(expr);
+            }
             return { __ok: true, value: __r };
           } catch (e: unknown) {
             return { __ok: false, error: (e as Error).message };
