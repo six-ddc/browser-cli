@@ -89,7 +89,7 @@ browser-cli fill @e5 "hello"      # Fill element ref
 
 | Option                  | Description                                                                                                                                      |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--browser <sessionId>` | Target a specific browser connection by session ID (e.g., `brave-falcon`). Only needed with multiple browsers; get IDs from `browser-cli status` |
+| `--session <sessionId>` | Target a specific browser connection by session ID (e.g., `brave-falcon`). Only needed with multiple browsers; get IDs from `browser-cli status` |
 | `--json`                | Output in JSON format (machine-readable)                                                                                                         |
 
 ## Operations Reference
@@ -278,9 +278,12 @@ browser-cli screenshot [options]
 browser-cli eval '<expression>'
 browser-cli eval -b/--base64 '<base64-encoded-expression>'  # decode from base64
 echo '<expression>' | browser-cli eval --stdin       # read from stdin
+browser-cli eval -u/--user-script '<expression>'     # bypass CSP via userScripts API
 ```
 
 Evaluates JavaScript in the page context and returns the result.
+
+**CSP-strict pages** (Gmail, GitHub, etc.) block `eval()` in the default MAIN world. Use `--user-script` (`-u`) to run via the `chrome.userScripts` API, which bypasses CSP. Requires Developer Mode enabled in `chrome://extensions`.
 
 ### Console & Errors
 
@@ -378,6 +381,21 @@ For comprehensive documentation on each domain:
 - [INTERACTION_REFERENCE.md](references/INTERACTION_REFERENCE.md) — click, fill, type, press, drag, check/uncheck, select, upload, mouse control, scroll, form filling patterns
 - [QUERY_REFERENCE.md](references/QUERY_REFERENCE.md) — get/is queries, wait operations, snapshot flags, screenshot options, eval, console/errors, data extraction patterns
 - [NETWORK_REFERENCE.md](references/NETWORK_REFERENCE.md) — network interception (route/unroute/requests), cookies, storage, tabs, frames, windows, dialogs, browser config, state save/load
+
+### Site-Specific Guides
+
+For known websites, site-specific guides provide tested selectors and extraction
+commands. Check for a matching guide before using generic extraction.
+
+| Domain          | Guide                                                           |
+| --------------- | --------------------------------------------------------------- |
+| google.com      | [sites/google.com.md](references/sites/google.com.md)           |
+| mail.google.com | [sites/mail.google.com.md](references/sites/mail.google.com.md) |
+| xiaohongshu.com | [sites/xiaohongshu.com.md](references/sites/xiaohongshu.com.md) |
+
+When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
+
+To add a new site guide, see [sites/CONTRIBUTING.md](references/sites/CONTRIBUTING.md).
 
 ## Common Workflows
 

@@ -20,7 +20,7 @@ export default defineConfig({
       // Chrome: declarativeNetRequest for network interception
       // Firefox: webRequest + webRequestBlocking
       ...(browser !== 'firefox'
-        ? ['declarativeNetRequest', 'declarativeNetRequestFeedback', 'webRequest']
+        ? ['declarativeNetRequest', 'declarativeNetRequestFeedback', 'webRequest', 'userScripts']
         : ['webRequest', 'webRequestBlocking']),
     ],
     host_permissions: ['<all_urls>'],

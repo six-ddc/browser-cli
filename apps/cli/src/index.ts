@@ -6,7 +6,7 @@ const program = new Command()
   .name('browser-cli')
   .description(`${APP_NAME} — browser automation from the command line`)
   .version(APP_VERSION)
-  .option('--browser <sessionId>', 'Target a specific browser connection by session ID')
+  .option('--session <sessionId>', 'Target a specific browser connection by session ID')
   .option('--json', 'Output in JSON format');
 
 registerCommands(program);
