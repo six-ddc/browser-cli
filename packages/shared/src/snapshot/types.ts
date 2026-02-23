@@ -3,6 +3,8 @@
  * The snapshot is a simplified a11y tree built by walking the DOM.
  */
 
+import { truncateUrl } from '../util/url.js';
+
 export interface SnapshotNode {
   /** ARIA role (e.g., "heading", "link", "button", "textbox") */
   role: string;
@@ -66,7 +68,7 @@ export function serializeSnapshot(
     if (node.value !== undefined) attrs.push(`value="${node.value}"`);
     if (node.expanded !== undefined) attrs.push(`expanded=${node.expanded}`);
     if (node.required) attrs.push('required');
-    if (node.url) attrs.push(`url="${node.url}"`);
+    if (node.url) attrs.push(`url="${truncateUrl(node.url)}"`);
 
     if (attrs.length > 0) {
       line += ` (${attrs.join(', ')})`;

@@ -65,6 +65,8 @@ import { networkCommand } from './network.js';
 import { stateCommand } from './state.js';
 // Find
 import { findCommand } from './find.js';
+// Markdown
+import { markdownCommand } from './markdown.js';
 
 export function registerCommands(program: Command): void {
   // Lifecycle
@@ -158,4 +160,7 @@ export function registerCommands(program: Command): void {
 
   // Find (AgentBrowser-compatible)
   program.addCommand(findCommand);
+
+  // Markdown
+  program.addCommand(markdownCommand);
 }

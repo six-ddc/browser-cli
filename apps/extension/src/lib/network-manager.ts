@@ -1,14 +1,15 @@
 /**
- * NetworkManager: Manages network request interception using browser.declarativeNetRequest.
- * Provides blocking, redirecting, and request tracking capabilities.
+ * NetworkManager: Manages network request interception.
  *
- * Note: webRequest API is used here for observation only (not blocking/modifying),
- * which remains supported in MV3. Actual blocking/redirecting is done via
- * declarativeNetRequest rules.
+ * Chrome (MV3): Uses declarativeNetRequest for blocking/redirecting,
+ *   webRequest for observation only.
+ * Firefox (MV2): Uses webRequest with blocking permission for both
+ *   interception and observation.
  */
 
 import type { NetworkRoute, NetworkRequest } from '@browser-cli/shared';
 
+const IS_FIREFOX = import.meta.env.FIREFOX;
 const RULE_ID_OFFSET = 10000; // Start rule IDs at 10000 to avoid conflicts
 
 export class NetworkManager {
@@ -23,10 +24,10 @@ export class NetworkManager {
 
   /**
    * Initialize request tracking using webRequest API.
-   * Note: We can't modify requests in MV3, only track them.
+   * Firefox: also handles blocking/redirecting via blocking callback.
+   * Chrome: observation only (blocking done via declarativeNetRequest).
    */
   private initRequestTracking() {
-    // Track all requests
     this.requestListener = (details) => {
       const request: NetworkRequest = {
         id: details.requestId,
@@ -42,27 +43,39 @@ export class NetworkManager {
         if (this.matchesPattern(details.url, route.pattern)) {
           if (route.action === 'block') {
             request.blocked = true;
+            if (IS_FIREFOX) {
+              this.requests.push(request);
+              this.trimRequests();
+              return { cancel: true };
+            }
           } else if (route.action === 'redirect' && route.redirectUrl) {
             request.redirectedTo = route.redirectUrl;
+            if (IS_FIREFOX) {
+              this.requests.push(request);
+              this.trimRequests();
+              return { redirectUrl: route.redirectUrl };
+            }
           }
         }
       }
 
       this.requests.push(request);
+      this.trimRequests();
 
-      // Keep only last 1000 requests to avoid memory issues
-      if (this.requests.length > 1000) {
-        this.requests = this.requests.slice(-1000);
-      }
-
-      return undefined; // We're only tracking, not blocking
+      return undefined;
     };
 
     browser.webRequest.onBeforeRequest.addListener(
       this.requestListener,
       { urls: ['<all_urls>'] },
-      []
+      IS_FIREFOX ? ['blocking'] : [],
     );
+  }
+
+  private trimRequests() {
+    if (this.requests.length > 1000) {
+      this.requests = this.requests.slice(-1000);
+    }
   }
 
   /**
@@ -70,7 +83,6 @@ export class NetworkManager {
    */
   async addRoute(pattern: string, action: 'block' | 'redirect', redirectUrl?: string): Promise<NetworkRoute> {
     const routeId = this.nextRouteId++;
-    const ruleId = RULE_ID_OFFSET + routeId;
 
     const route: NetworkRoute = {
       id: routeId,
@@ -80,45 +92,46 @@ export class NetworkManager {
       createdAt: Date.now(),
     };
 
-    // Convert pattern to URLFilter format
-    const urlFilter = this.convertPatternToUrlFilter(pattern);
+    if (!IS_FIREFOX) {
+      // Chrome: add declarativeNetRequest rule
+      const ruleId = RULE_ID_OFFSET + routeId;
+      const urlFilter = this.convertPatternToUrlFilter(pattern);
+      const rule: Browser.declarativeNetRequest.Rule = {
+        id: ruleId,
+        priority: 1,
+        condition: {
+          urlFilter,
+          resourceTypes: [
+            'main_frame',
+            'sub_frame',
+            'stylesheet',
+            'script',
+            'image',
+            'font',
+            'object',
+            'xmlhttprequest',
+            'ping',
+            'csp_report',
+            'media',
+            'websocket',
+            'other',
+          ] as Browser.declarativeNetRequest.ResourceType[],
+        },
+        action:
+          action === 'block'
+            ? { type: 'block' as Browser.declarativeNetRequest.RuleActionType }
+            : {
+                type: 'redirect' as Browser.declarativeNetRequest.RuleActionType,
+                redirect: { url: redirectUrl! },
+              },
+      };
 
-    // Build the declarativeNetRequest rule
-    const rule: Browser.declarativeNetRequest.Rule = {
-      id: ruleId,
-      priority: 1,
-      condition: {
-        urlFilter,
-        resourceTypes: [
-          'main_frame',
-          'sub_frame',
-          'stylesheet',
-          'script',
-          'image',
-          'font',
-          'object',
-          'xmlhttprequest',
-          'ping',
-          'csp_report',
-          'media',
-          'websocket',
-          'other',
-        ] as Browser.declarativeNetRequest.ResourceType[],
-      },
-      action:
-        action === 'block'
-          ? { type: 'block' as Browser.declarativeNetRequest.RuleActionType }
-          : {
-              type: 'redirect' as Browser.declarativeNetRequest.RuleActionType,
-              redirect: { url: redirectUrl! },
-            },
-    };
-
-    // Add the rule
-    await browser.declarativeNetRequest.updateDynamicRules({
-      addRules: [rule],
-      removeRuleIds: [],
-    });
+      await browser.declarativeNetRequest.updateDynamicRules({
+        addRules: [rule],
+        removeRuleIds: [],
+      });
+    }
+    // Firefox: routes are checked in the webRequest listener — no extra setup needed
 
     this.routes.set(routeId, route);
     return route;
@@ -131,12 +144,15 @@ export class NetworkManager {
     const route = this.routes.get(routeId);
     if (!route) return false;
 
-    const ruleId = RULE_ID_OFFSET + routeId;
-
-    await browser.declarativeNetRequest.updateDynamicRules({
-      addRules: [],
-      removeRuleIds: [ruleId],
-    });
+    if (!IS_FIREFOX) {
+      // Chrome: remove declarativeNetRequest rule
+      const ruleId = RULE_ID_OFFSET + routeId;
+      await browser.declarativeNetRequest.updateDynamicRules({
+        addRules: [],
+        removeRuleIds: [ruleId],
+      });
+    }
+    // Firefox: removing from map is sufficient — listener checks this.routes
 
     this.routes.delete(routeId);
     return true;
@@ -232,13 +248,15 @@ export class NetworkManager {
    * Cleanup on unload.
    */
   async destroy() {
-    // Remove all dynamic rules
-    const rules = await browser.declarativeNetRequest.getDynamicRules();
-    const ruleIds = rules.map((r) => r.id);
-    await browser.declarativeNetRequest.updateDynamicRules({
-      addRules: [],
-      removeRuleIds: ruleIds,
-    });
+    if (!IS_FIREFOX) {
+      // Chrome: remove all dynamic rules
+      const rules = await browser.declarativeNetRequest.getDynamicRules();
+      const ruleIds = rules.map((r) => r.id);
+      await browser.declarativeNetRequest.updateDynamicRules({
+        addRules: [],
+        removeRuleIds: ruleIds,
+      });
+    }
 
     // Remove request listener
     if (this.requestListener) {

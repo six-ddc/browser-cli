@@ -9,6 +9,9 @@ import { ErrorCode, createError } from '@browser-cli/shared';
 import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
 
+// Firefox: persistent listener for setHeaders (webRequest blocking mode)
+let setHeadersListener: ((details: Browser.webRequest.OnBeforeSendHeadersDetails) => Browser.webRequest.BlockingResponse) | null = null;
+
 export async function handleBackgroundCommand(
   msg: RequestMessage,
   targetTabId: number,
@@ -58,7 +61,6 @@ async function routeCommand(
       const beforeBack = await browser.tabs.get(targetTabId);
       await browser.scripting.executeScript({
         target: { tabId: targetTabId },
-        world: 'MAIN',
         func: () => history.back(),
       });
       await waitForUrlChange(targetTabId, beforeBack.url || '');
@@ -69,7 +71,6 @@ async function routeCommand(
       const beforeFwd = await browser.tabs.get(targetTabId);
       await browser.scripting.executeScript({
         target: { tabId: targetTabId },
-        world: 'MAIN',
         func: () => history.forward(),
       });
       await waitForUrlChange(targetTabId, beforeFwd.url || '');
@@ -198,7 +199,7 @@ async function routeCommand(
           type: 'browser-cli-command',
           id: `screenshot-prep-${Date.now()}`,
           command: { action: 'scrollIntoView', params: { selector } },
-        });
+        }, { frameId: 0 });
         if (!csResponse.success) {
           throw new Error(csResponse.error?.message || `Element not found: ${selector}`);
         }
@@ -207,7 +208,7 @@ async function routeCommand(
           type: 'browser-cli-command',
           id: `screenshot-bbox-${Date.now()}`,
           command: { action: 'boundingBox', params: { selector } },
-        });
+        }, { frameId: 0 });
         if (bboxResponse.success && bboxResponse.data) {
           cropRect = bboxResponse.data as { x: number; y: number; width: number; height: number };
         }
@@ -252,6 +253,19 @@ async function routeCommand(
     // ─── Evaluate ──────────────────────────────────────────────
     case 'evaluate': {
       const { expression } = command.params as { expression: string };
+      if (import.meta.env.FIREFOX) {
+        // Firefox: delegate to content script's <script> injection approach
+        const response = await browser.tabs.sendMessage(targetTabId, {
+          type: 'browser-cli-command',
+          id: `bg-evaluate-${Date.now()}`,
+          command: { action: 'evaluate', params: { expression } },
+        }, { frameId: 0 });
+        if (!response.success) {
+          throw new Error(response.error?.message || 'evaluate failed');
+        }
+        return response.data;
+      }
+      // Chrome: execute directly in MAIN world
       const results = await browser.scripting.executeScript({
         target: { tabId: targetTabId },
         world: 'MAIN',
@@ -359,12 +373,12 @@ async function routeCommand(
         type: 'browser-cli-command',
         id: `state-export-local-${Date.now()}`,
         command: { action: 'storageGet', params: { area: 'local' } },
-      });
+      }, { frameId: 0 });
       const sessionStorageResp = await browser.tabs.sendMessage(targetTabId, {
         type: 'browser-cli-command',
         id: `state-export-session-${Date.now()}`,
         command: { action: 'storageGet', params: { area: 'session' } },
-      });
+      }, { frameId: 0 });
 
       return {
         url: tabUrl,
@@ -412,7 +426,7 @@ async function routeCommand(
             type: 'browser-cli-command',
             id: `state-import-local-${Date.now()}-${key}`,
             command: { action: 'storageSet', params: { key, value, area: 'local' } },
-          });
+          }, { frameId: 0 });
           localCount++;
         }
       }
@@ -424,7 +438,7 @@ async function routeCommand(
             type: 'browser-cli-command',
             id: `state-import-session-${Date.now()}-${key}`,
             command: { action: 'storageSet', params: { key, value, area: 'session' } },
-          });
+          }, { frameId: 0 });
           sessionCount++;
         }
       }
@@ -445,6 +459,38 @@ async function routeCommand(
     }
     case 'setHeaders': {
       const { headers } = command.params as { headers: Record<string, string> };
+
+      if (import.meta.env.FIREFOX) {
+        // Firefox: use webRequest.onBeforeSendHeaders with blocking to modify headers
+        // Remove previous listener if any
+        if (setHeadersListener) {
+          browser.webRequest.onBeforeSendHeaders.removeListener(setHeadersListener);
+        }
+        if (Object.keys(headers).length > 0) {
+          setHeadersListener = (details: Browser.webRequest.OnBeforeSendHeadersDetails) => {
+            const requestHeaders = details.requestHeaders || [];
+            for (const [name, value] of Object.entries(headers)) {
+              const existing = requestHeaders.find((h) => h.name.toLowerCase() === name.toLowerCase());
+              if (existing) {
+                existing.value = value;
+              } else {
+                requestHeaders.push({ name, value });
+              }
+            }
+            return { requestHeaders };
+          };
+          browser.webRequest.onBeforeSendHeaders.addListener(
+            setHeadersListener,
+            { urls: ['<all_urls>'] },
+            ['blocking', 'requestHeaders'],
+          );
+        } else {
+          setHeadersListener = null;
+        }
+        return { set: true, ruleCount: Object.keys(headers).length };
+      }
+
+      // Chrome: use declarativeNetRequest
       const rules: Array<{
         id: number;
         priority: number;

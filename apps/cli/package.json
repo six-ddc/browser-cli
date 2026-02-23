@@ -25,10 +25,13 @@
   "dependencies": {
     "@browser-cli/shared": "workspace:*",
     "commander": "^14.0.0",
+    "defuddle": "^0.7.0",
+    "jsdom": "^26.1.0",
     "ws": "^8.19.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "eslint": "catalog:",

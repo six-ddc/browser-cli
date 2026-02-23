@@ -765,6 +765,23 @@ export interface StateImportResult {
   imported: { cookies: number; localStorage: number; sessionStorage: number };
 }
 
+// ─── Markdown ───────────────────────────────────────────────────────
+export type MarkdownParams = Record<string, never>;
+export interface MarkdownResult {
+  title: string;
+  markdown: string;
+  /** Author if detected */
+  byline: string | null;
+  /** Description/excerpt if detected */
+  excerpt: string | null;
+}
+
+/** Raw HTML returned by extension for CLI-side extraction */
+export interface MarkdownRawResult {
+  html: string;
+  url: string;
+}
+
 // ─── Action Type Union ───────────────────────────────────────────────
 
 export type ActionType =
@@ -861,7 +878,9 @@ export type ActionType =
   | 'setHeaders'
   // State Management
   | 'stateExport'
-  | 'stateImport';
+  | 'stateImport'
+  // Markdown
+  | 'markdown';
 
 /**
  * Discriminated union of all commands.
@@ -940,7 +959,8 @@ export type Command =
   | { action: 'setMedia'; params: SetMediaParams }
   | { action: 'setHeaders'; params: SetHeadersParams }
   | { action: 'stateExport'; params: StateExportParams }
-  | { action: 'stateImport'; params: StateImportParams };
+  | { action: 'stateImport'; params: StateImportParams }
+  | { action: 'markdown'; params: MarkdownParams };
 
 /** Map action type → result type */
 export interface ActionResultMap {
@@ -1017,4 +1037,5 @@ export interface ActionResultMap {
   setHeaders: SetHeadersResult;
   stateExport: StateExportResult;
   stateImport: StateImportResult;
+  markdown: MarkdownResult;
 }

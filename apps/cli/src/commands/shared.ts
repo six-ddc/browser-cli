@@ -25,7 +25,7 @@ export function getRootOpts(cmd: Command): { browser?: string; json?: boolean } 
 export async function sendCommand(
   cmd: Command,
   command: BrowserCommand,
-  options?: { tabId?: number },
+  options?: { tabId?: number; skipJson?: boolean },
 ): Promise<Record<string, unknown> | null> {
   const rootOpts = getRootOpts(cmd);
 
@@ -54,7 +54,7 @@ export async function sendCommand(
       sessionId: rootOpts.browser,
     });
 
-    if (rootOpts.json) {
+    if (rootOpts.json && !options?.skipJson) {
       console.log(JSON.stringify(response, null, 2));
       client.disconnect();
       process.exit(response.success ? 0 : 1);

@@ -8,6 +8,7 @@ import { frameManager } from '../lib/frame-manager';
 
 let wsClient: WsClient | null = null;
 let networkManager: NetworkManager | null = null;
+let initializing = false;
 
 /** Commands handled by the background service worker (not content scripts) */
 const BG_ACTIONS = new Set([
@@ -31,36 +32,42 @@ async function resolveTargetTab(tabId?: number): Promise<number> {
 
 /** Re-create WsClient + NetworkManager if the SW was restarted */
 async function ensureInitialized(): Promise<void> {
-  if (wsClient) return;
+  if (wsClient || initializing) return;
+  initializing = true;
 
-  console.log('[browser-cli] Lazy re-initialization after SW wake');
+  try {
+    console.log('[browser-cli] Lazy re-initialization after SW wake');
 
-  networkManager = new NetworkManager();
+    networkManager = new NetworkManager();
 
-  const port = await getPort();
+    const port = await getPort();
 
-  wsClient = new WsClient({
-    port,
-    messageHandler: handleCommand,
-    onConnect: () => {
-      console.log('[browser-cli] Connected to daemon');
-      setState({ connected: true, lastConnected: Date.now(), reconnecting: false, nextRetryIn: null });
-    },
-    onDisconnect: () => {
-      console.log('[browser-cli] Disconnected from daemon');
-      setState({ connected: false, lastDisconnected: Date.now(), sessionId: null });
-    },
-    onHandshake: (ack) => {
-      console.log('[browser-cli] Handshake complete, session:', ack.sessionId);
-      setState({ sessionId: ack.sessionId });
-    },
-    onReconnecting: (nextRetryMs) => {
-      console.log(`[browser-cli] Reconnecting in ${nextRetryMs}ms...`);
-      setState({ reconnecting: true, nextRetryIn: nextRetryMs });
-    },
-  });
+    wsClient = new WsClient({
+      port,
+      messageHandler: handleCommand,
+      onConnect: () => {
+        console.log('[browser-cli] Connected to daemon');
+        setState({ connected: true, lastConnected: Date.now(), reconnecting: false, nextRetryIn: null });
+      },
+      onDisconnect: () => {
+        console.log('[browser-cli] Disconnected from daemon');
+        setState({ connected: false, lastDisconnected: Date.now(), sessionId: null });
+      },
+      onHandshake: (ack) => {
+        console.log('[browser-cli] Handshake complete, session:', ack.sessionId);
+        setState({ sessionId: ack.sessionId });
+      },
+      onReconnecting: (nextRetryMs) => {
+        console.log(`[browser-cli] Reconnecting in ${nextRetryMs}ms...`);
+        setState({ reconnecting: true, nextRetryIn: nextRetryMs });
+      },
+    });
 
-  wsClient.start();
+    wsClient.start();
+  } catch (err) {
+    initializing = false;
+    throw err;
+  }
 }
 
 /** Send a message to a content script with retry on "Receiving end does not exist" */
@@ -72,7 +79,10 @@ async function sendToContentScript(
 ): Promise<{ success: boolean; data?: unknown; error?: unknown }> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await browser.tabs.sendMessage(tabId, message);
+      // Always target the main frame (frameId: 0) to avoid iframe content scripts
+      // responding first. The main frame's content script handles iframe routing
+      // via frame-bridge when a frame switch is active.
+      return await browser.tabs.sendMessage(tabId, message, { frameId: 0 });
     } catch (err) {
       const msg = (err as Error).message || '';
       const isReceivingEndError = msg.includes('Receiving end does not exist') ||
@@ -185,17 +195,34 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ result: null, error: 'Unauthorized sender' });
       return true;
     }
-    // Evaluate expression in MAIN world for content scripts (bypasses CSP)
-    browser.scripting.executeScript({
-      target: { tabId: sender.tab.id },
-      world: 'MAIN',
-      func: (expr: string) => (0, eval)(expr),
-      args: [message.expression],
-    }).then((results) => {
-      sendResponse({ result: results?.[0]?.result });
-    }).catch((err) => {
-      sendResponse({ result: null, error: `eval failed: ${(err as Error).message}` });
-    });
+    if (import.meta.env.FIREFOX) {
+      // Firefox: content script already uses <script> injection in evaluate.ts,
+      // so this path shouldn't normally be hit. Forward to content script as fallback.
+      browser.tabs.sendMessage(sender.tab.id, {
+        type: 'browser-cli-command',
+        id: `bg-eval-main-${Date.now()}`,
+        command: { action: 'evaluate', params: { expression: message.expression } },
+      }, { frameId: 0 }).then((response: { success: boolean; data?: { value: unknown }; error?: { message?: string } }) => {
+        sendResponse({
+          result: response.success ? response.data?.value : null,
+          error: response.success ? undefined : response.error?.message,
+        });
+      }).catch((err: Error) => {
+        sendResponse({ result: null, error: `eval failed: ${err.message}` });
+      });
+    } else {
+      // Chrome: evaluate in MAIN world directly
+      browser.scripting.executeScript({
+        target: { tabId: sender.tab.id },
+        world: 'MAIN',
+        func: (expr: string) => (0, eval)(expr),
+        args: [message.expression],
+      }).then((results) => {
+        sendResponse({ result: results?.[0]?.result });
+      }).catch((err) => {
+        sendResponse({ result: null, error: `eval failed: ${(err as Error).message}` });
+      });
+    }
   }
   // Return true to indicate we'll send a response asynchronously
   return true;
