@@ -22,33 +22,31 @@ test.describe('is visible', () => {
     expect(r.stdout).toBe('true');
   });
 
-  test('returns false for hidden element', async ({ bcli, navigateAndWait, activePage }) => {
+  test('returns false for hidden element', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.DYNAMIC_CONTROLS);
     // Click Remove to hide the checkbox
     bcli('click', '#checkbox-example button');
-    await activePage.waitForTimeout(2000);
+    // Wait for the removal animation to complete
+    bcli('wait', '2000');
 
-    // After removal, the checkbox INPUT is removed from the DOM
-    // Querying the removed input should fail (element not found) or return false
+    // After removal: either returns false or fails (element not found)
     const r = bcli('is', 'visible', '#checkbox-example input[type="checkbox"]');
-    // Either returns false or fails (element not found) -- both acceptable for removed element
-    if (r.exitCode === 0) {
+    if (r.success) {
       expect(r.stdout).toBe('false');
     } else {
-      // Element not found error is also acceptable
-      expect(r.exitCode).not.toBe(0);
+      expect(r).toBcliFailure();
     }
   });
 
-  test('fails or returns false for nonexistent element', async ({ bcli, navigateAndWait }) => {
+  test('fails for nonexistent element', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
     const r = bcli('is', 'visible', '.nonexistent-element');
-    // Either the command fails (element not found) or returns false -- both acceptable
-    if (r.exitCode === 0) {
+    // Nonexistent element: either returns false or fails (element not found)
+    if (r.success) {
       expect(r.stdout).toBe('false');
     } else {
-      expect(r.exitCode).not.toBe(0);
+      expect(r).toBcliFailure();
     }
   });
 });
@@ -74,7 +72,7 @@ test.describe('is enabled', () => {
     expect(r.stdout).toBe('false');
   });
 
-  test('returns true after enabling a disabled input', async ({ bcli, navigateAndWait, activePage }) => {
+  test('returns true after enabling a disabled input', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.DYNAMIC_CONTROLS);
 
     // Verify input starts disabled
@@ -82,9 +80,9 @@ test.describe('is enabled', () => {
     expect(r1).toBcliSuccess();
     expect(r1.stdout).toBe('false');
 
-    // Click Enable button
+    // Click Enable button and wait for the enable animation to complete
     bcli('click', '#input-example button');
-    await activePage.waitForTimeout(3000);
+    bcli('wait', '3000');
 
     // Now the input should be enabled
     const r2 = bcli('is', 'enabled', '#input-example input');
@@ -124,23 +122,21 @@ test.describe('is checked', () => {
     expect(r.stdout).toBe('true');
   });
 
-  test('reflects state after check command', async ({ bcli, navigateAndWait, activePage }) => {
+  test('reflects state after check command', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     bcli('check', `${SEL.CHECKBOX}:first-of-type`);
-    await activePage.waitForTimeout(500);
 
     const r = bcli('is', 'checked', `${SEL.CHECKBOX}:first-of-type`);
     expect(r).toBcliSuccess();
     expect(r.stdout).toBe('true');
   });
 
-  test('reflects state after uncheck command', async ({ bcli, navigateAndWait, activePage }) => {
+  test('reflects state after uncheck command', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     // Second checkbox is checked by default -- uncheck it
     bcli('uncheck', `${SEL.CHECKBOX}:last-of-type`);
-    await activePage.waitForTimeout(500);
 
     const r = bcli('is', 'checked', `${SEL.CHECKBOX}:last-of-type`);
     expect(r).toBcliSuccess();
@@ -151,9 +147,8 @@ test.describe('is checked', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     const r = bcli('is', 'checked', SEL.USERNAME);
-    // Checking a non-checkbox should either fail or return false
-    if (r.exitCode === 0) {
-      expect(r.stdout).toBe('false');
-    }
+    // Checking a non-checkbox element should return false (it has no checked state)
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toBe('false');
   });
 });

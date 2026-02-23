@@ -1,37 +1,29 @@
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdirSync } from 'node:fs';
-import { APP_DIR_NAME, DEFAULT_SESSION } from '@browser-cli/shared';
+import { APP_DIR_NAME, DEFAULT_WS_PORT } from '@browser-cli/shared';
 
-/** Get the app directory (~/.browser-cli/) */
+/** Get the app directory (~/.browser-cli/ or $BROWSER_CLI_DIR) */
 export function getAppDir(): string {
-  const dir = join(homedir(), APP_DIR_NAME);
+  const dir = process.env.BROWSER_CLI_DIR || join(homedir(), APP_DIR_NAME);
   mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-/** Get PID file path for a session */
-export function getPidPath(session: string = DEFAULT_SESSION): string {
-  return join(getAppDir(), `${session}.pid`);
+/** Get PID file path */
+export function getPidPath(): string {
+  return join(getAppDir(), 'daemon.pid');
 }
 
-/** Get socket file path for a session */
-export function getSocketPath(session: string = DEFAULT_SESSION): string {
-  // On Windows, use a named pipe pattern; on Unix, use socket file
+/** Get socket file path */
+export function getSocketPath(): string {
   if (process.platform === 'win32') {
-    return `\\\\.\\pipe\\browser-cli-${session}`;
+    return '\\\\.\\pipe\\browser-cli-daemon';
   }
-  return join(getAppDir(), `${session}.sock`);
+  return join(getAppDir(), 'daemon.sock');
 }
 
-/** Get the WS port for a session (default 9222) */
-export function getWsPort(session: string = DEFAULT_SESSION): number {
-  // For non-default sessions, offset the port
-  if (session === DEFAULT_SESSION) return 9222;
-  // Simple hash for session name → port offset
-  let hash = 0;
-  for (const ch of session) {
-    hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-  }
-  return 9222 + (Math.abs(hash) % 1000) + 1;
+/** Get the WS port */
+export function getWsPort(): number {
+  return DEFAULT_WS_PORT;
 }

@@ -87,46 +87,54 @@ test.describe('mouse wheel', () => {
     expect(r).toBcliSuccess();
   });
 
-  test('negative delta scrolls up', async ({ bcli, navigateAndWait, activePage }) => {
+  test('negative delta scrolls up', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LARGE_PAGE);
 
     // First scroll down
     bcli('mouse', 'wheel', '500');
-    await activePage.waitForTimeout(1000);
 
-    // Then scroll back up
+    // Then scroll back up with negative delta
     const r = bcli('mouse', 'wheel', '-300');
     expect(r).toBcliSuccess();
   });
 });
 
 test.describe('keydown', () => {
-  test('presses key down', async ({ bcli, navigateAndWait }) => {
+  test('presses key down', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.KEY_PRESSES);
 
     const r1 = bcli('keydown', 'Shift');
     expect(r1).toBcliSuccess();
+
+    // Verify the key press was registered in the page's #result element
+    await expect(activePage.locator('#result')).toContainText('Shift');
 
     // Release the key
     const r2 = bcli('keyup', 'Shift');
     expect(r2).toBcliSuccess();
   });
 
-  test('presses Control key', async ({ bcli, navigateAndWait }) => {
+  test('presses Control key', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.KEY_PRESSES);
 
     const r1 = bcli('keydown', 'Control');
     expect(r1).toBcliSuccess();
 
+    // Verify the key press was registered
+    await expect(activePage.locator('#result')).toContainText('Control');
+
     const r2 = bcli('keyup', 'Control');
     expect(r2).toBcliSuccess();
   });
 
-  test('presses letter key', async ({ bcli, navigateAndWait }) => {
+  test('presses letter key', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.KEY_PRESSES);
 
     const r1 = bcli('keydown', 'a');
     expect(r1).toBcliSuccess();
+
+    // Verify the key press was registered
+    await expect(activePage.locator('#result')).toContainText('a');
 
     const r2 = bcli('keyup', 'a');
     expect(r2).toBcliSuccess();
@@ -146,7 +154,7 @@ test.describe('keyup', () => {
 });
 
 test.describe('keydown + keyup integration', () => {
-  test('modifier key sequence', async ({ bcli, navigateAndWait }) => {
+  test('modifier key sequence', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.KEY_PRESSES);
 
     // Hold Shift, press 'a', release both
@@ -155,6 +163,9 @@ test.describe('keydown + keyup integration', () => {
 
     const r2 = bcli('press', 'a');
     expect(r2).toBcliSuccess();
+
+    // The last keydown event should show 'a' in the result
+    await expect(activePage.locator('#result')).toContainText('a');
 
     const r3 = bcli('keyup', 'Shift');
     expect(r3).toBcliSuccess();

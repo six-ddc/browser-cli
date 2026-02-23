@@ -52,6 +52,16 @@ if (typeof globalThis.DragEvent === 'undefined') {
   };
 }
 
+// CSS.escape — jsdom doesn't implement CSS.escape
+if (!globalThis.CSS?.escape) {
+  globalThis.CSS = {
+    ...globalThis.CSS,
+    escape: (value: string) => {
+      return value.replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, '\\$&');
+    },
+  } as typeof CSS;
+}
+
 // document.elementFromPoint — jsdom doesn't implement hit testing
 if (typeof document.elementFromPoint !== 'function') {
   document.elementFromPoint = () => document.body;

@@ -23,7 +23,7 @@ export class SocketClient {
   /** Send a command and wait for the response */
   sendCommand(
     command: Command,
-    options?: { tabId?: number; timeout?: number },
+    options?: { tabId?: number; timeout?: number; sessionId?: string },
   ): Promise<DaemonResponse> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
@@ -36,6 +36,7 @@ export class SocketClient {
         id,
         command,
         tabId: options?.tabId,
+        sessionId: options?.sessionId,
       };
 
       const timeout = options?.timeout ?? COMMAND_TIMEOUT_MS;

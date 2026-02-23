@@ -14,8 +14,8 @@ function isProcessRunning(pid: number): boolean {
 }
 
 /** Read daemon PID from file, or null if not running */
-export function getDaemonPid(session?: string): number | null {
-  const pidPath = getPidPath(session);
+export function getDaemonPid(): number | null {
+  const pidPath = getPidPath();
   if (!existsSync(pidPath)) return null;
 
   try {
@@ -23,7 +23,7 @@ export function getDaemonPid(session?: string): number | null {
     if (isNaN(pid)) return null;
     if (!isProcessRunning(pid)) {
       // Stale PID file
-      cleanupPidFile(session);
+      cleanupPidFile();
       return null;
     }
     return pid;
@@ -33,14 +33,14 @@ export function getDaemonPid(session?: string): number | null {
 }
 
 /** Write daemon PID to file */
-export function writeDaemonPid(pid: number, session?: string): void {
-  writeFileSync(getPidPath(session), String(pid), 'utf-8');
+export function writeDaemonPid(pid: number): void {
+  writeFileSync(getPidPath(), String(pid), 'utf-8');
 }
 
 /** Clean up PID and socket files */
-export function cleanupPidFile(session?: string): void {
-  const pidPath = getPidPath(session);
-  const sockPath = getSocketPath(session);
+export function cleanupPidFile(): void {
+  const pidPath = getPidPath();
+  const sockPath = getSocketPath();
   try {
     if (existsSync(pidPath)) unlinkSync(pidPath);
   } catch {
@@ -53,14 +53,14 @@ export function cleanupPidFile(session?: string): void {
   }
 }
 
-/** Check if daemon is running for a session */
-export function isDaemonRunning(session?: string): boolean {
-  return getDaemonPid(session) !== null;
+/** Check if daemon is running */
+export function isDaemonRunning(): boolean {
+  return getDaemonPid() !== null;
 }
 
 /** Start the daemon as a detached child process */
-export function startDaemon(session?: string, wsPort?: number): number {
-  const existing = getDaemonPid(session);
+export function startDaemon(wsPort?: number): number {
+  const existing = getDaemonPid();
   if (existing) {
     logger.info(`Daemon already running (PID ${existing})`);
     return existing;
@@ -71,7 +71,6 @@ export function startDaemon(session?: string, wsPort?: number): number {
   const daemonEntry = new URL('./daemon/index.js', import.meta.url).pathname;
 
   const args = ['--daemon'];
-  if (session) args.push('--session', session);
   if (wsPort) args.push('--port', String(wsPort));
 
   const child = spawn(process.execPath, [daemonEntry, ...args], {
@@ -86,13 +85,13 @@ export function startDaemon(session?: string, wsPort?: number): number {
     throw new Error('Failed to start daemon process');
   }
 
-  writeDaemonPid(child.pid, session);
+  writeDaemonPid(child.pid);
   return child.pid;
 }
 
-/** Stop the daemon for a session */
-export function stopDaemon(session?: string): boolean {
-  const pid = getDaemonPid(session);
+/** Stop the daemon */
+export function stopDaemon(): boolean {
+  const pid = getDaemonPid();
   if (!pid) return false;
 
   try {
@@ -101,13 +100,13 @@ export function stopDaemon(session?: string): boolean {
     // Process may have already exited
   }
 
-  cleanupPidFile(session);
+  cleanupPidFile();
   return true;
 }
 
 /** Ensure the daemon is running, starting it if necessary */
-export function ensureDaemon(session?: string, wsPort?: number): number {
-  const existing = getDaemonPid(session);
+export function ensureDaemon(wsPort?: number): number {
+  const existing = getDaemonPid();
   if (existing) return existing;
-  return startDaemon(session, wsPort);
+  return startDaemon(wsPort);
 }

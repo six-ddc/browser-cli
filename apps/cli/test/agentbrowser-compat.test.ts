@@ -90,7 +90,6 @@ vi.mock('../src/commands/shared.js', () => ({
 async function parseArgs(...args: string[]): Promise<void> {
   const program = new Command()
     .name('browser-cli')
-    .option('--session <name>', 'Session', 'default')
     .option('--json', 'JSON output')
     .exitOverride(); // throw instead of process.exit
 

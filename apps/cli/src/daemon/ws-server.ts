@@ -1,9 +1,9 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { randomUUID } from 'node:crypto';
 import {
   PROTOCOL_VERSION,
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
+  generateFriendlyId,
 } from '@browser-cli/shared';
 import type {
   RequestMessage,
@@ -12,6 +12,7 @@ import type {
   HandshakeMessage,
   PongMessage,
   WsMessage,
+  BrowserInfo,
 } from '@browser-cli/shared';
 import { logger } from '../util/logger.js';
 
@@ -19,6 +20,7 @@ export interface ExtensionConnection {
   ws: WebSocket;
   extensionId: string;
   sessionId: string;
+  browser?: BrowserInfo;
   alive: boolean;
   lastPong: number;
 }
@@ -27,25 +29,53 @@ export interface PendingRequest {
   resolve: (msg: ResponseMessage) => void;
   reject: (err: Error) => void;
   timer: ReturnType<typeof setTimeout>;
+  sessionId: string;
 }
 
 const MAX_STORED_EVENTS = 1000;
 
 export class WsServer {
   private wss: WebSocketServer | null = null;
-  private connection: ExtensionConnection | null = null;
+  private connections = new Map<string, ExtensionConnection>();
+  private defaultSessionId: string | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private pending = new Map<string, PendingRequest>();
   private events: EventMessage[] = [];
 
   get isConnected(): boolean {
-    return this.connection !== null && this.connection.ws.readyState === WebSocket.OPEN;
+    return this.connections.size > 0;
   }
 
-  get extensionInfo(): { extensionId: string; sessionId: string } | null {
-    return this.connection
-      ? { extensionId: this.connection.extensionId, sessionId: this.connection.sessionId }
+  /** Info for the default connection (backward compat) */
+  get extensionInfo(): { extensionId: string; sessionId: string; browser?: BrowserInfo } | null {
+    const conn = this.getDefaultConnection();
+    return conn
+      ? { extensionId: conn.extensionId, sessionId: conn.sessionId, browser: conn.browser }
       : null;
+  }
+
+  /** All active connections for status display */
+  get allConnections(): Array<{ extensionId: string; sessionId: string; browser?: BrowserInfo }> {
+    return Array.from(this.connections.values()).map((c) => ({
+      extensionId: c.extensionId,
+      sessionId: c.sessionId,
+      browser: c.browser,
+    }));
+  }
+
+  /** Get a specific connection by sessionId, or the default */
+  getConnection(sessionId?: string): ExtensionConnection | null {
+    if (sessionId) {
+      return this.connections.get(sessionId) ?? null;
+    }
+    return this.getDefaultConnection();
+  }
+
+  private getDefaultConnection(): ExtensionConnection | null {
+    if (this.defaultSessionId) {
+      return this.connections.get(this.defaultSessionId) ?? null;
+    }
+    return null;
   }
 
   start(port: number): Promise<void> {
@@ -76,14 +106,32 @@ export class WsServer {
         });
 
         ws.on('close', () => {
-          if (this.connection?.ws === ws) {
-            logger.warn('Extension disconnected');
-            this.connection = null;
-            // Reject all pending requests
+          // Find which connection owns this ws
+          let closedSessionId: string | null = null;
+          for (const [sid, conn] of this.connections) {
+            if (conn.ws === ws) {
+              closedSessionId = sid;
+              break;
+            }
+          }
+
+          if (closedSessionId) {
+            logger.warn(`Extension disconnected (session=${closedSessionId})`);
+            this.connections.delete(closedSessionId);
+
+            // Reject pending requests for this session only
             for (const [id, req] of this.pending) {
-              req.reject(new Error('Extension disconnected'));
-              clearTimeout(req.timer);
-              this.pending.delete(id);
+              if (req.sessionId === closedSessionId) {
+                req.reject(new Error('Extension disconnected'));
+                clearTimeout(req.timer);
+                this.pending.delete(id);
+              }
+            }
+
+            // Update default if needed
+            if (this.defaultSessionId === closedSessionId) {
+              const remaining = this.connections.keys().next();
+              this.defaultSessionId = remaining.done ? null : remaining.value;
             }
           }
         });
@@ -101,7 +149,7 @@ export class WsServer {
         this.handleHandshake(ws, msg as HandshakeMessage);
         break;
       case 'pong':
-        this.handlePong(msg as PongMessage);
+        this.handlePong(ws, msg as PongMessage);
         break;
       case 'response':
         this.handleResponse(msg as ResponseMessage);
@@ -122,14 +170,16 @@ export class WsServer {
       );
     }
 
-    const sessionId = randomUUID();
-    this.connection = {
+    const sessionId = generateFriendlyId();
+    this.connections.set(sessionId, {
       ws,
       extensionId: msg.extensionId,
       sessionId,
+      browser: msg.browser,
       alive: true,
       lastPong: Date.now(),
-    };
+    });
+    this.defaultSessionId = sessionId;
 
     const ack = {
       type: 'handshake_ack' as const,
@@ -137,13 +187,19 @@ export class WsServer {
       sessionId,
     };
     ws.send(JSON.stringify(ack));
-    logger.success(`Extension connected (id=${msg.extensionId}, session=${sessionId})`);
+
+    const browserStr = msg.browser ? `, browser=${msg.browser.name} ${msg.browser.version}` : '';
+    logger.success(`Extension connected (id=${msg.extensionId}, session=${sessionId}${browserStr})`);
   }
 
-  private handlePong(msg: PongMessage) {
-    if (this.connection) {
-      this.connection.alive = true;
-      this.connection.lastPong = msg.timestamp;
+  private handlePong(ws: WebSocket, msg: PongMessage) {
+    // Find the connection that sent this pong
+    for (const conn of this.connections.values()) {
+      if (conn.ws === ws) {
+        conn.alive = true;
+        conn.lastPong = msg.timestamp;
+        break;
+      }
     }
   }
 
@@ -180,39 +236,50 @@ export class WsServer {
 
   private startHeartbeat() {
     this.heartbeatTimer = setInterval(() => {
-      if (!this.connection) return;
-
-      if (!this.connection.alive) {
-        const elapsed = Date.now() - this.connection.lastPong;
-        if (elapsed > HEARTBEAT_TIMEOUT_MS) {
-          logger.warn('Extension heartbeat timeout, disconnecting');
-          this.connection.ws.terminate();
-          this.connection = null;
-          return;
+      for (const [sid, conn] of this.connections) {
+        if (!conn.alive) {
+          const elapsed = Date.now() - conn.lastPong;
+          if (elapsed > HEARTBEAT_TIMEOUT_MS) {
+            logger.warn(`Extension heartbeat timeout (session=${sid}), disconnecting`);
+            conn.ws.terminate();
+            // ws 'close' handler will clean up the map
+            continue;
+          }
         }
-      }
 
-      this.connection.alive = false;
-      const ping = { type: 'ping', timestamp: Date.now() };
-      this.connection.ws.send(JSON.stringify(ping));
+        conn.alive = false;
+        const ping = { type: 'ping', timestamp: Date.now() };
+        conn.ws.send(JSON.stringify(ping));
+      }
     }, HEARTBEAT_INTERVAL_MS);
   }
 
   /** Send a command to the extension and wait for a response */
-  sendRequest(msg: RequestMessage, timeoutMs: number = 30_000): Promise<ResponseMessage> {
+  sendRequest(msg: RequestMessage, timeoutMs: number = 30_000, sessionId?: string): Promise<ResponseMessage> {
     return new Promise((resolve, reject) => {
-      if (!this.isConnected || !this.connection) {
-        reject(new Error('Extension not connected'));
+      const conn = this.getConnection(sessionId);
+
+      if (!conn || conn.ws.readyState !== WebSocket.OPEN) {
+        if (sessionId) {
+          const available = Array.from(this.connections.keys()).join(', ');
+          reject(new Error(
+            `Browser session '${sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'}`,
+          ));
+        } else {
+          reject(new Error('Extension not connected'));
+        }
         return;
       }
+
+      const resolvedSessionId = sessionId ?? conn.sessionId;
 
       const timer = setTimeout(() => {
         this.pending.delete(msg.id);
         reject(new Error(`Request timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
-      this.pending.set(msg.id, { resolve, reject, timer });
-      this.connection.ws.send(JSON.stringify(msg));
+      this.pending.set(msg.id, { resolve, reject, timer, sessionId: resolvedSessionId });
+      conn.ws.send(JSON.stringify(msg));
     });
   }
 
@@ -229,10 +296,11 @@ export class WsServer {
       this.pending.delete(id);
     }
 
-    if (this.connection) {
-      this.connection.ws.close();
-      this.connection = null;
+    for (const conn of this.connections.values()) {
+      conn.ws.close();
     }
+    this.connections.clear();
+    this.defaultSessionId = null;
 
     return new Promise<void>((resolve) => {
       if (this.wss) {

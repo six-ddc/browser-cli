@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Internet - TestID Page</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input[type="text"], input[type="email"], select {
+      display: block; width: 300px; padding: 8px; margin-top: 4px;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    button { margin-top: 15px; padding: 10px 20px; cursor: pointer; }
+    img { display: block; margin: 10px 0; }
+    a { color: #2b6dad; }
+  </style>
+</head>
+<body>
+  <div class="example">
+    <h3>TestID Page</h3>
+
+    <button data-testid="submit-btn" title="Submit form" type="button">Submit</button>
+
+    <label for="email">Email</label>
+    <input type="email" id="email" data-testid="email-input" title="Enter email" placeholder="email@example.com">
+
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='40'%3E%3Crect fill='%232b6dad' width='100' height='40' rx='4'/%3E%3Ctext x='50' y='25' fill='white' text-anchor='middle' font-size='14'%3ELogo%3C/text%3E%3C/svg%3E" alt="Company Logo">
+
+    <a href="#" data-testid="nav-link" title="Go to home page">Home</a>
+
+    <div style="margin-top: 15px;">
+      <label><input type="checkbox" data-testid="terms-checkbox"> I agree to the terms</label>
+    </div>
+
+    <label for="country">Country</label>
+    <select id="country" data-testid="country-select">
+      <option value="">-- Select --</option>
+      <option value="us">United States</option>
+      <option value="uk">United Kingdom</option>
+      <option value="de">Germany</option>
+    </select>
+  </div>
+</body>
+</html>

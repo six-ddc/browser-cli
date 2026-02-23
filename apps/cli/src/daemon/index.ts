@@ -5,7 +5,7 @@
  */
 
 import { parseArgs } from 'node:util';
-import { DEFAULT_WS_PORT, DEFAULT_SESSION } from '@browser-cli/shared';
+import { DEFAULT_WS_PORT } from '@browser-cli/shared';
 import { WsServer } from './ws-server.js';
 import { SocketServer } from './socket-server.js';
 import { Bridge } from './bridge.js';
@@ -17,20 +17,18 @@ async function main() {
   const { values } = parseArgs({
     options: {
       daemon: { type: 'boolean', default: false },
-      session: { type: 'string', default: DEFAULT_SESSION },
       port: { type: 'string', default: String(DEFAULT_WS_PORT) },
     },
     strict: false,
   });
 
-  const session = String(values.session ?? DEFAULT_SESSION);
   const wsPort = parseInt(String(values.port ?? DEFAULT_WS_PORT), 10);
-  const socketPath = getSocketPath(session);
+  const socketPath = getSocketPath();
 
-  logger.info(`Starting daemon (session=${session}, wsPort=${wsPort})`);
+  logger.info(`Starting daemon (wsPort=${wsPort})`);
 
   // Write PID
-  writeDaemonPid(process.pid, session);
+  writeDaemonPid(process.pid);
 
   // Create servers
   const wsServer = new WsServer();
@@ -38,9 +36,7 @@ async function main() {
   const socketServer = new SocketServer(
     (req) => bridge.handleRequest(req),
     () => ({
-      connected: wsServer.isConnected,
-      extensionId: wsServer.extensionInfo?.extensionId ?? null,
-      sessionId: wsServer.extensionInfo?.sessionId ?? null,
+      connections: wsServer.allConnections,
       uptime: Math.floor(process.uptime()),
       pid: process.pid,
     }),
@@ -57,7 +53,7 @@ async function main() {
     logger.info('Shutting down daemon...');
     await socketServer.stop();
     await wsServer.stop();
-    cleanupPidFile(session);
+    cleanupPidFile();
     process.exit(0);
   };
 

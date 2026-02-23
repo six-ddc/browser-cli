@@ -9,6 +9,9 @@ dist/
 # Turbo
 .turbo/
 
+# TypeScript build info
+*.tsbuildinfo
+
 # Environment
 .env
 .env.*

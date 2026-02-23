@@ -13,6 +13,8 @@ export interface DaemonRequest {
   command: Command;
   /** Target tab (optional — daemon can default to active tab) */
   tabId?: number;
+  /** Target browser session (optional — daemon routes to default if omitted) */
+  sessionId?: string;
 }
 
 /** Daemon replies to CLI */
@@ -51,11 +53,19 @@ export interface EventMessage {
   timestamp: number;
 }
 
+/** Browser identity sent during handshake */
+export interface BrowserInfo {
+  name: string;
+  version: string;
+  userAgent: string;
+}
+
 /** Extension → Daemon: initial handshake */
 export interface HandshakeMessage {
   type: 'handshake';
   protocolVersion: string;
   extensionId: string;
+  browser?: BrowserInfo;
 }
 
 /** Daemon → Extension: handshake acknowledgement */

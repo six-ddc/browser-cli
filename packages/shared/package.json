@@ -8,19 +8,20 @@
   "license": "MIT",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
     "./protocol": {
-      "types": "./src/protocol/index.ts",
+      "types": "./dist/protocol/index.d.ts",
       "default": "./src/protocol/index.ts"
     },
     "./snapshot": {
-      "types": "./src/snapshot/index.ts",
+      "types": "./dist/snapshot/index.d.ts",
       "default": "./src/snapshot/index.ts"
     }
   },
   "scripts": {
+    "build": "tsc -b",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

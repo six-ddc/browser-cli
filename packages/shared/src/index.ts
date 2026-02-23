@@ -20,3 +20,6 @@ export * from './protocol/index.js';
 
 // Snapshot types
 export * from './snapshot/index.js';
+
+// Utilities
+export { generateFriendlyId } from './util/friendly-id.js';

@@ -11,6 +11,7 @@ test.describe('get url', () => {
 
     const r = bcli('get', 'url');
     expect(r).toBcliSuccess();
+    expect(r.stdout).toMatch(/^https?:\/\//);
     expect(r.stdout).toContain('/login');
   });
 
@@ -19,6 +20,7 @@ test.describe('get url', () => {
 
     const r = bcli('get', 'url');
     expect(r).toBcliSuccess();
+    expect(r.stdout).toMatch(/^https?:\/\//);
     expect(r.stdout).toContain('/checkboxes');
   });
 });
@@ -47,7 +49,7 @@ test.describe('get text', () => {
 
     const r = bcli('get', 'text', 'h2');
     expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('Login Page');
+    expect(r.stdout.trim()).toBe('Login Page');
   });
 
   test('returns nested text content', async ({ bcli, navigateAndWait }) => {
@@ -55,7 +57,7 @@ test.describe('get text', () => {
 
     const r = bcli('get', 'text', 'h1');
     expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('Welcome');
+    expect(r.stdout.trim()).toBe('Welcome to the-internet');
   });
 
   test('fails for nonexistent selector', async ({ bcli, navigateAndWait }) => {
@@ -93,7 +95,7 @@ test.describe('get html', () => {
 
     const r = bcli('get', 'html', '#login');
     expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('input');
+    expect(r.stdout).toContain('<input');
   });
 });
 
@@ -110,24 +112,20 @@ test.describe('get value', () => {
     expect(r.stdout).toBe('');
   });
 
-  test('returns value after fill', async ({ bcli, navigateAndWait, activePage }) => {
+  test('returns value after fill', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
     bcli('fill', SEL.USERNAME, TEST_USERNAME);
-    await activePage.waitForTimeout(500);
 
     const r = bcli('get', 'value', SEL.USERNAME);
     expect(r).toBcliSuccess();
     expect(r.stdout).toBe(TEST_USERNAME);
   });
 
-  test('returns value after clearing and re-filling', async ({ bcli, navigateAndWait, activePage }) => {
+  test('returns value after clearing and re-filling', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
     bcli('fill', SEL.USERNAME, 'first');
-    await activePage.waitForTimeout(500);
     bcli('clear', SEL.USERNAME);
-    await activePage.waitForTimeout(500);
     bcli('fill', SEL.USERNAME, 'second');
-    await activePage.waitForTimeout(500);
 
     const r = bcli('get', 'value', SEL.USERNAME);
     expect(r).toBcliSuccess();
@@ -201,7 +199,8 @@ test.describe('get count', () => {
     expect(r).toBcliSuccess();
     const count = parseInt(r.stdout, 10);
     expect(count).not.toBeNaN();
-    expect(count).toBeGreaterThan(0);
+    // The homepage has 23 links in the ul list
+    expect(count).toBe(23);
   });
 });
 
@@ -224,9 +223,13 @@ test.describe('get box', () => {
     const r = bcli('get', 'box', 'h2');
     expect(r).toBcliSuccess();
     expect(r.stdout).toMatch(/x=\d+ y=\d+ w=\d+ h=\d+/);
-    // Width and height should be positive
-    expect(r.stdout).not.toContain('w=0 ');
-    expect(r.stdout).not.toContain('h=0');
+    // Width and height should be positive — parse numerically to avoid fragile string matching
+    const wMatch = r.stdout.match(/w=(\d+)/);
+    const hMatch = r.stdout.match(/h=(\d+)/);
+    expect(wMatch).not.toBeNull();
+    expect(hMatch).not.toBeNull();
+    expect(Number(wMatch![1])).toBeGreaterThan(0);
+    expect(Number(hMatch![1])).toBeGreaterThan(0);
   });
 
   test('fails for nonexistent element', async ({ bcli, navigateAndWait }) => {

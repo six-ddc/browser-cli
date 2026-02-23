@@ -102,6 +102,39 @@ test.describe('tab close', () => {
     const url = bcli('get', 'url');
     expect(url.exitCode).toBe(0);
   });
+
+  test('closes a tab by specific tab ID', async ({ bcli, navigateAndWait, baseURL }) => {
+    await navigateAndWait(PAGES.HOME);
+
+    // Record original tab IDs
+    const origList = bcli('tab', 'list');
+    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+
+    // Open a new tab
+    bcli('tab', 'new', `${baseURL}/${PAGES.LOGIN}`);
+    bcli('wait', '2000');
+
+    // Get the new tab's ID
+    const afterList = bcli('tab', 'list');
+    const allIds = [...afterList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+    const newTabId = allIds.find(id => !origTabIds.includes(id));
+    expect(newTabId).toBeDefined();
+
+    // Switch back to original tab first
+    if (origTabIds.length > 0) {
+      bcli('tab', origTabIds[0]);
+      bcli('wait', '1000');
+    }
+
+    // Close the new tab by its specific ID
+    const r = bcli('tab', 'close', newTabId!);
+    expect(r.exitCode).toBe(0);
+    bcli('wait', '1000');
+
+    // Verify the new tab is gone
+    const finalList = bcli('tab', 'list');
+    expect(finalList.stdout).not.toContain(`[${newTabId}]`);
+  });
 });
 
 test.describe('tab integration', () => {

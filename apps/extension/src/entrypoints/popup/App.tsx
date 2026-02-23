@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
-import { APP_NAME, DEFAULT_WS_PORT } from '@browser-cli/shared';
-import { getState, setPort } from '../../lib/state';
+import { APP_NAME } from '@browser-cli/shared';
+import { getState, setPort, CONFIGURED_WS_PORT } from '../../lib/state';
 import type { ConnectionState } from '../../lib/state';
 
 export default function App() {
   const [state, setStateLocal] = useState<ConnectionState>({
     connected: false,
     sessionId: null,
-    port: DEFAULT_WS_PORT,
+    port: CONFIGURED_WS_PORT,
     lastConnected: null,
     lastDisconnected: null,
     reconnecting: false,
     nextRetryIn: null,
   });
-  const [portInput, setPortInput] = useState(String(DEFAULT_WS_PORT));
+  const [portInput, setPortInput] = useState(String(CONFIGURED_WS_PORT));
   const [copied, setCopied] = useState(false);
   const [sessionCopied, setSessionCopied] = useState(false);
 

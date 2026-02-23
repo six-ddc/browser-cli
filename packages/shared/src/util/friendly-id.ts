@@ -1,0 +1,39 @@
+/**
+ * Docker-style friendly ID generator: "adjective-noun"
+ * Works in both Node.js and browser extension (uses crypto.getRandomValues).
+ */
+
+const ADJECTIVES = [
+  'bold', 'brave', 'bright', 'calm', 'clever', 'cool', 'crisp', 'daring',
+  'eager', 'fair', 'fast', 'fierce', 'flying', 'gentle', 'glad', 'golden',
+  'grand', 'happy', 'hardy', 'keen', 'kind', 'lively', 'lucky', 'merry',
+  'mighty', 'neat', 'noble', 'proud', 'quick', 'quiet', 'rapid', 'ready',
+  'sharp', 'shiny', 'silent', 'sleek', 'smart', 'smooth', 'snowy', 'solar',
+  'solid', 'steady', 'still', 'stormy', 'strong', 'sunny', 'super', 'sure',
+  'swift', 'tender', 'tidy', 'tough', 'vivid', 'warm', 'wild', 'wise',
+  'witty', 'young', 'zen', 'agile',
+];
+
+const NOUNS = [
+  'anchor', 'arrow', 'beacon', 'blade', 'bolt', 'bridge', 'brook', 'canyon',
+  'cedar', 'cliff', 'cloud', 'comet', 'coral', 'crane', 'crest', 'dawn',
+  'delta', 'dune', 'eagle', 'ember', 'falcon', 'fern', 'flare', 'flame',
+  'frost', 'glade', 'grove', 'harbor', 'hawk', 'heron', 'island', 'jade',
+  'lake', 'lark', 'leaf', 'maple', 'marsh', 'meadow', 'moon', 'oak',
+  'ocean', 'olive', 'orbit', 'otter', 'panda', 'peak', 'pearl', 'pine',
+  'plume', 'pond', 'prism', 'rain', 'raven', 'reef', 'ridge', 'river',
+  'sage', 'shore', 'spark', 'stone',
+];
+
+function randomIndex(max: number): number {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return array[0] % max;
+}
+
+/** Generate a friendly session ID like "brave-falcon" */
+export function generateFriendlyId(): string {
+  const adj = ADJECTIVES[randomIndex(ADJECTIVES.length)];
+  const noun = NOUNS[randomIndex(NOUNS.length)];
+  return `${adj}-${noun}`;
+}

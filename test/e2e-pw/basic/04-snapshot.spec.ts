@@ -13,6 +13,8 @@ test.describe('basic snapshot', () => {
     await navigateAndWait(PAGES.LOGIN);
     const r = bcli('snapshot');
     expect(r).toBcliSuccess();
+    // Verify output contains recognizable page elements (textbox for login form inputs)
+    expect(r.stdout).toContain('textbox');
   });
 });
 
@@ -40,18 +42,27 @@ test.describe('-i / --interactive flag', () => {
 });
 
 test.describe('-c / --compact flag', () => {
-  test('compact output format', async ({ bcli, navigateAndWait }) => {
+  test('compact output is shorter than full output', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('snapshot', '-c');
-    expect(r).toBcliSuccess();
-    expect(r.stdout.length).toBeGreaterThan(0);
+    const compact = bcli('snapshot', '-c');
+    expect(compact).toBcliSuccess();
+
+    const full = bcli('snapshot');
+    expect(full).toBcliSuccess();
+
+    // Compact output should be strictly shorter than the full accessibility tree
+    expect(compact.stdout.length).toBeLessThan(full.stdout.length);
   });
 
   test('--compact long form flag works', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('snapshot', '--compact');
-    expect(r).toBcliSuccess();
-    expect(r.stdout.length).toBeGreaterThan(0);
+    const compact = bcli('snapshot', '--compact');
+    expect(compact).toBcliSuccess();
+
+    const full = bcli('snapshot');
+    expect(full).toBcliSuccess();
+
+    expect(compact.stdout.length).toBeLessThan(full.stdout.length);
   });
 });
 
@@ -81,16 +92,24 @@ test.describe('-ic (interactive + compact combined)', () => {
 test.describe('-C / --cursor flag', () => {
   test('includes cursor-interactive elements', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
-    const r = bcli('snapshot', '-C');
-    expect(r).toBcliSuccess();
-    expect(r.stdout.length).toBeGreaterThan(0);
+    const withCursor = bcli('snapshot', '-C');
+    expect(withCursor).toBcliSuccess();
+    // Cursor flag should include elements with cursor:pointer — verify it contains link elements
+    expect(withCursor.stdout).toContain('link');
   });
 
-  test('-iC: interactive + cursor combined', async ({ bcli, navigateAndWait }) => {
+  test('-iC shows at least as many elements as -i alone', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
-    const r = bcli('snapshot', '-iC');
-    expect(r).toBcliSuccess();
-    expect(r.stdout.length).toBeGreaterThan(0);
+    const interactive = bcli('snapshot', '-i');
+    expect(interactive).toBcliSuccess();
+
+    const interactiveCursor = bcli('snapshot', '-iC');
+    expect(interactiveCursor).toBcliSuccess();
+
+    // -iC includes cursor-interactive elements on top of regular interactive ones
+    const iLines = interactive.stdout.split('\n').length;
+    const iCLines = interactiveCursor.stdout.split('\n').length;
+    expect(iCLines).toBeGreaterThanOrEqual(iLines);
   });
 });
 
@@ -105,21 +124,29 @@ test.describe('-d / --depth flag', () => {
 
     const shallowLines = shallow.stdout.split('\n').length;
     const deepLines = deep.stdout.split('\n').length;
-    expect(shallowLines).toBeLessThanOrEqual(deepLines);
+    expect(shallowLines).toBeLessThan(deepLines);
   });
 
-  test('-d 2 limits tree depth to 2 levels', async ({ bcli, navigateAndWait }) => {
+  test('-d 2 produces fewer lines than unlimited depth', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('snapshot', '-d', '2');
-    expect(r).toBcliSuccess();
-    expect(r.stdout.length).toBeGreaterThan(0);
+    const limited = bcli('snapshot', '-d', '2');
+    expect(limited).toBcliSuccess();
+
+    const full = bcli('snapshot');
+    expect(full).toBcliSuccess();
+
+    expect(limited.stdout.split('\n').length).toBeLessThan(full.stdout.split('\n').length);
   });
 
   test('--depth long form flag works', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('snapshot', '--depth', '3');
-    expect(r).toBcliSuccess();
-    expect(r.stdout.length).toBeGreaterThan(0);
+    const limited = bcli('snapshot', '--depth', '3');
+    expect(limited).toBcliSuccess();
+
+    const full = bcli('snapshot');
+    expect(full).toBcliSuccess();
+
+    expect(limited.stdout.split('\n').length).toBeLessThan(full.stdout.split('\n').length);
   });
 });
 
@@ -159,13 +186,23 @@ test.describe('combined flags', () => {
     expect(r.stdout).toContain('textbox');
   });
 
-  test('-ic -d 2: interactive compact with depth limit', async ({ bcli, navigateAndWait }) => {
+  test('-ic -d 8: interactive compact with depth limit', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
     // Use higher depth to ensure interactive elements (links inside <ul><li><a>)
     // are captured — depth 2 from root may not reach deep enough
     const r = bcli('snapshot', '-ic', '-d', '8');
     expect(r).toBcliSuccess();
-    expect(r.stdout.length).toBeGreaterThan(0);
+    // Should contain element refs since -ic is used
+    expect(r.stdout).toContain('@e');
+  });
+
+  test('all flags combined: -i -c -C -d 3 -s form', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.LOGIN);
+    const r = bcli('snapshot', '-i', '-c', '-C', '-d', '3', '-s', 'form');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('@e');
+    // Scoped to form, so should contain form elements
+    expect(r.stdout).toContain('textbox');
   });
 });
 

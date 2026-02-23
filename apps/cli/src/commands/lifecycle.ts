@@ -6,6 +6,7 @@ import {
   getDaemonPid,
 } from '../daemon/process.js';
 import { getSocketPath, getWsPort } from '../util/paths.js';
+import { SocketClient } from '../client/socket-client.js';
 import { logger } from '../util/logger.js';
 import { getRootOpts } from './shared.js';
 
@@ -16,7 +17,7 @@ export const startCommand = new Command('start')
     const rootOpts = getRootOpts(cmd);
     const wsPort = parseInt(opts.port, 10);
     try {
-      const pid = startDaemon(rootOpts.session, wsPort);
+      const pid = startDaemon(wsPort);
       if (rootOpts.json) {
         console.log(JSON.stringify({ success: true, pid }));
       } else {
@@ -36,7 +37,7 @@ export const stopCommand = new Command('stop')
   .description('Stop the browser-cli daemon')
   .action((_opts: unknown, cmd: Command) => {
     const rootOpts = getRootOpts(cmd);
-    const stopped = stopDaemon(rootOpts.session);
+    const stopped = stopDaemon();
     if (rootOpts.json) {
       console.log(JSON.stringify({ success: true, stopped }));
       return;
@@ -54,7 +55,7 @@ export const closeCommand = new Command('close')
   .description('Close the browser-cli session (stop daemon)')
   .action((_opts: unknown, cmd: Command) => {
     const rootOpts = getRootOpts(cmd);
-    const stopped = stopDaemon(rootOpts.session);
+    const stopped = stopDaemon();
     if (rootOpts.json) {
       console.log(JSON.stringify({ success: true, stopped }));
       return;
@@ -70,8 +71,7 @@ export const statusCommand = new Command('status')
   .description('Show daemon and extension connection status')
   .action(async (_opts: unknown, cmd: Command) => {
     const rootOpts = getRootOpts(cmd);
-    const session = rootOpts.session;
-    const pid = getDaemonPid(session);
+    const pid = getDaemonPid();
 
     if (!pid) {
       if (rootOpts.json) {
@@ -85,21 +85,21 @@ export const statusCommand = new Command('status')
     const status: Record<string, unknown> = {
       daemon: true,
       pid,
-      socket: getSocketPath(session),
-      wsPort: getWsPort(session),
+      socket: getSocketPath(),
+      wsPort: getWsPort(),
     };
 
     if (!rootOpts.json) {
       console.log(`Daemon: running (PID ${pid})`);
-      console.log(`Socket: ${getSocketPath(session)}`);
-      console.log(`WebSocket port: ${getWsPort(session)}`);
+      console.log(`Socket: ${getSocketPath()}`);
+      console.log(`WebSocket port: ${getWsPort()}`);
     }
 
     // Query daemon for extension connection status
     try {
       const { SocketClient } = await import('../client/socket-client.js');
       const client = new SocketClient();
-      await client.connect(getSocketPath(session));
+      await client.connect(getSocketPath());
 
       if (!rootOpts.json) console.log('Socket: connectable');
       status.socketConnectable = true;
@@ -112,22 +112,28 @@ export const statusCommand = new Command('status')
 
       if (response.success && response.data) {
         const data = response.data as {
-          connected: boolean;
-          extensionId: string | null;
-          sessionId: string | null;
+          connections: Array<{
+            extensionId: string;
+            sessionId: string;
+            browser?: { name: string; version: string; userAgent: string };
+          }>;
           uptime: number;
         };
         status.extension = data;
 
         if (!rootOpts.json) {
-          console.log(`Extension: ${data.connected ? 'connected' : 'not connected'}`);
-          if (data.connected && data.extensionId) {
-            console.log(`Extension ID: ${data.extensionId}`);
+          if (data.connections.length === 0) {
+            console.log('Extension: not connected');
+          } else {
+            console.log(`Browsers connected: ${data.connections.length}`);
+            for (const conn of data.connections) {
+              const parts = [`  ${conn.sessionId}`];
+              if (conn.browser) parts.push(`${conn.browser.name} ${conn.browser.version}`);
+              parts.push(`ext=${conn.extensionId}`);
+              console.log(parts.join(' | '));
+            }
           }
-          if (data.sessionId) {
-            console.log(`Session ID: ${data.sessionId}`);
-          }
-          console.log(`Daemon uptime: ${data.uptime}s`);
+          console.log(`Uptime: ${data.uptime}s`);
         }
       }
 

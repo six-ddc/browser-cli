@@ -13,8 +13,5 @@ export const HEARTBEAT_TIMEOUT_MS = 15_000;
 /** Default timeout for CLI commands waiting for a response */
 export const COMMAND_TIMEOUT_MS = 30_000;
 
-/** Default session name */
-export const DEFAULT_SESSION = 'default';
-
 /** App directory name under home */
 export const APP_DIR_NAME = '.browser-cli';

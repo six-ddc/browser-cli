@@ -29,7 +29,7 @@ export function getAriaRole(el: Element): string {
  * Fallback role detection for environments where aria-api doesn't work.
  * Covers the most common HTML elements.
  */
-function getFallbackRole(el: Element): string {
+export function getFallbackRole(el: Element): string {
   // Check explicit role attribute first
   const explicitRole = el.getAttribute('role');
   if (explicitRole) return explicitRole;

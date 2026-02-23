@@ -16,7 +16,22 @@ export class Bridge {
   constructor(private wsServer: WsServer) {}
 
   async handleRequest(req: DaemonRequest): Promise<DaemonResponse> {
-    if (!this.wsServer.isConnected) {
+    // If a specific session is requested, check that connection
+    if (req.sessionId) {
+      const conn = this.wsServer.getConnection(req.sessionId);
+      if (!conn) {
+        const available = this.wsServer.allConnections.map((c) => c.sessionId).join(', ');
+        return {
+          id: req.id,
+          success: false,
+          error: createError(
+            ErrorCode.EXTENSION_NOT_CONNECTED,
+            `Browser session '${req.sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'}`,
+            "Run 'browser-cli status' to see connected browsers, then use --browser <sessionId> to target one.",
+          ),
+        };
+      }
+    } else if (!this.wsServer.isConnected) {
       return {
         id: req.id,
         success: false,
@@ -36,7 +51,7 @@ export class Bridge {
     };
 
     try {
-      const response = await this.wsServer.sendRequest(wsRequest, COMMAND_TIMEOUT_MS);
+      const response = await this.wsServer.sendRequest(wsRequest, COMMAND_TIMEOUT_MS, req.sessionId);
       return {
         id: req.id,
         success: response.success,

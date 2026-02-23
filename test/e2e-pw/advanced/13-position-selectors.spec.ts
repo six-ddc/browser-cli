@@ -4,20 +4,26 @@ import { PAGES, SEL, TEST_USERNAME, TEST_PASSWORD } from '../helpers/constants';
 // ---- first selector ----
 
 test.describe('find first', () => {
-  test('click first checkbox', async ({ bcli, navigateAndWait }) => {
+  test('click first checkbox', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     const r = bcli('find', 'first', SEL.CHECKBOX, 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
+
+    // First checkbox was unchecked initially; clicking should check it
+    await expect(activePage.locator(SEL.CHECKBOX).first()).toBeChecked();
   });
 
-  test('check first checkbox', async ({ bcli, navigateAndWait }) => {
+  test('check first checkbox', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     const r = bcli('find', 'first', SEL.CHECKBOX, 'check');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Checked');
+
+    // Verify the first checkbox is now checked
+    await expect(activePage.locator(SEL.CHECKBOX).first()).toBeChecked();
   });
 
   test('default action is click', async ({ bcli, navigateAndWait }) => {
@@ -80,13 +86,16 @@ test.describe('find last', () => {
     expect(r.stdout).toContain('Clicked');
   });
 
-  test('uncheck last checkbox', async ({ bcli, navigateAndWait }) => {
+  test('uncheck last checkbox', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     // The second (last) checkbox on /checkboxes is checked by default
     const r = bcli('find', 'last', SEL.CHECKBOX, 'uncheck');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Unchecked');
+
+    // Verify the last checkbox is now unchecked
+    await expect(activePage.locator(SEL.CHECKBOX).last()).not.toBeChecked();
   });
 
   test('default action is click', async ({ bcli, navigateAndWait }) => {
@@ -145,21 +154,27 @@ test.describe('find nth', () => {
     expect(r.stdout).toContain('Clicked');
   });
 
-  test('nth 1: check first checkbox', async ({ bcli, navigateAndWait }) => {
+  test('nth 1: check first checkbox', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     const r = bcli('find', 'nth', '1', SEL.CHECKBOX, 'check');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Checked');
+
+    // Verify the first checkbox is now checked
+    await expect(activePage.locator(SEL.CHECKBOX).first()).toBeChecked();
   });
 
-  test('nth 2: uncheck second checkbox', async ({ bcli, navigateAndWait }) => {
+  test('nth 2: uncheck second checkbox', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     // Second checkbox is checked by default
     const r = bcli('find', 'nth', '2', SEL.CHECKBOX, 'uncheck');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Unchecked');
+
+    // Verify the second checkbox is now unchecked
+    await expect(activePage.locator(SEL.CHECKBOX).last()).not.toBeChecked();
   });
 
   test('nth: default action is click', async ({ bcli, navigateAndWait }) => {
@@ -325,7 +340,7 @@ test.describe('position selector error handling', () => {
 // ---- Position Selectors in Multi-Element Scenarios ----
 
 test.describe('multi-element scenarios', () => {
-  test('first and last target different elements', async ({ bcli, navigateAndWait }) => {
+  test('first and last target different elements', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     // Verify we have 2 checkboxes
@@ -333,14 +348,15 @@ test.describe('multi-element scenarios', () => {
     expect(countR).toBcliSuccess();
     expect(countR.stdout.trim()).toBe('2');
 
-    // Check the first checkbox
+    // Check the first checkbox (initially unchecked)
     bcli('find', 'first', SEL.CHECKBOX, 'check');
 
-    // Uncheck the last checkbox
+    // Uncheck the last checkbox (initially checked)
     bcli('find', 'last', SEL.CHECKBOX, 'uncheck');
 
-    // After these operations, first should be checked and last should be unchecked
-    // (assuming first was unchecked and last was checked initially)
+    // Verify first checkbox is checked and last is unchecked
+    await expect(activePage.locator(SEL.CHECKBOX).first()).toBeChecked();
+    await expect(activePage.locator(SEL.CHECKBOX).last()).not.toBeChecked();
   });
 
   test('nth iterates through multiple elements correctly', async ({ bcli, navigateAndWait }) => {
