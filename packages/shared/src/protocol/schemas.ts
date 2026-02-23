@@ -363,6 +363,7 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('setHeaders'), params: setHeadersParamsSchema }),
   z.object({ action: z.literal('stateExport'), params: stateExportParamsSchema }),
   z.object({ action: z.literal('stateImport'), params: stateImportParamsSchema }),
+  z.object({ action: z.literal('markdown'), params: emptyParamsSchema }),
 ]);
 
 // ─── Message Schemas ─────────────────────────────────────────────────

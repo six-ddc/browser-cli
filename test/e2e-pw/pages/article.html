@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Article — Browser-CLI</title>
+  <meta name="author" content="Jane Doe">
+  <meta name="description" content="A test article for markdown extraction">
+  <style>
+    body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; line-height: 1.6; color: #333; }
+    h1 { font-size: 2em; }
+    h2 { font-size: 1.5em; margin-top: 1.5em; }
+    code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+    pre code { display: block; padding: 12px; overflow-x: auto; }
+    blockquote { border-left: 4px solid #ccc; margin: 1em 0; padding: 0.5em 1em; color: #555; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f9f9f9; }
+    a { color: #2b6dad; }
+  </style>
+</head>
+<body>
+  <article>
+    <h1>Understanding Browser Automation</h1>
+    <p class="byline">By <span class="author" rel="author">Jane Doe</span></p>
+
+    <p>Browser automation is a powerful technique for testing web applications.
+       This article explores how <strong>extension-based</strong> automation compares
+       to traditional approaches like <a href="https://playwright.dev">Playwright</a>
+       and <a href="https://www.selenium.dev">Selenium</a>.</p>
+
+    <h2>Key Benefits</h2>
+    <p>Using a browser extension offers several advantages:</p>
+    <ul>
+      <li>Access to the user's real browser profile and cookies</li>
+      <li>No need for a separate browser binary</li>
+      <li>Works with all installed extensions</li>
+    </ul>
+
+    <h2>Architecture Overview</h2>
+    <p>The system uses a <strong>three-layer architecture</strong>:</p>
+    <ol>
+      <li>CLI client sends commands</li>
+      <li>Daemon process routes messages</li>
+      <li>Browser extension executes actions</li>
+    </ol>
+
+    <blockquote>
+      <p>Extension-based automation brings the best of both worlds: full browser access
+         with programmatic control.</p>
+    </blockquote>
+
+    <h2>Comparison Table</h2>
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>Extension-based</th><th>Playwright</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Real browser profile</td><td>Yes</td><td>No</td></tr>
+        <tr><td>Headless support</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>Extension access</td><td>Yes</td><td>Limited</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Code Example</h2>
+    <pre><code>browser-cli navigate https://example.com
+browser-cli snapshot -ic
+browser-cli click @e1</code></pre>
+
+    <p>For more details, see the
+       <a href="https://github.com/example/browser-cli?tab=readme-ov-file#getting-started&very-long-parameter=true&another-param=value&tracking=utm_source%3Dgoogle%26utm_medium%3Dcpc%26utm_campaign%3Dspring_2025_launch%26utm_content%3Dbanner_ad_v2%26utm_term%3Dbrowser+automation">full documentation with a very long URL</a>.</p>
+  </article>
+</body>
+</html>

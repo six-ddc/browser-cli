@@ -74,7 +74,7 @@ browser-cli fill @e5 "hello"      # Fill element ref
 
 | Option | Description |
 |--------|-------------|
-| `--session <name>` | Use a named session (for multiple browsers) |
+| `--browser <sessionId>` | Target a specific browser connection by session ID (e.g., `brave-falcon`). Only needed with multiple browsers; get IDs from `browser-cli status` |
 | `--json` | Output in JSON format (machine-readable) |
 
 ## Operations Reference
@@ -145,6 +145,14 @@ browser-cli snapshot [options]
 | `-s, --selector <sel>` | Scope to element |
 
 **Best practice**: Use `snapshot -ic` for a concise view of interactive elements. Use element refs (`@e1`, `@e2`) from snapshot output in subsequent commands.
+
+### Markdown (Page Content Extraction)
+
+```bash
+browser-cli markdown
+```
+
+Extracts the current page's readable content using Defuddle and converts it to Markdown. Long query strings in URLs are automatically trimmed. Useful for AI agents consuming page content.
 
 ### Screenshot
 

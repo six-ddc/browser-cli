@@ -34,6 +34,7 @@ export const PAGES = {
   BROKEN_IMAGES: 'broken-images',
   ERROR_TEST: 'error-test',
   TESTID_PAGE: 'testid-page',
+  ARTICLE: 'article',
 } as const;
 
 // Test credentials for login page

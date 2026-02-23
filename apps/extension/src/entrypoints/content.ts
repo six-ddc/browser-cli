@@ -202,6 +202,12 @@ async function handleContentCommand(command: Command): Promise<unknown> {
       return handleGetCurrentFrame();
     }
 
+    // Markdown
+    case 'markdown': {
+      const { handleMarkdown } = await import('../content-lib/markdown');
+      return handleMarkdown();
+    }
+
     default:
       throw new Error(`Unknown content command: ${(command as { action: string }).action}`);
   }

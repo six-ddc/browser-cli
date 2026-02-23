@@ -7,7 +7,7 @@ export default defineConfig({
     disabled: false,
     chromiumArgs: ['--auto-open-devtools-for-tabs'],
   },
-  manifest: {
+  manifest: ({ browser }) => ({
     name: 'Browser-CLI',
     description: 'Browser automation from the command line — extension bridge',
     permissions: [
@@ -17,14 +17,22 @@ export default defineConfig({
       'scripting',
       'storage',
       'alarms',
-      'declarativeNetRequest',
-      'declarativeNetRequestFeedback',
-      'webRequest',
+      // Chrome: declarativeNetRequest for network interception
+      // Firefox: webRequest + webRequestBlocking
+      ...(browser !== 'firefox'
+        ? ['declarativeNetRequest', 'declarativeNetRequestFeedback', 'webRequest']
+        : ['webRequest', 'webRequestBlocking']),
     ],
     host_permissions: ['<all_urls>'],
+    // Firefox requires a gecko add-on ID
+    ...(browser === 'firefox' && {
+      browser_specific_settings: {
+        gecko: { id: 'browser-cli@browser-cli.dev' },
+      },
+    }),
     content_security_policy: {
       extension_pages:
         "default-src 'self'; script-src 'self'; object-src 'self'; frame-src 'self'; connect-src ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:*",
     },
-  },
+  }),
 });
