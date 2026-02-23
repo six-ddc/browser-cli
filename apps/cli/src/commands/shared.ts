@@ -11,7 +11,7 @@ import { getSocketPath } from '../util/paths.js';
 import { logger } from '../util/logger.js';
 
 /** Get root program options */
-export function getRootOpts(cmd: Command): { browser?: string; json?: boolean } {
+export function getRootOpts(cmd: Command): { session?: string; json?: boolean } {
   // Walk up to root
   let root = cmd;
   while (root.parent) root = root.parent;
@@ -62,7 +62,7 @@ export async function sendCommand<A extends ActionType>(
   try {
     const response = await client.sendCommand(command, {
       tabId: options?.tabId,
-      sessionId: rootOpts.browser,
+      sessionId: rootOpts.session,
     });
 
     if (rootOpts.json && !options?.skipJson) {

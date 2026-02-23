@@ -57,6 +57,16 @@ const ERROR_PATTERNS: ErrorPattern[] = [
     message: 'No page in browser history to navigate to.',
     hint: 'The tab has no history to go back/forward to. Navigate to more pages first.',
   },
+  {
+    pattern: /unsafe-eval|Trusted Type|Content Security Policy.*eval/i,
+    code: ErrorCode.EVAL_ERROR,
+    message:
+      "eval() is blocked by this page's Content Security Policy (CSP). " +
+      'Sites like Gmail, Google Drive, and GitHub enforce strict CSP that prevents JavaScript evaluation.',
+    hint:
+      "Retry with 'eval --user-script' to bypass CSP via chrome.userScripts API (requires Developer Mode in chrome://extensions). " +
+      "Or use 'snapshot -ic' to read interactive elements, 'snapshot -c' for full page content, or 'find' to locate and interact with elements.",
+  },
 ];
 
 /**

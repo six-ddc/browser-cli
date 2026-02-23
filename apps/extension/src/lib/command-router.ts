@@ -259,7 +259,8 @@ async function routeCommand(
 
     // ─── Evaluate ──────────────────────────────────────────────
     case 'evaluate': {
-      const { expression } = command.params;
+      const { expression, userScript } = command.params;
+
       if (import.meta.env.FIREFOX) {
         // Firefox: delegate to content script's <script> injection approach
         const response = await sendToContentScript(
@@ -276,18 +277,79 @@ async function routeCommand(
         }
         return response.data;
       }
-      // Chrome: execute directly in MAIN world
+
+      // Chrome --user-script mode: use chrome.userScripts API to bypass CSP
+      if (userScript) {
+        if (!chrome.userScripts?.execute) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
+          throw createError(
+            ErrorCode.EVAL_ERROR,
+            'chrome.userScripts API is not available. Developer Mode (or "Allow User Scripts" on Chrome 138+) must be enabled in chrome://extensions.',
+            'Enable Developer Mode in chrome://extensions, then reload the extension.',
+          );
+        }
+        try {
+          const usResults = await chrome.userScripts.execute({
+            target: { tabId: targetTabId },
+            js: [{ code: expression }],
+          });
+          const usResult = usResults[0] as { result?: unknown; error?: string } | undefined;
+          if (usResult?.error) {
+            // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
+            throw createError(
+              ErrorCode.EVAL_ERROR,
+              `userScripts eval failed: ${usResult.error}`,
+              'Check your expression for syntax or runtime errors.',
+            );
+          }
+          return { value: usResult?.result };
+        } catch (usErr) {
+          // Re-throw ProtocolErrors as-is (from createError above)
+          if (usErr && typeof usErr === 'object' && 'code' in usErr) throw usErr;
+          // Wrap unexpected errors with userScripts-specific hint
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
+          throw createError(
+            ErrorCode.EVAL_ERROR,
+            `userScripts execution failed: ${usErr instanceof Error ? usErr.message : String(usErr)}`,
+            'Ensure "Allow User Scripts" (or Developer Mode) is enabled in chrome://extensions and the extension has been reloaded.',
+          );
+        }
+      }
+
+      // Chrome default: execute in MAIN world with structured result envelope
+      // so we can distinguish "expression evaluated to null" from "CSP blocked eval()"
       const results = await browser.scripting.executeScript({
         target: { tabId: targetTabId },
         world: 'MAIN',
         func: (expr: string) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- eval returns any by design
-          return (0, eval)(expr);
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- eval returns any by design
+            const __r = (0, eval)(expr);
+            return { __ok: true, value: __r };
+          } catch (e: unknown) {
+            return { __ok: false, error: (e as Error).message };
+          }
         },
         args: [expression],
       });
-      const scriptResult: unknown = results[0]?.result;
-      return { value: scriptResult };
+
+      const raw = results[0]?.result as
+        | { __ok: true; value: unknown }
+        | { __ok: false; error: string }
+        | undefined;
+
+      if (!raw) {
+        // executeScript returned undefined — likely blocked entirely
+        throw new Error('eval() returned no result. The page may block script execution via CSP.');
+      }
+
+      if (raw.__ok) {
+        return { value: raw.value };
+      }
+
+      // Throw raw error message — error-classifier will detect CSP errors
+      // and add appropriate hints
+      throw new Error(raw.error || 'evaluate failed');
     }
 
     // ─── Network ───────────────────────────────────────────────

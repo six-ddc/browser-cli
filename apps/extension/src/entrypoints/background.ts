@@ -311,6 +311,16 @@ browser.runtime.onInstalled.addListener(() => {
   ensureInitialized().catch((err: unknown) => {
     console.error('[browser-cli] Failed to initialize on install:', err);
   });
+
+  // Configure USER_SCRIPT world CSP to allow eval() for CSP-restricted pages
+  if (!import.meta.env.FIREFOX && chrome.userScripts?.configureWorld) {
+    chrome.userScripts
+      .configureWorld({ csp: "script-src 'unsafe-eval'" })
+      .then(() => console.log('[browser-cli] userScripts world configured'))
+      .catch((err: unknown) =>
+        console.warn('[browser-cli] Failed to configure userScripts world:', err),
+      );
+  }
 });
 
 // Handle reconnection alarms from WsClient

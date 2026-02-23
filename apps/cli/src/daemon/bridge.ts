@@ -23,7 +23,7 @@ export class Bridge {
           error: createError(
             ErrorCode.EXTENSION_NOT_CONNECTED,
             `Browser session '${req.sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'}`,
-            "Run 'browser-cli status' to see connected browsers, then use --browser <sessionId> to target one.",
+            "Run 'browser-cli status' to see connected browsers, then use --session <sessionId> to target one.",
           ),
         };
       }
