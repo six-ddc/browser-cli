@@ -11,7 +11,7 @@ import { getSocketPath } from '../util/paths.js';
 import { logger } from '../util/logger.js';
 
 /** Get root program options */
-export function getRootOpts(cmd: Command): { session?: string; json?: boolean } {
+export function getRootOpts(cmd: Command): { browser?: string; json?: boolean } {
   // Walk up to root
   let root = cmd;
   while (root.parent) root = root.parent;
@@ -28,11 +28,10 @@ export async function sendCommand(
   options?: { tabId?: number },
 ): Promise<Record<string, unknown> | null> {
   const rootOpts = getRootOpts(cmd);
-  const session = rootOpts.session;
 
   // Ensure daemon is running
   try {
-    ensureDaemon(session);
+    ensureDaemon();
   } catch (err) {
     logger.error(`Failed to start daemon: ${(err as Error).message}`);
     process.exit(1);
@@ -41,7 +40,7 @@ export async function sendCommand(
   // Connect to daemon
   const client = new SocketClient();
   try {
-    await client.connect(getSocketPath(session));
+    await client.connect(getSocketPath());
   } catch (err) {
     logger.error(
       `Failed to connect to daemon: ${(err as Error).message}\nIs the daemon running? Try: browser-cli start`,
@@ -50,7 +49,10 @@ export async function sendCommand(
   }
 
   try {
-    const response = await client.sendCommand(command, { tabId: options?.tabId });
+    const response = await client.sendCommand(command, {
+      tabId: options?.tabId,
+      sessionId: rootOpts.browser,
+    });
 
     if (rootOpts.json) {
       console.log(JSON.stringify(response, null, 2));

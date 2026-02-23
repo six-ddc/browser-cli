@@ -4,6 +4,8 @@ import { writeFileSync, mkdtempSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 let uploadTempDir: string;
 
 test.beforeEach(() => {
@@ -43,13 +45,11 @@ test.describe('upload', () => {
     // Get the value of the file input -- should contain the filename
     const r2 = bcli('get', 'value', SEL.FILE_UPLOAD);
     expect(r2).toBcliSuccess();
-    const stdout = r2.stdout;
-    expect(
-      stdout.includes('hello.txt') || stdout.includes('hello') || stdout.length > 0,
-    ).toBe(true);
+    // File input value is a fake path like "C:\fakepath\hello.txt"
+    expect(r2.stdout).toContain('hello.txt');
   });
 
-  test('upload then submit form', async ({ bcli, navigateAndWait, activePage }) => {
+  test('upload then submit form', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.UPLOAD);
 
     const testFile = path.join(uploadTempDir, 'submit-test.txt');
@@ -62,13 +62,12 @@ test.describe('upload', () => {
     // Click submit
     const r2 = bcli('click', SEL.FILE_SUBMIT);
     expect(r2).toBcliSuccess();
-    await activePage.waitForTimeout(2000);
+    await sleep(2000);
 
     // After submit, the page shows the uploaded filename in #uploaded-files
     const r3 = bcli('get', 'text', '#uploaded-files');
     expect(r3).toBcliSuccess();
-    const stdout = r3.stdout;
-    expect(stdout.includes('submit-test.txt') || stdout.includes('Uploaded')).toBe(true);
+    expect(r3.stdout).toContain('submit-test.txt');
   });
 
   test('upload with --clear flag', async ({ bcli, navigateAndWait }) => {
@@ -103,14 +102,18 @@ test.describe('drag', () => {
   test('drags element from source to target', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.DRAG_AND_DROP);
 
-    // Get initial text of column A
-    const r1 = bcli('get', 'text', SEL.DRAG_COL_A);
-    expect(r1).toBcliSuccess();
+    // Verify initial state: column A has "A", column B has "B"
+    await expect(activePage.locator('#column-a header')).toHaveText('A');
+    await expect(activePage.locator('#column-b header')).toHaveText('B');
 
     // Drag column A to column B
     const r2 = bcli('drag', SEL.DRAG_COL_A, SEL.DRAG_COL_B);
     expect(r2).toBcliSuccess();
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
+
+    // After drag, columns should have swapped: column-a has "B", column-b has "A"
+    await expect(activePage.locator('#column-a header')).toHaveText('B');
+    await expect(activePage.locator('#column-b header')).toHaveText('A');
   });
 
   test('command completes successfully', async ({ bcli, navigateAndWait }) => {

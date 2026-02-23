@@ -5,7 +5,7 @@ test.describe('navigate command', () => {
   test('loads a page and returns title + URL', async ({ bcli, baseURL }) => {
     const r = bcli('navigate', `${baseURL}/${PAGES.HOME}`);
     expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('localhost');
+    expect(r.stdout).toContain('/home');
   });
 
   test('URL is correct after navigation', async ({ navigateAndWait, activePage }) => {
@@ -96,7 +96,7 @@ test.describe('reload', () => {
     await navigateAndWait(PAGES.HOME);
     const r = bcli('reload');
     expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('localhost');
+    expect(r.stdout).toContain('/home');
   });
 });
 
@@ -104,6 +104,9 @@ test.describe('navigation to different page types', () => {
   test('handles pages with dynamic content', async ({ navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.DYNAMIC_CONTENT);
     expect(activePage.url()).toContain('/dynamic-content');
+    // Verify the page actually rendered dynamic content
+    await expect(activePage.locator('h3')).toContainText('Dynamic Content');
+    await expect(activePage.locator('.row')).toHaveCount(3);
   });
 
   test('handles pages with forms', async ({ navigateAndWait, activePage }) => {

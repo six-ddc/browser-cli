@@ -75,7 +75,6 @@ async function runCli(...args: string[]): Promise<{ lines: string[]; exitCode?: 
 
   const program = new Command()
     .name('browser-cli')
-    .option('--session <name>', 'Session', 'default')
     .option('--json', 'JSON output')
     .exitOverride();
 

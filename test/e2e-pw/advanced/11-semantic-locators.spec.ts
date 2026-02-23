@@ -59,8 +59,8 @@ test.describe('role= locator', () => {
 
     const r = bcli('get', 'count', 'role=checkbox');
     expect(r).toBcliSuccess();
-    // The checkboxes page has 2 checkboxes
-    expect(r.stdout).toMatch(/[0-9]+/);
+    // The checkboxes page has exactly 2 checkboxes
+    expect(r.stdout.trim()).toBe('2');
   });
 });
 
@@ -184,33 +184,34 @@ test.describe('alt= locator', () => {
   test('click image by alt text', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOVERS);
 
-    // The hovers page has images; check if we can find any by alt attribute
-    // This may vary by the page's actual content
+    // The hovers page has images with alt="User 1", alt="User 2", alt="User 3"
+    // Substring match on "User" should find one of them
     const r = bcli('click', 'alt=User');
-    // This test may fail if no images have matching alt text, which is acceptable
-    // The key is that the locator engine itself works
-    if (r.success) {
-      expect(r.stdout).toContain('Clicked');
-    } else {
-      expect(r.stdout + r.stderr).toMatch(/not found|Element/i);
-    }
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Clicked');
   });
 });
 
 // ---- title= locator ----
 
 test.describe('title= locator', () => {
-  test('find element by title attribute', async ({ bcli, navigateAndWait }) => {
+  test('fails when no element has matching title attribute', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.CONTEXT_MENU);
 
-    // The context menu page has an element with a title attribute
+    // The context menu page has no elements with a title attribute,
+    // so title=Context should fail to find an element
     const r = bcli('hover', 'title=Context');
-    // The title locator engine should work; element existence depends on the page
-    if (r.success) {
-      expect(r.stdout).toContain('Hovered');
-    } else {
-      expect(r.stdout + r.stderr).toMatch(/not found|Element/i);
-    }
+    expect(r).toBcliFailure();
+    expect(r.stdout + r.stderr).toMatch(/not found|Element/i);
+  });
+
+  test('finds element by title attribute on testid page', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.TESTID_PAGE);
+
+    // The testid page has a button with title="Submit form"
+    const r = bcli('hover', 'title=Submit form');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Hovered');
   });
 });
 

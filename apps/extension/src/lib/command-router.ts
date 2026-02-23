@@ -485,7 +485,7 @@ async function routeCommand(
   }
 }
 
-function getFallbackErrorCode(action: string): ErrorCode {
+export function getFallbackErrorCode(action: string): ErrorCode {
   if (['navigate', 'goBack', 'goForward', 'reload'].includes(action)) {
     return ErrorCode.NAVIGATION_FAILED;
   }
@@ -501,7 +501,7 @@ function getFallbackErrorCode(action: string): ErrorCode {
   return ErrorCode.UNKNOWN;
 }
 
-function cookieToInfo(c: Browser.cookies.Cookie) {
+export function cookieToInfo(c: Browser.cookies.Cookie) {
   return {
     name: c.name,
     value: c.value,

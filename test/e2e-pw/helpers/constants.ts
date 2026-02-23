@@ -1,3 +1,6 @@
+import path from 'node:path';
+import os from 'node:os';
+
 // Page paths (relative to base URL served from test/e2e-pw/pages/)
 // Note: `serve` strips .html extensions (301 redirect), so use extensionless paths
 export const PAGES = {
@@ -29,6 +32,8 @@ export const PAGES = {
   HORIZONTAL_SLIDER: 'horizontal-slider',
   INFINITE_SCROLL: 'infinite-scroll',
   BROKEN_IMAGES: 'broken-images',
+  ERROR_TEST: 'error-test',
+  TESTID_PAGE: 'testid-page',
 } as const;
 
 // Test credentials for login page
@@ -48,6 +53,12 @@ export const SEL = {
   DRAG_COL_A: '#column-a',
   DRAG_COL_B: '#column-b',
 } as const;
+
+// E2E daemon uses a separate WS port to avoid conflicts with a user's daemon
+export const E2E_WS_PORT = 19222;
+
+// Isolated directory for E2E daemon files (socket, pid) — avoids touching ~/.browser-cli/
+export const E2E_DIR = path.join(os.tmpdir(), 'browser-cli-e2e');
 
 // Timeouts (ms)
 export const TIMEOUTS = {

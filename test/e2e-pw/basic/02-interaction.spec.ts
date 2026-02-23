@@ -27,14 +27,23 @@ test.describe('click', () => {
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
+
+  test('middle-click with --button middle', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.CONTEXT_MENU);
+    const r = bcli('click', '#hot-spot', '--button', 'middle');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Clicked');
+  });
 });
 
 test.describe('dblclick', () => {
-  test('double-clicks an element', async ({ bcli, navigateAndWait }) => {
+  test('double-clicks an element', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.ADD_REMOVE);
     const r = bcli('dblclick', 'button[onclick="addElement()"]');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Double-clicked');
+    // CLI dblclick dispatches a dblclick event; the onclick handler fires once
+    await expect(activePage.locator('.added-manually')).toHaveCount(1);
   });
 });
 
@@ -65,18 +74,20 @@ test.describe('fill', () => {
 });
 
 test.describe('type', () => {
-  test('types text character-by-character', async ({ bcli, navigateAndWait }) => {
+  test('types text character-by-character', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.INPUTS);
     const r = bcli('type', 'input[type="number"]', '12345');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Typed');
+    await expect(activePage.locator('input[type="number"]')).toHaveValue('12345');
   });
 
-  test('types with --delay option', async ({ bcli, navigateAndWait }) => {
+  test('types with --delay option', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.INPUTS);
     const r = bcli('type', 'input[type="number"]', '42', '--delay', '50');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Typed');
+    await expect(activePage.locator('input[type="number"]')).toHaveValue('42');
   });
 });
 
@@ -145,29 +156,35 @@ test.describe('hover', () => {
     const r = bcli('hover', '.figure:first-of-type');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Hovered');
+    // Note: CSS :hover pseudo-class does not activate with programmatic hover
+    // (dispatching mouse events). Only real user mouse position triggers :hover.
+    // So we only verify the CLI command succeeded.
   });
 });
 
 test.describe('press (page-level key)', () => {
-  test('presses a key on the page', async ({ bcli, navigateAndWait }) => {
+  test('presses a key on the page', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.KEY_PRESSES);
     const r = bcli('press', 'Enter');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Pressed');
+    await expect(activePage.locator('#result')).toContainText('Enter');
   });
 
-  test('Tab key', async ({ bcli, navigateAndWait }) => {
+  test('Tab key', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.KEY_PRESSES);
     const r = bcli('press', 'Tab');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Pressed');
+    await expect(activePage.locator('#result')).toContainText('Tab');
   });
 
-  test('key alias works', async ({ bcli, navigateAndWait }) => {
+  test('key alias works', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.KEY_PRESSES);
     const r = bcli('key', 'Escape');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Pressed');
+    await expect(activePage.locator('#result')).toContainText('Escape');
   });
 });
 
@@ -185,11 +202,12 @@ test.describe('clear', () => {
 });
 
 test.describe('focus', () => {
-  test('focuses an input element', async ({ bcli, navigateAndWait }) => {
+  test('focuses an input element', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
     const r = bcli('focus', SEL.USERNAME);
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Focused');
+    await expect(activePage.locator(SEL.USERNAME)).toBeFocused();
   });
 });
 

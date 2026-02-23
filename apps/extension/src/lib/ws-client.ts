@@ -4,16 +4,17 @@
  */
 
 import {
-  DEFAULT_WS_PORT,
   PROTOCOL_VERSION,
   schemas,
 } from '@browser-cli/shared';
+import { CONFIGURED_WS_PORT } from './state';
 import type {
   WsMessage,
   RequestMessage,
   ResponseMessage,
   HandshakeAckMessage,
   PingMessage,
+  BrowserInfo,
 } from '@browser-cli/shared';
 
 export type MessageHandler = (msg: RequestMessage) => Promise<ResponseMessage>;
@@ -51,7 +52,7 @@ export class WsClient {
   private pendingEvents: string[] = [];
 
   constructor(options: WsClientOptions = {}) {
-    this.port = options.port ?? DEFAULT_WS_PORT;
+    this.port = options.port ?? CONFIGURED_WS_PORT;
     this.options = options;
   }
 
@@ -149,6 +150,7 @@ export class WsClient {
         type: 'handshake' as const,
         protocolVersion: PROTOCOL_VERSION,
         extensionId: browser.runtime.id,
+        browser: parseBrowserInfo(navigator.userAgent),
       };
       this.ws?.send(JSON.stringify(handshake));
     };
@@ -274,4 +276,36 @@ export class WsClient {
     this.backoff = INITIAL_BACKOFF_MS;
     this.connect();
   }
+}
+
+/** Parse browser name and version from a User-Agent string */
+function parseBrowserInfo(ua: string): BrowserInfo {
+  let name = 'Unknown';
+  let version = '';
+
+  // Order matters: check more specific browsers before generic ones
+  if (ua.includes('Edg/')) {
+    name = 'Edge';
+    version = ua.match(/Edg\/([\d.]+)/)?.[1] ?? '';
+  } else if (ua.includes('OPR/') || ua.includes('Opera/')) {
+    name = 'Opera';
+    version = ua.match(/(?:OPR|Opera)\/([\d.]+)/)?.[1] ?? '';
+  } else if (ua.includes('Brave')) {
+    name = 'Brave';
+    version = ua.match(/Brave\/([\d.]+)/)?.[1] ?? ua.match(/Chrome\/([\d.]+)/)?.[1] ?? '';
+  } else if (ua.includes('Vivaldi/')) {
+    name = 'Vivaldi';
+    version = ua.match(/Vivaldi\/([\d.]+)/)?.[1] ?? '';
+  } else if (ua.includes('Firefox/')) {
+    name = 'Firefox';
+    version = ua.match(/Firefox\/([\d.]+)/)?.[1] ?? '';
+  } else if (ua.includes('Safari/') && !ua.includes('Chrome/')) {
+    name = 'Safari';
+    version = ua.match(/Version\/([\d.]+)/)?.[1] ?? '';
+  } else if (ua.includes('Chrome/')) {
+    name = 'Chrome';
+    version = ua.match(/Chrome\/([\d.]+)/)?.[1] ?? '';
+  }
+
+  return { name, version, userAgent: ua };
 }

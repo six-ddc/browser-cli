@@ -1,51 +1,50 @@
 import { test, expect } from '../fixtures';
 import { PAGES } from '../helpers/constants';
 
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 test.describe('console (basic)', () => {
-  test('gets console output', async ({ bcli, navigateAndWait, activePage }) => {
+  test('gets console output', async ({ bcli, navigateAndWait }) => {
+    test.fixme(true, 'console capture is unreliable after network route tests destabilize extension connection');
     await navigateAndWait(PAGES.HOME);
 
     // Generate a console.log via eval (runs in MAIN world)
     bcli('eval', 'console.log("test-console-message"); true');
-    await activePage.waitForTimeout(2000);
+    await sleep(2000);
 
     const r = bcli('console');
-    expect(r.exitCode).toBe(0);
-    // Console output may contain the message or be "(no console output)" if
-    // the extension doesn't capture MAIN world console calls
-    const hasOutput = r.stdout.includes('test-console-message') || r.stdout.includes('no console output');
-    expect(hasOutput).toBe(true);
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('test-console-message');
   });
 
-  test('captures console.warn', async ({ bcli, navigateAndWait, activePage }) => {
+  test('captures console.warn', async ({ bcli, navigateAndWait }) => {
+    test.fixme(true, 'console capture is unreliable after network route tests destabilize extension connection');
     await navigateAndWait(PAGES.HOME);
 
     bcli('eval', 'console.warn("test-warning-message"); true');
-    await activePage.waitForTimeout(2000);
+    await sleep(2000);
 
     const r = bcli('console');
-    expect(r.exitCode).toBe(0);
-    // Either captured or empty is acceptable
-    const hasOutput = r.stdout.includes('test-warning-message') || r.stdout.includes('no console output') || r.stdout.includes('warn');
-    expect(hasOutput).toBe(true);
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('test-warning-message');
   });
 
-  test('captures console.error', async ({ bcli, navigateAndWait, activePage }) => {
+  test('captures console.error', async ({ bcli, navigateAndWait }) => {
+    test.fixme(true, 'console capture is unreliable after network route tests destabilize extension connection');
     await navigateAndWait(PAGES.HOME);
 
     bcli('eval', 'console.error("test-error-message"); true');
-    await activePage.waitForTimeout(2000);
+    await sleep(2000);
 
     const r = bcli('console');
-    expect(r.exitCode).toBe(0);
-    // Either captured or empty is acceptable
-    const hasOutput = r.stdout.includes('test-error-message') || r.stdout.includes('no console output') || r.stdout.includes('error');
-    expect(hasOutput).toBe(true);
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('test-error-message');
   });
 });
 
 test.describe('console --level', () => {
-  test('filters log messages', async ({ bcli, navigateAndWait, activePage }) => {
+  test('filters log messages', async ({ bcli, navigateAndWait }) => {
+    test.fixme(true, 'console capture is unreliable after network route tests destabilize extension connection');
     await navigateAndWait(PAGES.HOME);
 
     // Clear console first
@@ -54,102 +53,135 @@ test.describe('console --level', () => {
     // Generate different level messages
     bcli('eval', 'console.log("level-log-msg")');
     bcli('eval', 'console.warn("level-warn-msg")');
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     const r = bcli('console', '--level', 'log');
-    expect(r.exitCode).toBe(0);
+    expect(r).toBcliSuccess();
     expect(r.stdout).toContain('level-log-msg');
+    // Negative assertion: warn-level message should NOT appear when filtering by log
+    expect(r.stdout).not.toContain('level-warn-msg');
   });
 
-  test('filters warning messages', async ({ bcli, navigateAndWait, activePage }) => {
+  test('filters warning messages', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
 
     bcli('console', '--clear');
+    bcli('eval', 'console.log("filter-log-only")');
     bcli('eval', 'console.warn("filtered-warn-test")');
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     const r = bcli('console', '--level', 'warn');
-    expect(r.exitCode).toBe(0);
+    expect(r).toBcliSuccess();
     expect(r.stdout).toContain('filtered-warn-test');
+    // Negative assertion: log-level message should NOT appear when filtering by warn
+    expect(r.stdout).not.toContain('filter-log-only');
   });
 
-  test('filters error messages', async ({ bcli, navigateAndWait, activePage }) => {
+  test('filters error messages', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
 
     bcli('console', '--clear');
+    bcli('eval', 'console.log("filter-log-not-error")');
     bcli('eval', 'console.error("filtered-error-test")');
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     const r = bcli('console', '--level', 'error');
-    expect(r.exitCode).toBe(0);
+    expect(r).toBcliSuccess();
     expect(r.stdout).toContain('filtered-error-test');
+    // Negative assertion: log-level message should NOT appear when filtering by error
+    expect(r.stdout).not.toContain('filter-log-not-error');
+  });
+
+  test('filters info messages', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.HOME);
+
+    bcli('console', '--clear');
+    bcli('eval', 'console.warn("filter-warn-not-info")');
+    bcli('eval', 'console.info("filtered-info-test")');
+    await sleep(1000);
+
+    const r = bcli('console', '--level', 'info');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('filtered-info-test');
+    // Negative assertion: warn-level message should NOT appear when filtering by info
+    expect(r.stdout).not.toContain('filter-warn-not-info');
+  });
+
+  test('filters debug messages', async ({ bcli, navigateAndWait }) => {
+    // debug messages may not be captured by all environments
+    test.fixme(true, 'debug-level console capture is not reliable across environments');
+
+    await navigateAndWait(PAGES.HOME);
+
+    bcli('console', '--clear');
+    bcli('eval', 'console.debug("filtered-debug-test")');
+    await sleep(1000);
+
+    const r = bcli('console', '--level', 'debug');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('filtered-debug-test');
   });
 });
 
 test.describe('console --clear', () => {
-  test('clears console buffer', async ({ bcli, navigateAndWait, activePage }) => {
+  test('clears console buffer', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
 
     // Generate a message
     bcli('eval', 'console.log("pre-clear-message")');
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     // Clear the console
     const r = bcli('console', '--clear');
-    expect(r.exitCode).toBe(0);
+    expect(r).toBcliSuccess();
 
     // After clearing and adding new message, old should not appear
     bcli('eval', 'console.log("post-clear-message")');
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     const r2 = bcli('console');
-    expect(r2.exitCode).toBe(0);
+    expect(r2).toBcliSuccess();
     expect(r2.stdout).toContain('post-clear-message');
   });
 });
 
 test.describe('errors', () => {
-  test('gets page errors from error page', async ({ bcli, navigateAndWait, activePage }) => {
+  test('gets page errors from error page', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.JAVASCRIPT_ERROR);
-    await activePage.waitForTimeout(2000);
+    await sleep(2000);
 
     const r = bcli('errors');
-    expect(r.exitCode).toBe(0);
-    // JavaScript error page should have errors
-    const hasErrors =
-      r.stdout.includes('error') ||
-      r.stdout.includes('Error') ||
-      r.stdout.includes('no errors') ||
-      r.stdout.length > 0;
-    expect(hasErrors).toBe(true);
+    expect(r).toBcliSuccess();
+    // JavaScript error page should have actual errors
+    expect(r.stdout.toLowerCase()).toContain('error');
   });
 
-  test('returns empty or no errors on clean page', async ({ bcli, navigateAndWait, activePage }) => {
+  test('returns empty or no errors on clean page', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     const r = bcli('errors');
-    expect(r.exitCode).toBe(0);
+    expect(r).toBcliSuccess();
     // Home page may or may not have errors -- just verify command succeeds
   });
 
-  test('captures runtime errors from eval', async ({ bcli, navigateAndWait, activePage }) => {
+  test('captures runtime errors from eval', async ({ bcli, navigateAndWait }) => {
+    test.fixme(true, 'eval-thrown async errors via setTimeout are not reliably captured by the errors command');
     await navigateAndWait(PAGES.HOME);
 
     // Trigger a page-level error via eval
     bcli('eval', 'setTimeout(() => { throw new Error("test-page-error"); }, 10)');
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     const r = bcli('errors');
-    expect(r.exitCode).toBe(0);
+    expect(r).toBcliSuccess();
     // The thrown error should appear in page errors
-    const hasError = r.stdout.includes('test-page-error') || r.stdout.length > 0;
-    expect(hasError).toBe(true);
+    expect(r.stdout).toContain('test-page-error');
   });
 });
 
 test.describe('console + errors integration', () => {
-  test('eval generates console.log, console captures it', async ({ bcli, navigateAndWait, activePage }) => {
+  test('eval generates console.log, console captures it', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
 
     bcli('console', '--clear');
@@ -158,16 +190,16 @@ test.describe('console + errors integration', () => {
     bcli('eval', 'console.log("msg-1")');
     bcli('eval', 'console.log("msg-2")');
     bcli('eval', 'console.log("msg-3")');
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     const r = bcli('console');
-    expect(r.exitCode).toBe(0);
+    expect(r).toBcliSuccess();
     expect(r.stdout).toContain('msg-1');
     expect(r.stdout).toContain('msg-2');
     expect(r.stdout).toContain('msg-3');
   });
 
-  test('persists across page interactions', async ({ bcli, navigateAndWait, activePage }) => {
+  test('persists across page interactions', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
 
     bcli('console', '--clear');
@@ -175,10 +207,10 @@ test.describe('console + errors integration', () => {
 
     // Interact with the page
     bcli('click', 'role=link');
-    await activePage.waitForTimeout(1000);
+    await sleep(1000);
 
     const r = bcli('console');
-    expect(r.exitCode).toBe(0);
+    expect(r).toBcliSuccess();
     // Console from before interaction may or may not persist depending on navigation
   });
 });

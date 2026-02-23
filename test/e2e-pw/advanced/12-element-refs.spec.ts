@@ -181,11 +181,11 @@ test.describe('get data with @e ref', () => {
     // Snapshot to get refs
     bcli('snapshot', '-ic');
 
-    // One of the refs should correspond to a button or element with text
+    // @e3 should correspond to the login button on the login page
     const r = bcli('get', 'text', '@e3');
     expect(r).toBcliSuccess();
-    // Should return some text content
-    expect(r.stdout.length).toBeGreaterThan(0);
+    // The login button text contains "Login"
+    expect(r.stdout).toContain('Login');
   });
 
   test('get value using element ref', async ({ bcli, navigateAndWait }) => {
@@ -268,11 +268,20 @@ test.describe('stale ref handling', () => {
     // Navigate to a different page (refs should become stale)
     await navigateAndWait(PAGES.CHECKBOXES);
 
-    // Try to use the old ref -- might succeed if CSS selector fallback works,
-    // or fail if the element no longer exists.
-    // Either outcome is acceptable; the key test is whether it doesn't crash.
-    bcli('click', '@e1');
-    // No assertion on success/failure -- just verifying no crash
+    // Try to use the old ref -- the CSS selector may still resolve on the new page
+    // (e.g., @e1 was "#username" which doesn't exist on checkboxes page),
+    // or it may succeed if the selector matches something on the new page.
+    const r = bcli('click', '@e1');
+    // The ref maps to a CSS selector from the login page. On the checkboxes page,
+    // this selector likely won't match, so we expect failure.
+    if (r.success) {
+      // If CSS selector fallback matched an element on the new page, that's acceptable
+      expect(r.stdout).toContain('Clicked');
+    } else {
+      // Expected: the old ref's selector doesn't match on the new page
+      expect(r).toBcliFailure();
+      expect(r.stdout + r.stderr).toMatch(/not found|Element|stale/i);
+    }
   });
 
   test('nonexistent ref gives error', async ({ bcli, navigateAndWait }) => {

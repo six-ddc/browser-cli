@@ -4,29 +4,38 @@ import { PAGES, SEL, TEST_USERNAME, TEST_PASSWORD } from '../helpers/constants';
 // ---- Find by Role ----
 
 test.describe('find role', () => {
-  test('default action is click', async ({ bcli, navigateAndWait }) => {
+  test('default action is click', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
     // find role button should click the first button (Login)
     const r = bcli('find', 'role', 'button');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
+
+    // Clicking login with empty fields should show error flash
+    await expect(activePage.locator(SEL.FLASH_MESSAGE)).toBeVisible();
   });
 
-  test('click button with --name', async ({ bcli, navigateAndWait }) => {
+  test('click button with --name', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
     const r = bcli('find', 'role', 'button', '--name', 'Login');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
+
+    // Clicking login with empty fields should show error flash
+    await expect(activePage.locator(SEL.FLASH_MESSAGE)).toBeVisible();
   });
 
-  test('fill textbox', async ({ bcli, navigateAndWait }) => {
+  test('fill textbox', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
     const r = bcli('find', 'role', 'textbox', 'fill', TEST_USERNAME);
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
+
+    // Verify the input was actually filled
+    await expect(activePage.locator(SEL.USERNAME)).toHaveValue(TEST_USERNAME);
   });
 
   test('hover on link', async ({ bcli, navigateAndWait }) => {
@@ -128,12 +137,15 @@ test.describe('find label', () => {
 // ---- Find by Placeholder ----
 
 test.describe('find placeholder', () => {
-  test('fill input by placeholder text', async ({ bcli, navigateAndWait }) => {
+  test('fill input by placeholder text', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.FORGOT_PASSWORD);
 
     const r = bcli('find', 'placeholder', 'E-mail', 'fill', 'test@example.com');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
+
+    // Verify the input was actually filled
+    await expect(activePage.locator('input[placeholder="E-mail"]')).toHaveValue('test@example.com');
   });
 });
 
@@ -196,29 +208,38 @@ test.describe('find + actions', () => {
     expect(r.stdout).toContain('Hovered');
   });
 
-  test('find + check action', async ({ bcli, navigateAndWait }) => {
+  test('find + check action', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     const r = bcli('find', 'first', SEL.CHECKBOX, 'check');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Checked');
+
+    // Verify the first checkbox is now checked
+    await expect(activePage.locator(SEL.CHECKBOX).first()).toBeChecked();
   });
 
-  test('find + uncheck action', async ({ bcli, navigateAndWait }) => {
+  test('find + uncheck action', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     // The second checkbox is checked by default on this page
     const r = bcli('find', 'last', SEL.CHECKBOX, 'uncheck');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Unchecked');
+
+    // Verify the last checkbox is now unchecked
+    await expect(activePage.locator(SEL.CHECKBOX).last()).not.toBeChecked();
   });
 
-  test('find + select action', async ({ bcli, navigateAndWait }) => {
+  test('find + select action', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.DROPDOWN);
 
     const r = bcli('find', 'role', 'combobox', 'select', '1');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Selected');
+
+    // Verify the dropdown value was set
+    await expect(activePage.locator(SEL.DROPDOWN)).toHaveValue('1');
   });
 
   test('find + clear action', async ({ bcli, navigateAndWait, activePage }) => {
@@ -260,6 +281,91 @@ test.describe('find + actions', () => {
     const r = bcli('find', 'label', 'Username', 'press', 'Tab');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Pressed');
+  });
+});
+
+// ---- Find by Alt ----
+
+test.describe('find alt', () => {
+  test('click image by alt text', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.HOVERS);
+
+    const r = bcli('find', 'alt', 'User 1', 'click');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Clicked');
+  });
+
+  test('hover image by alt text', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.HOVERS);
+
+    const r = bcli('find', 'alt', 'User 2', 'hover');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Hovered');
+  });
+});
+
+// ---- Find by Title ----
+
+test.describe('find title', () => {
+  test('click element by title', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.TESTID_PAGE);
+
+    const r = bcli('find', 'title', 'Submit form', 'click');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Clicked');
+  });
+
+  test('hover element by title', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.TESTID_PAGE);
+
+    const r = bcli('find', 'title', 'Go to home page', 'hover');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Hovered');
+  });
+});
+
+// ---- Find by TestID ----
+
+test.describe('find testid', () => {
+  test('click button by testid', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.TESTID_PAGE);
+
+    const r = bcli('find', 'testid', 'submit-btn', 'click');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Clicked');
+  });
+
+  test('fill input by testid', async ({ bcli, navigateAndWait, activePage }) => {
+    await navigateAndWait(PAGES.TESTID_PAGE);
+
+    const r = bcli('find', 'testid', 'email-input', 'fill', 'test@example.com');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Filled');
+
+    // Verify the input was actually filled
+    await expect(activePage.locator('[data-testid="email-input"]')).toHaveValue('test@example.com');
+  });
+
+  test('check checkbox by testid', async ({ bcli, navigateAndWait, activePage }) => {
+    await navigateAndWait(PAGES.TESTID_PAGE);
+
+    const r = bcli('find', 'testid', 'terms-checkbox', 'check');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Checked');
+
+    // Verify the checkbox is now checked
+    await expect(activePage.locator('[data-testid="terms-checkbox"]')).toBeChecked();
+  });
+
+  test('select option by testid', async ({ bcli, navigateAndWait, activePage }) => {
+    await navigateAndWait(PAGES.TESTID_PAGE);
+
+    const r = bcli('find', 'testid', 'country-select', 'select', 'us');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Selected');
+
+    // Verify the dropdown value was set
+    await expect(activePage.locator('[data-testid="country-select"]')).toHaveValue('us');
   });
 });
 

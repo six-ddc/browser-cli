@@ -118,17 +118,13 @@ test.describe('wait --url', () => {
     // Click login to trigger navigation
     bcli('click', SEL.LOGIN_BTN);
 
-    // The content script may disconnect during navigation (message channel closed error).
-    // Retry the wait once if it fails due to the race condition.
-    let r = bcli('wait', '--url', '**/secure*', '--timeout', '10000');
-    if (!r.success) {
-      // Navigation may already have completed; try checking the URL directly
-      const url = bcli('get', 'url');
-      expect(url.exitCode).toBe(0);
-      expect(url.stdout).toContain('secure');
-    } else {
-      expect(r.stdout).toContain('secure');
-    }
+    // Wait for navigation to settle
+    bcli('wait', '2000');
+
+    // wait --url should detect that the URL now contains /secure
+    const r = bcli('wait', '--url', '**/secure*', '--timeout', '10000');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('secure');
   });
 });
 
@@ -168,6 +164,11 @@ test.describe('wait --text', () => {
 // wait --load -- Load state wait
 // ===========================================================================
 
+// NOTE: These tests only verify the "already loaded" case — navigateAndWait ensures
+// the page is fully loaded before wait --load is called. A more thorough test would
+// call `navigate` and immediately `wait --load` in rapid succession to test the
+// waiting-for-load scenario, but that is difficult to orchestrate with synchronous
+// CLI calls. This limitation is known and accepted.
 test.describe('wait --load', () => {
   test('waits for page load (default)', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);

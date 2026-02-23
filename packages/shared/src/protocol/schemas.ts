@@ -390,10 +390,17 @@ export const eventMessageSchema = z.object({
   timestamp: z.number(),
 });
 
+export const browserInfoSchema = z.object({
+  name: z.string(),
+  version: z.string(),
+  userAgent: z.string(),
+});
+
 export const handshakeMessageSchema = z.object({
   type: z.literal('handshake'),
   protocolVersion: z.string(),
   extensionId: z.string(),
+  browser: browserInfoSchema.optional(),
 });
 
 export const handshakeAckMessageSchema = z.object({
@@ -428,6 +435,7 @@ export const daemonRequestSchema = z.object({
   id: z.string(),
   command: commandSchema,
   tabId: z.number().optional(),
+  sessionId: z.string().optional(),
 });
 
 export const daemonResponseSchema = z.object({

@@ -3,6 +3,15 @@
  * Uses a serial queue to prevent concurrent read-modify-write races.
  */
 
+import { DEFAULT_WS_PORT } from '@browser-cli/shared';
+
+/**
+ * WS port configured at build time via VITE_WS_PORT env var.
+ * Defaults to DEFAULT_WS_PORT (9222). E2E builds override this.
+ */
+export const CONFIGURED_WS_PORT: number =
+  Number(import.meta.env.VITE_WS_PORT) || DEFAULT_WS_PORT;
+
 export interface ConnectionState {
   connected: boolean;
   sessionId: string | null;
@@ -16,7 +25,7 @@ export interface ConnectionState {
 const DEFAULT_STATE: ConnectionState = {
   connected: false,
   sessionId: null,
-  port: 9222,
+  port: CONFIGURED_WS_PORT,
   lastConnected: null,
   lastDisconnected: null,
   reconnecting: false,
@@ -26,7 +35,7 @@ const DEFAULT_STATE: ConnectionState = {
 const STORAGE_KEY = 'browserCliState';
 
 /** Validate stored state has the expected shape */
-function isValidState(raw: unknown): raw is ConnectionState {
+export function isValidState(raw: unknown): raw is ConnectionState {
   if (typeof raw !== 'object' || raw === null) return false;
   const obj = raw as Record<string, unknown>;
   return (

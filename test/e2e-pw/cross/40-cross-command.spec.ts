@@ -48,9 +48,8 @@ test.describe('eval + get verification cross-tests', () => {
     expect(evalR.exitCode).toBe(0);
 
     const title = bcli('get', 'title');
-    expect(title.exitCode).toBe(0);
-    // Title may be the new value or original depending on eval world and test ordering
-    expect(title.stdout.length).toBeGreaterThan(0);
+    expect(title).toBcliSuccess();
+    expect(title.stdout).toContain('Cross Test Title');
   });
 
   test('eval adds element, get count verifies', async ({ bcli, navigateAndWait }) => {
@@ -83,10 +82,15 @@ test.describe('scroll + snapshot cross-tests', () => {
     await navigateAndWait(PAGES.HOME);
 
     const scroll = bcli('scroll', 'down', '--amount', '500');
-    expect(scroll.exitCode).toBe(0);
+    expect(scroll).toBcliSuccess();
+
+    // Verify scroll actually happened
+    const scrollY = bcli('eval', 'window.scrollY');
+    expect(scrollY).toBcliSuccess();
+    expect(Number(scrollY.stdout)).toBeGreaterThan(0);
 
     const snap = bcli('snapshot', '-ic');
-    expect(snap.exitCode).toBe(0);
+    expect(snap).toBcliSuccess();
     expect(snap.stdout.length).toBeGreaterThan(0);
   });
 
@@ -94,21 +98,18 @@ test.describe('scroll + snapshot cross-tests', () => {
     await navigateAndWait(PAGES.HOME);
 
     const scroll = bcli('scrollintoview', 'div#page-footer a');
-    if (scroll.exitCode === 0) {
-      const click = bcli('click', 'div#page-footer a');
-      expect(click.exitCode).toBe(0);
-    }
+    expect(scroll).toBcliSuccess();
+
+    const click = bcli('click', 'div#page-footer a');
+    expect(click).toBcliSuccess();
   });
 });
 
 test.describe('network + navigation cross-tests', () => {
   test('network route then navigate', async ({ bcli, navigateAndWait }) => {
+    test.fixme(true, 'network route fails: Rule with id 10001 does not have a unique ID');
     const route = bcli('network', 'route', '*nonexistent-domain.invalid*', '--abort');
-    if (route.exitCode !== 0) {
-      // Network interception may not be available
-      test.skip();
-      return;
-    }
+    expect(route).toBcliSuccess();
 
     await navigateAndWait(PAGES.HOME);
 
@@ -185,8 +186,9 @@ test.describe('snapshot refs + navigation (ref invalidation)', () => {
 
     await navigateAndWait(PAGES.CHECKBOXES);
 
-    // Old refs may succeed or fail — either is acceptable, the key is no crash
-    bcli('click', '@e1');
+    // Old refs should be stale after navigation to a different page
+    const clickOldRef = bcli('click', '@e1');
+    expect(clickOldRef).toBcliFailure();
   });
 
   test('snapshot refs work after re-snapshot on new page', async ({ bcli, navigateAndWait }) => {
@@ -226,9 +228,8 @@ test.describe('cookies + storage + state save/load cross-tests', () => {
     bcli('wait', '1000');
 
     const cookie = bcli('cookies', 'get', 'cross-cookie');
-    if (cookie.exitCode === 0) {
-      expect(cookie.stdout.includes('cross-val') || cookie.stdout.includes('cross-cookie')).toBeTruthy();
-    }
+    expect(cookie).toBcliSuccess();
+    expect(cookie.stdout.includes('cross-val') || cookie.stdout.includes('cross-cookie')).toBeTruthy();
 
     rmSync(tempDir, { recursive: true });
   });
@@ -289,22 +290,24 @@ test.describe('multi-step workflow cross-tests', () => {
 
   test('viewport change + navigate + snapshot + screenshot', async ({ bcli, navigateAndWait }) => {
     const vp = bcli('set', 'viewport', '375', '812');
-    expect(vp.exitCode).toBe(0);
+    expect(vp).toBcliSuccess();
 
-    await navigateAndWait(PAGES.LOGIN);
+    try {
+      await navigateAndWait(PAGES.LOGIN);
 
-    const snap = bcli('snapshot', '-ic');
-    expect(snap.exitCode).toBe(0);
-    expect(snap.stdout.length).toBeGreaterThan(0);
+      const snap = bcli('snapshot', '-ic');
+      expect(snap).toBcliSuccess();
+      expect(snap.stdout.length).toBeGreaterThan(0);
 
-    const tempDir = mkdtempSync(path.join(tmpdir(), 'bcli-test-'));
-    const filePath = path.join(tempDir, 'mobile-view.png');
-    const ss = bcli('screenshot', '--path', filePath);
-    expect(ss.exitCode).toBe(0);
-    expect(existsSync(filePath)).toBeTruthy();
-    rmSync(tempDir, { recursive: true });
-
-    // Reset viewport
-    bcli('set', 'viewport', '1280', '720');
+      const tempDir = mkdtempSync(path.join(tmpdir(), 'bcli-test-'));
+      const filePath = path.join(tempDir, 'mobile-view.png');
+      const ss = bcli('screenshot', '--path', filePath);
+      expect(ss).toBcliSuccess();
+      expect(existsSync(filePath)).toBeTruthy();
+      rmSync(tempDir, { recursive: true });
+    } finally {
+      // Always reset viewport even on test failure
+      bcli('set', 'viewport', '1280', '720');
+    }
   });
 });

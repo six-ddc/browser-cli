@@ -1,7 +1,9 @@
 import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { E2E_DIR } from '../helpers/constants';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI_BIN = path.resolve(__dirname, '../../../apps/cli/bin/cli.js');
@@ -9,14 +11,13 @@ const EXTENSION_PATH = path.resolve(
   __dirname,
   '../../../apps/extension/.output/chrome-mv3',
 );
-const SESSION = 'e2e-pw';
 
 // Strip ANSI escape codes from CLI output
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
 const stripAnsi = (s: string) => s.replace(ANSI_RE, '');
 
-// Env vars to disable color output from Node.js / CLI
-const CLI_ENV = { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' };
+// Env vars: disable color output + point CLI to the E2E isolated directory
+const CLI_ENV = { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0', BROWSER_CLI_DIR: E2E_DIR };
 
 export interface BcliResult {
   stdout: string;
@@ -33,6 +34,7 @@ export const test = base.extend<
     bcli: BcliFn;
     navigateAndWait: (url: string) => Promise<void>;
     baseURL: string;
+    _autoCleanup: void;
   },
   // worker-scoped
   { extensionContext: BrowserContext; activePage: Page }
@@ -40,21 +42,44 @@ export const test = base.extend<
   // ── worker-scoped: entire worker lifecycle starts one browser ──
   extensionContext: [
     async ({}, use) => {
-      const ctx = await chromium.launchPersistentContext(
-        path.resolve(__dirname, '../../../.e2e-chrome-profile'),
-        {
-          headless: false,
-          args: [
-            `--disable-extensions-except=${EXTENSION_PATH}`,
-            `--load-extension=${EXTENSION_PATH}`,
-            '--no-first-run',
-            '--disable-default-apps',
-            '--disable-popup-blocking',
-          ],
-          viewport: { width: 1280, height: 720 },
-        },
-      );
+      const headless = process.env.HEADLESS !== '0';
+      const profileDir = path.resolve(__dirname, '../../../.e2e-chrome-profile');
+
+      // Write Chrome Preferences to disable password manager popups
+      const defaultDir = path.join(profileDir, 'Default');
+      if (!existsSync(defaultDir)) mkdirSync(defaultDir, { recursive: true });
+      const prefs = {
+        credentials_enable_service: false,
+        profile: { password_manager_enabled: false, password_manager_leak_detection: false },
+        password_manager: { leak_detection: false },
+        safebrowsing: { enabled: false },
+      };
+      writeFileSync(path.join(defaultDir, 'Preferences'), JSON.stringify(prefs));
+
+      const ctx = await chromium.launchPersistentContext(profileDir, {
+        headless: false, // Playwright's built-in headless doesn't support extensions
+        args: [
+          `--disable-extensions-except=${EXTENSION_PATH}`,
+          `--load-extension=${EXTENSION_PATH}`,
+          '--no-first-run',
+          '--disable-default-apps',
+          '--disable-popup-blocking',
+          '--disable-features=PasswordLeakDetection,PasswordCheck,TranslateUI,CredentialLeakDetection,SafeBrowsingEnhancedProtection',
+          '--disable-save-password-bubble',
+          '--password-store=basic',
+          '--no-default-browser-check',
+          '--disable-background-networking',
+          '--disable-translate',
+          '--disable-infobars',
+          '--disable-notifications',
+          '--disable-component-update',
+          ...(headless ? ['--headless=new'] : []),
+        ],
+        viewport: { width: 1280, height: 720 },
+      });
+
       // Wait for extension to connect to daemon (up to 30s)
+      // The extension's WS port is baked in at build time via VITE_WS_PORT
       await waitForExtensionConnection(30_000);
       await use(ctx);
       await ctx.close();
@@ -81,7 +106,7 @@ export const test = base.extend<
       try {
         const stdout = execFileSync(
           'node',
-          [CLI_BIN, '--session', SESSION, ...args],
+          [CLI_BIN, ...args],
           { encoding: 'utf-8', timeout: 15_000, env: CLI_ENV },
         );
         return { stdout: stripAnsi(stdout.trim()), stderr: '', exitCode: 0, success: true };
@@ -101,6 +126,18 @@ export const test = base.extend<
     };
     await use(fn);
   },
+
+  // Auto-cleanup: reset browser state between tests to prevent leakage
+  _autoCleanup: [
+    async ({ bcli }, use) => {
+      // Clean before each test
+      try { bcli('cookies', 'clear'); } catch { /* ignore if daemon not ready */ }
+      try { bcli('storage', 'local', 'clear'); } catch { /* ignore */ }
+      try { bcli('storage', 'session', 'clear'); } catch { /* ignore */ }
+      await use();
+    },
+    { auto: true },
+  ],
 
   navigateAndWait: async ({ bcli, activePage, baseURL }, use) => {
     const fn = async (urlOrPath: string) => {
@@ -137,10 +174,10 @@ async function waitForExtensionConnection(timeoutMs: number) {
     try {
       const out = execFileSync(
         'node',
-        [CLI_BIN, 'status', '--session', SESSION],
-        { encoding: 'utf-8', timeout: 5_000 },
+        [CLI_BIN, 'status'],
+        { encoding: 'utf-8', timeout: 5_000, env: CLI_ENV },
       );
-      if (/extension.*connected|connected.*extension/i.test(out)) return;
+      if (/Browsers connected/i.test(out)) return;
     } catch {
       // Ignore — daemon may not be ready yet
     }

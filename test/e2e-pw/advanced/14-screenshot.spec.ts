@@ -6,15 +6,17 @@ import { existsSync, statSync } from 'node:fs';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
 
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 let screenshotDir: string;
 
 // Chrome limits captureVisibleTab calls per second — slow down tests
 test.describe.configure({ mode: 'serial' });
 
-test.beforeEach(async ({ activePage }) => {
+test.beforeEach(async () => {
   screenshotDir = mkdtempSync(path.join(tmpdir(), 'bcli-screenshot-'));
   // Rate-limit: wait between screenshot tests to avoid MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
-  await activePage.waitForTimeout(1500);
+  await sleep(1500);
 });
 
 test.afterEach(() => {

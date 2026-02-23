@@ -31,7 +31,7 @@ test.describe('CSS selectors', () => {
     await navigateAndWait(PAGES.CHECKBOXES);
     const r = bcli('get', 'count', SEL.CHECKBOX);
     expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('2');
+    expect(parseInt(r.stdout.trim(), 10)).toBe(2);
   });
 });
 
