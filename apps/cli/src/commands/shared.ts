@@ -3,8 +3,8 @@
  * Handles connecting to daemon, sending commands, and formatting output.
  */
 
-import { Command } from 'commander';
-import type { Command as BrowserCommand } from '@browser-cli/shared';
+import type { Command } from 'commander';
+import type { ActionResultMap, ActionType, Command as BrowserCommand } from '@browser-cli/shared';
 import { SocketClient } from '../client/socket-client.js';
 import { ensureDaemon } from '../daemon/process.js';
 import { getSocketPath } from '../util/paths.js';
@@ -22,11 +22,11 @@ export function getRootOpts(cmd: Command): { browser?: string; json?: boolean } 
  * Send a command to the daemon and return the result data.
  * Handles daemon auto-start, connection, error display.
  */
-export async function sendCommand(
+export async function sendCommand<A extends ActionType>(
   cmd: Command,
-  command: BrowserCommand,
+  command: BrowserCommand & { action: A },
   options?: { tabId?: number; skipJson?: boolean },
-): Promise<Record<string, unknown> | null> {
+): Promise<ActionResultMap[A] | null> {
   const rootOpts = getRootOpts(cmd);
 
   // Ensure daemon is running
@@ -37,13 +37,24 @@ export async function sendCommand(
     process.exit(1);
   }
 
-  // Connect to daemon
+  // Connect to daemon with retry (daemon may still be starting up)
   const client = new SocketClient();
-  try {
-    await client.connect(getSocketPath());
-  } catch (err) {
+  const socketPath = getSocketPath();
+  const connectDeadline = Date.now() + 5000;
+  let lastConnectErr: Error | undefined;
+  while (Date.now() < connectDeadline) {
+    try {
+      await client.connect(socketPath);
+      lastConnectErr = undefined;
+      break;
+    } catch (err) {
+      lastConnectErr = err as Error;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+  if (lastConnectErr) {
     logger.error(
-      `Failed to connect to daemon: ${(err as Error).message}\nIs the daemon running? Try: browser-cli start`,
+      `Failed to connect to daemon: ${lastConnectErr.message}\nIs the daemon running? Try: browser-cli start`,
     );
     process.exit(1);
   }
@@ -68,7 +79,8 @@ export async function sendCommand(
       process.exit(1);
     }
 
-    return (response.data as Record<string, unknown>) ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- data may be undefined at runtime even on success
+    return (response.data as ActionResultMap[A]) ?? ({} as ActionResultMap[A]);
   } finally {
     client.disconnect();
   }

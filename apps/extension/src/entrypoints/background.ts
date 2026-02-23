@@ -12,20 +12,39 @@ let initializing = false;
 
 /** Commands handled by the background service worker (not content scripts) */
 const BG_ACTIONS = new Set([
-  'navigate', 'goBack', 'goForward', 'reload', 'getUrl', 'getTitle',
-  'tabNew', 'tabList', 'tabSwitch', 'tabClose',
-  'cookiesGet', 'cookiesSet', 'cookiesClear',
+  'navigate',
+  'goBack',
+  'goForward',
+  'reload',
+  'getUrl',
+  'getTitle',
+  'tabNew',
+  'tabList',
+  'tabSwitch',
+  'tabClose',
+  'cookiesGet',
+  'cookiesSet',
+  'cookiesClear',
   'screenshot',
-  'route', 'unroute', 'getRequests', 'getRoutes', 'clearRequests',
-  'windowNew', 'windowList', 'windowClose',
-  'setViewport', 'setHeaders',
-  'stateExport', 'stateImport',
+  'route',
+  'unroute',
+  'getRequests',
+  'getRoutes',
+  'clearRequests',
+  'windowNew',
+  'windowList',
+  'windowClose',
+  'setViewport',
+  'setHeaders',
+  'stateExport',
+  'stateImport',
   'evaluate',
 ]);
 
 async function resolveTargetTab(tabId?: number): Promise<number> {
   if (tabId) return tabId;
   const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- activeTab may be undefined if no tabs match
   if (!activeTab?.id) throw new Error('No active tab found');
   return activeTab.id;
 }
@@ -47,19 +66,24 @@ async function ensureInitialized(): Promise<void> {
       messageHandler: handleCommand,
       onConnect: () => {
         console.log('[browser-cli] Connected to daemon');
-        setState({ connected: true, lastConnected: Date.now(), reconnecting: false, nextRetryIn: null });
+        void setState({
+          connected: true,
+          lastConnected: Date.now(),
+          reconnecting: false,
+          nextRetryIn: null,
+        });
       },
       onDisconnect: () => {
         console.log('[browser-cli] Disconnected from daemon');
-        setState({ connected: false, lastDisconnected: Date.now(), sessionId: null });
+        void setState({ connected: false, lastDisconnected: Date.now(), sessionId: null });
       },
       onHandshake: (ack) => {
         console.log('[browser-cli] Handshake complete, session:', ack.sessionId);
-        setState({ sessionId: ack.sessionId });
+        void setState({ sessionId: ack.sessionId });
       },
       onReconnecting: (nextRetryMs) => {
         console.log(`[browser-cli] Reconnecting in ${nextRetryMs}ms...`);
-        setState({ reconnecting: true, nextRetryIn: nextRetryMs });
+        void setState({ reconnecting: true, nextRetryIn: nextRetryMs });
       },
     });
 
@@ -85,7 +109,8 @@ async function sendToContentScript(
       return await browser.tabs.sendMessage(tabId, message, { frameId: 0 });
     } catch (err) {
       const msg = (err as Error).message || '';
-      const isReceivingEndError = msg.includes('Receiving end does not exist') ||
+      const isReceivingEndError =
+        msg.includes('Receiving end does not exist') ||
         msg.includes('Could not establish connection');
       if (!isReceivingEndError || attempt === maxRetries) {
         throw err;
@@ -109,19 +134,29 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
       console.log(`[browser-cli] Routing to background handler: ${command.action}`);
       const { handleBackgroundCommand } = await import('../lib/command-router');
       const result = await handleBackgroundCommand(msg, targetTabId, networkManager);
-      console.log(`[browser-cli] Background command #${id} result:`, result.success ? 'success' : 'error', result);
+      console.log(
+        `[browser-cli] Background command #${id} result:`,
+        result.success ? 'success' : 'error',
+        result,
+      );
       return result;
     }
 
     // Forward to content script (with retry)
-    console.log(`[browser-cli] Forwarding to content script on tab ${targetTabId}: ${command.action}`);
+    console.log(
+      `[browser-cli] Forwarding to content script on tab ${targetTabId}: ${command.action}`,
+    );
     const response = await sendToContentScript(targetTabId, {
       type: 'browser-cli-command',
       id,
       command,
     });
 
-    console.log(`[browser-cli] Content script response #${id}:`, response.success ? 'success' : 'error', response);
+    console.log(
+      `[browser-cli] Content script response #${id}:`,
+      response.success ? 'success' : 'error',
+      response,
+    );
 
     return {
       id,
@@ -158,79 +193,125 @@ browser.tabs.onRemoved.addListener((tabId) => {
 // Listen for port changes from popup
 browser.storage.onChanged.addListener((changes) => {
   const stateChange = changes['browserCliState'];
-  if (stateChange?.newValue && stateChange?.oldValue) {
+  if (stateChange.newValue && stateChange.oldValue) {
     const newState = stateChange.newValue as Record<string, unknown>;
     const oldState = stateChange.oldValue as Record<string, unknown>;
     const newPort = newState.port;
     const oldPort = oldState.port;
 
     if (typeof newPort === 'number' && typeof oldPort === 'number' && newPort !== oldPort) {
-      ensureInitialized().then(() => {
-        if (wsClient) {
-          console.log(`[browser-cli] Port changed: ${oldPort} → ${newPort}`);
-          wsClient.updatePort(newPort);
-        }
-      });
+      ensureInitialized()
+        .then(() => {
+          if (wsClient) {
+            console.log(`[browser-cli] Port changed: ${oldPort} → ${newPort}`);
+            wsClient.updatePort(newPort);
+          }
+        })
+        .catch((err: unknown) => {
+          console.error('[browser-cli] Failed to initialize after port change:', err);
+        });
     }
   }
 });
 
 // Listen for manual reconnect requests from popup and eval-in-main from content scripts
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'reconnect') {
-    ensureInitialized().then(() => {
-      wsClient?.reconnect();
-      sendResponse({ success: true });
-    });
-  } else if (message.type === 'getConnectionState') {
-    ensureInitialized().then(() => {
-      sendResponse({
-        connected: wsClient?.isConnected ?? false,
-        sessionId: wsClient?.currentSessionId ?? null,
-      });
-    });
-  } else if (message.type === 'browser-cli-eval-in-main' && sender.tab?.id) {
-    // Validate sender is this extension
-    if (sender.id !== browser.runtime.id) {
-      sendResponse({ result: null, error: 'Unauthorized sender' });
-      return true;
-    }
-    if (import.meta.env.FIREFOX) {
-      // Firefox: content script already uses <script> injection in evaluate.ts,
-      // so this path shouldn't normally be hit. Forward to content script as fallback.
-      browser.tabs.sendMessage(sender.tab.id, {
-        type: 'browser-cli-command',
-        id: `bg-eval-main-${Date.now()}`,
-        command: { action: 'evaluate', params: { expression: message.expression } },
-      }, { frameId: 0 }).then((response: { success: boolean; data?: { value: unknown }; error?: { message?: string } }) => {
-        sendResponse({
-          result: response.success ? response.data?.value : null,
-          error: response.success ? undefined : response.error?.message,
+browser.runtime.onMessage.addListener(
+  (message: { type?: string; expression?: string }, sender, sendResponse) => {
+    if (message.type === 'reconnect') {
+      ensureInitialized()
+        .then(() => {
+          wsClient?.reconnect();
+          sendResponse({ success: true });
+        })
+        .catch((err: unknown) => {
+          console.error('[browser-cli] Failed to initialize for reconnect:', err);
+          sendResponse({ success: false, error: String(err) });
         });
-      }).catch((err: Error) => {
-        sendResponse({ result: null, error: `eval failed: ${err.message}` });
-      });
-    } else {
-      // Chrome: evaluate in MAIN world directly
-      browser.scripting.executeScript({
-        target: { tabId: sender.tab.id },
-        world: 'MAIN',
-        func: (expr: string) => (0, eval)(expr),
-        args: [message.expression],
-      }).then((results) => {
-        sendResponse({ result: results?.[0]?.result });
-      }).catch((err) => {
-        sendResponse({ result: null, error: `eval failed: ${(err as Error).message}` });
-      });
+    } else if (message.type === 'getConnectionState') {
+      ensureInitialized()
+        .then(() => {
+          sendResponse({
+            connected: wsClient?.isConnected ?? false,
+            sessionId: wsClient?.currentSessionId ?? null,
+          });
+        })
+        .catch((err: unknown) => {
+          console.error('[browser-cli] Failed to initialize for state check:', err);
+          sendResponse({ connected: false, sessionId: null });
+        });
+    } else if (message.type === 'browser-cli-eval-in-main' && sender.tab?.id) {
+      // Validate sender is this extension
+      if (sender.id !== browser.runtime.id) {
+        sendResponse({ result: null, error: 'Unauthorized sender' });
+        return true;
+      }
+      if (import.meta.env.FIREFOX) {
+        // Firefox: content script already uses <script> injection in evaluate.ts,
+        // so this path shouldn't normally be hit. Forward to content script as fallback.
+        browser.tabs
+          .sendMessage(
+            sender.tab.id,
+            {
+              type: 'browser-cli-command',
+              id: `bg-eval-main-${Date.now()}`,
+              command: { action: 'evaluate', params: { expression: message.expression } },
+            },
+            { frameId: 0 },
+          )
+          .then(
+            (response: {
+              success: boolean;
+              data?: { value: unknown };
+              error?: { message?: string };
+            }) => {
+              sendResponse({
+                result: response.success ? response.data?.value : null,
+                error: response.success ? undefined : response.error?.message,
+              });
+            },
+          )
+          .catch((err: unknown) => {
+            sendResponse({
+              result: null,
+              error: `eval failed: ${err instanceof Error ? err.message : String(err)}`,
+            });
+          });
+      } else {
+        // Chrome: evaluate in MAIN world directly
+        browser.scripting
+          .executeScript({
+            target: { tabId: sender.tab.id },
+            world: 'MAIN',
+            func: (expr: string) => (0, eval)(expr),
+            args: [message.expression ?? ''],
+          })
+          .then((results) => {
+            sendResponse({ result: results[0]?.result });
+          })
+          .catch((err: unknown) => {
+            sendResponse({
+              result: null,
+              error: `eval failed: ${err instanceof Error ? err.message : String(err)}`,
+            });
+          });
+      }
     }
-  }
-  // Return true to indicate we'll send a response asynchronously
-  return true;
-});
+    // Return true to indicate we'll send a response asynchronously
+    return true;
+  },
+);
 
 // Re-initialize on browser startup and extension install/update
-browser.runtime.onStartup.addListener(() => ensureInitialized());
-browser.runtime.onInstalled.addListener(() => ensureInitialized());
+browser.runtime.onStartup.addListener(() => {
+  ensureInitialized().catch((err: unknown) => {
+    console.error('[browser-cli] Failed to initialize on startup:', err);
+  });
+});
+browser.runtime.onInstalled.addListener(() => {
+  ensureInitialized().catch((err: unknown) => {
+    console.error('[browser-cli] Failed to initialize on install:', err);
+  });
+});
 
 // Handle reconnection alarms from WsClient
 browser.alarms.onAlarm.addListener((alarm) => {
@@ -243,6 +324,7 @@ browser.alarms.onAlarm.addListener((alarm) => {
 
 // ─── defineBackground (first-time initialization) ────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-misused-promises -- WXT defineBackground supports async
 export default defineBackground(async () => {
   console.log('[browser-cli] Background script loaded');
   await ensureInitialized();

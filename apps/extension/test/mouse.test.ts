@@ -14,7 +14,8 @@ beforeEach(() => {
 
 describe('mouseMove', () => {
   it('dispatches pointermove and mousemove events', async () => {
-    document.body.innerHTML = '<div id="target" style="position:absolute;left:0;top:0;width:200px;height:200px;">Target</div>';
+    document.body.innerHTML =
+      '<div id="target" style="position:absolute;left:0;top:0;width:200px;height:200px;">Target</div>';
 
     const events: string[] = [];
     // Events bubble to document.body

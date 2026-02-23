@@ -4,13 +4,11 @@
 
 import type { Command } from '@browser-cli/shared';
 
+// eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleStorage(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'storageGet': {
-      const { key, area } = command.params as {
-        key?: string;
-        area?: 'local' | 'session';
-      };
+      const { key, area } = command.params;
       const storage = area === 'session' ? sessionStorage : localStorage;
 
       if (key) {
@@ -26,11 +24,7 @@ export async function handleStorage(command: Command): Promise<unknown> {
       return { entries };
     }
     case 'storageSet': {
-      const { key, value, area } = command.params as {
-        key: string;
-        value: string;
-        area?: 'local' | 'session';
-      };
+      const { key, value, area } = command.params;
       const storage = area === 'session' ? sessionStorage : localStorage;
       try {
         storage.setItem(key, value);
@@ -38,7 +32,7 @@ export async function handleStorage(command: Command): Promise<unknown> {
         if ((err as DOMException).name === 'QuotaExceededError') {
           throw new Error(
             `Storage quota exceeded when setting key "${key}" (${area ?? 'local'}Storage). ` +
-            `Hint: Clear unused entries with "storage clear ${area ?? 'local'}" before adding new data.`,
+              `Hint: Clear unused entries with "storage clear ${area ?? 'local'}" before adding new data.`,
           );
         }
         throw err;
@@ -46,7 +40,7 @@ export async function handleStorage(command: Command): Promise<unknown> {
       return { set: true };
     }
     case 'storageClear': {
-      const { area } = command.params as { area?: 'local' | 'session' };
+      const { area } = command.params;
       const storage = area === 'session' ? sessionStorage : localStorage;
       storage.clear();
       return { cleared: true };

@@ -34,14 +34,3 @@ export interface NetworkRequest {
   /** Redirect URL if redirected */
   redirectedTo?: string;
 }
-
-export interface NetworkStats {
-  /** Total requests tracked */
-  totalRequests: number;
-  /** Active routes */
-  activeRoutes: number;
-  /** Blocked requests count */
-  blockedCount: number;
-  /** Redirected requests count */
-  redirectedCount: number;
-}

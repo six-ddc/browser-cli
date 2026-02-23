@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
-const getCmd = new Command('get')
-  .description('Get data from an element');
+const getCmd = new Command('get').description('Get data from an element');
 
 getCmd
   .command('text <selector>')
@@ -17,7 +16,10 @@ getCmd
   .description('Get innerHTML of an element')
   .option('--outer', 'Get outerHTML instead')
   .action(async (selector: string, opts: { outer?: boolean }, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'getHtml', params: { selector, outer: opts.outer } });
+    const result = await sendCommand(cmd, {
+      action: 'getHtml',
+      params: { selector, outer: opts.outer },
+    });
     if (result) console.log(result.html);
   });
 
@@ -33,7 +35,10 @@ getCmd
   .command('attr <selector> <attribute>')
   .description('Get an attribute value')
   .action(async (selector: string, attribute: string, _opts: unknown, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'getAttribute', params: { selector, attribute } });
+    const result = await sendCommand(cmd, {
+      action: 'getAttribute',
+      params: { selector, attribute },
+    });
     if (result) console.log(result.value ?? 'null');
   });
 
@@ -72,8 +77,7 @@ getCmd
 export { getCmd as getCommand };
 
 // is commands
-const isCmd = new Command('is')
-  .description('Check element state');
+const isCmd = new Command('is').description('Check element state');
 
 isCmd
   .command('visible <selector>')

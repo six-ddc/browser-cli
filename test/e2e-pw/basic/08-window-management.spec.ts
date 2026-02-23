@@ -100,7 +100,7 @@ test.describe('window close', () => {
     // Record original window IDs
     const origList = bcli('window', 'list');
     expect(origList).toBcliSuccess();
-    const origWindowIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+    const origWindowIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
 
     // Open a new window
     bcli('window', 'new', `${baseURL}/${PAGES.CHECKBOXES}`);
@@ -109,8 +109,8 @@ test.describe('window close', () => {
     // Get all window IDs and find the new one
     const afterList = bcli('window', 'list');
     expect(afterList).toBcliSuccess();
-    const allIds = [...afterList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
-    const newWindowId = allIds.find(id => !origWindowIds.includes(id));
+    const allIds = [...afterList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
+    const newWindowId = allIds.find((id) => !origWindowIds.includes(id));
     expect(newWindowId).toBeDefined();
 
     // Close the new window by its specific ID

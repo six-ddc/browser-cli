@@ -22,10 +22,10 @@ async function extractMarkdown(raw: MarkdownRawResult) {
     throw new Error('Could not extract readable content from this page');
   }
   return {
-    title: extracted.title ?? '',
+    title: extracted.title,
     markdown: trimMarkdownUrls(extracted.content),
-    byline: extracted.author ?? null,
-    excerpt: extracted.description ?? null,
+    byline: extracted.author,
+    excerpt: extracted.description,
   };
 }
 

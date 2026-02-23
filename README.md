@@ -168,11 +168,11 @@ cd apps/cli && pnpm unlink --global
 
 ## Packages
 
-| Package | Path | Description |
-|---|---|---|
-| `@browser-cli/cli` | `apps/cli` | CLI client + daemon process |
-| `@browser-cli/extension` | `apps/extension` | Browser extension — Chrome + Firefox (WXT + React) |
-| `@browser-cli/shared` | `packages/shared` | Protocol types, Zod schemas, constants |
+| Package                  | Path              | Description                                        |
+| ------------------------ | ----------------- | -------------------------------------------------- |
+| `@browser-cli/cli`       | `apps/cli`        | CLI client + daemon process                        |
+| `@browser-cli/extension` | `apps/extension`  | Browser extension — Chrome + Firefox (WXT + React) |
+| `@browser-cli/shared`    | `packages/shared` | Protocol types, Zod schemas, constants             |
 
 ## License
 

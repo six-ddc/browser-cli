@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 import { PAGES } from '../helpers/constants';
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 test.describe('network routes (list)', () => {
   test('lists active routes (initially empty or minimal)', async ({ bcli, navigateAndWait }) => {

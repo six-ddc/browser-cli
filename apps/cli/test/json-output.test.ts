@@ -32,7 +32,9 @@ const { mockSocketClient, mockDaemon } = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/client/socket-client.js', () => ({
-  SocketClient: vi.fn(function () { return mockSocketClient; }),
+  SocketClient: vi.fn(function () {
+    return mockSocketClient;
+  }),
 }));
 
 vi.mock('../src/daemon/process.js', () => mockDaemon);
@@ -73,10 +75,7 @@ async function runCli(...args: string[]): Promise<{ lines: string[]; exitCode?: 
     throw new ExitCalled(exitCode);
   }) as never);
 
-  const program = new Command()
-    .name('browser-cli')
-    .option('--json', 'JSON output')
-    .exitOverride();
+  const program = new Command().name('browser-cli').option('--json', 'JSON output').exitOverride();
 
   registerCommands(program);
 
@@ -105,7 +104,8 @@ beforeEach(() => {
 describe('--json: daemon-routed commands', () => {
   it('navigate --json outputs only JSON, no text', async () => {
     mockSocketClient.sendCommand.mockResolvedValue({
-      id: 'r1', success: true,
+      id: 'r1',
+      success: true,
       data: { url: 'https://example.com', title: 'Example' },
     });
 
@@ -121,7 +121,9 @@ describe('--json: daemon-routed commands', () => {
 
   it('click --json outputs only JSON, no "Clicked" text', async () => {
     mockSocketClient.sendCommand.mockResolvedValue({
-      id: 'r2', success: true, data: {},
+      id: 'r2',
+      success: true,
+      data: {},
     });
 
     const { lines, exitCode } = await runCli('--json', 'click', '#btn');
@@ -134,7 +136,8 @@ describe('--json: daemon-routed commands', () => {
 
   it('snapshot --json outputs only JSON, no refCount text', async () => {
     mockSocketClient.sendCommand.mockResolvedValue({
-      id: 'r3', success: true,
+      id: 'r3',
+      success: true,
       data: { snapshot: '<tree>', refCount: 5 },
     });
 
@@ -148,7 +151,8 @@ describe('--json: daemon-routed commands', () => {
 
   it('eval --json outputs only JSON, no value text', async () => {
     mockSocketClient.sendCommand.mockResolvedValue({
-      id: 'r4', success: true,
+      id: 'r4',
+      success: true,
       data: { value: 'hello world' },
     });
 
@@ -163,7 +167,8 @@ describe('--json: daemon-routed commands', () => {
 
   it('error response exits with code 1', async () => {
     mockSocketClient.sendCommand.mockResolvedValue({
-      id: 'r5', success: false,
+      id: 'r5',
+      success: false,
       error: { code: 'ELEMENT_NOT_FOUND', message: 'not found', hint: 'check selector' },
     });
 
@@ -178,7 +183,8 @@ describe('--json: daemon-routed commands', () => {
 
   it('--json after subcommand args also works', async () => {
     mockSocketClient.sendCommand.mockResolvedValue({
-      id: 'r6', success: true,
+      id: 'r6',
+      success: true,
       data: { url: 'https://example.com', title: 'Example' },
     });
 
@@ -191,7 +197,8 @@ describe('--json: daemon-routed commands', () => {
 
   it('without --json outputs human-readable text', async () => {
     mockSocketClient.sendCommand.mockResolvedValue({
-      id: 'r7', success: true,
+      id: 'r7',
+      success: true,
       data: { url: 'https://example.com', title: 'Example' },
     });
 
@@ -209,7 +216,8 @@ describe('--json: lifecycle commands', () => {
   it('status --json outputs structured JSON when daemon running', async () => {
     mockDaemon.getDaemonPid.mockReturnValue(12345);
     mockSocketClient.sendCommand.mockResolvedValue({
-      id: 's1', success: true,
+      id: 's1',
+      success: true,
       data: { connected: true, extensionId: 'ext-abc', sessionId: 'sess-1', uptime: 300 },
     });
 

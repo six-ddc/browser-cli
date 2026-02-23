@@ -151,17 +151,22 @@ describe('parseFindArgs', () => {
       expect(result.position).toEqual({ type: 'nth', index: 2 });
     });
 
-    it('parses: find nth 0 .item click', () => {
-      const result = parseFindArgs(['nth', '0', '.item', 'click'], {});
-      expect(result.position).toEqual({ type: 'nth', index: 0 });
+    it('rejects zero index (1-based)', () => {
+      expect(() => parseFindArgs(['nth', '0', '.item', 'click'], {})).toThrow(
+        'positive integer (1-based)',
+      );
     });
 
     it('rejects negative index', () => {
-      expect(() => parseFindArgs(['nth', '-1', '.item', 'click'], {})).toThrow('non-negative integer');
+      expect(() => parseFindArgs(['nth', '-1', '.item', 'click'], {})).toThrow(
+        'positive integer (1-based)',
+      );
     });
 
     it('rejects non-numeric index', () => {
-      expect(() => parseFindArgs(['nth', 'abc', '.item', 'click'], {})).toThrow('non-negative integer');
+      expect(() => parseFindArgs(['nth', 'abc', '.item', 'click'], {})).toThrow(
+        'positive integer (1-based)',
+      );
     });
 
     it('handles nth with action value', () => {

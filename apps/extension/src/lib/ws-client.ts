@@ -3,17 +3,13 @@
  * Connects to the daemon's WS server with exponential backoff reconnection.
  */
 
-import {
-  PROTOCOL_VERSION,
-  schemas,
-} from '@browser-cli/shared';
+import { PROTOCOL_VERSION, schemas } from '@browser-cli/shared';
 import { CONFIGURED_WS_PORT } from './state';
 import type {
   WsMessage,
   RequestMessage,
   ResponseMessage,
   HandshakeAckMessage,
-  PingMessage,
   BrowserInfo,
 } from '@browser-cli/shared';
 
@@ -159,15 +155,19 @@ export class WsClient {
       if (gen !== this.generation) return;
       this.lastMessageTime = Date.now();
       try {
-        const parsed = JSON.parse(event.data as string);
+        const parsed: unknown = JSON.parse(event.data as string);
         const result = schemas.wsMessageSchema.safeParse(parsed);
         if (!result.success) {
-          console.error('[browser-cli] Invalid WS message (schema validation failed):', result.error, parsed);
+          console.error(
+            '[browser-cli] Invalid WS message (schema validation failed):',
+            result.error,
+            parsed,
+          );
           return;
         }
         const msg = result.data as WsMessage;
         console.log('[browser-cli] Received message:', msg.type, msg);
-        this.handleMessage(msg);
+        void this.handleMessage(msg);
       } catch (err) {
         console.error('[browser-cli] Failed to parse WS message:', err, event.data);
       }
@@ -197,19 +197,23 @@ export class WsClient {
         this.connected = true;
         this.sessionId = msg.sessionId;
         this.options.onConnect?.();
-        this.options.onHandshake?.(msg as HandshakeAckMessage);
+        this.options.onHandshake?.(msg);
         this.flushPendingEvents();
         break;
       }
       case 'ping': {
-        const pong = { type: 'pong' as const, timestamp: (msg as PingMessage).timestamp };
+        const pong = { type: 'pong' as const, timestamp: msg.timestamp };
         this.ws?.send(JSON.stringify(pong));
         break;
       }
       case 'request': {
         if (this.options.messageHandler) {
-          const response = await this.options.messageHandler(msg as RequestMessage);
-          this.ws?.send(JSON.stringify(response));
+          const response = await this.options.messageHandler(msg);
+          if (this.connected && this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify(response));
+          } else {
+            console.warn(`[browser-cli] Dropping response for #${response.id} — WebSocket closed`);
+          }
         }
         break;
       }
@@ -263,7 +267,7 @@ export class WsClient {
     // For long delays, also set a chrome.alarm as belt-and-suspenders
     // (setTimeout may not fire if SW is suspended)
     if (delay >= ALARM_THRESHOLD_MS) {
-      browser.alarms.create('browser-cli-reconnect', { delayInMinutes: delay / 60000 });
+      void browser.alarms.create('browser-cli-reconnect', { delayInMinutes: delay / 60000 });
     }
 
     this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF_MS);

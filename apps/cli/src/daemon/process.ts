@@ -1,7 +1,17 @@
 import { spawn } from 'node:child_process';
-import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  existsSync,
+  openSync,
+  closeSync,
+  constants,
+} from 'node:fs';
 import { getPidPath, getSocketPath } from '../util/paths.js';
 import { logger } from '../util/logger.js';
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Check if a process with given PID is running */
 function isProcessRunning(pid: number): boolean {
@@ -32,9 +42,22 @@ export function getDaemonPid(): number | null {
   }
 }
 
-/** Write daemon PID to file */
+/** Write daemon PID to file using exclusive create to prevent races */
 export function writeDaemonPid(pid: number): void {
-  writeFileSync(getPidPath(), String(pid), 'utf-8');
+  const pidPath = getPidPath();
+  try {
+    // O_CREAT | O_EXCL | O_WRONLY — fails if file already exists
+    const fd = openSync(pidPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY);
+    writeFileSync(fd, String(pid), 'utf-8');
+    closeSync(fd);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+      // File already exists — overwrite (e.g., stale PID file from crashed daemon)
+      writeFileSync(pidPath, String(pid), 'utf-8');
+    } else {
+      throw err;
+    }
+  }
 }
 
 /** Clean up PID and socket files */
@@ -85,12 +108,13 @@ export function startDaemon(wsPort?: number): number {
     throw new Error('Failed to start daemon process');
   }
 
-  writeDaemonPid(child.pid);
+  // Don't write PID here — the daemon child writes its own PID at startup
+  // (see daemon/index.ts) to avoid race between parent and child writes.
   return child.pid;
 }
 
-/** Stop the daemon */
-export function stopDaemon(): boolean {
+/** Stop the daemon, waiting for process exit */
+export async function stopDaemon(): Promise<boolean> {
   const pid = getDaemonPid();
   if (!pid) return false;
 
@@ -98,8 +122,27 @@ export function stopDaemon(): boolean {
     process.kill(pid, 'SIGTERM');
   } catch {
     // Process may have already exited
+    cleanupPidFile();
+    return true;
   }
 
+  // Poll until process exits (max 5s)
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    if (!isProcessRunning(pid)) {
+      cleanupPidFile();
+      return true;
+    }
+    await sleep(100);
+  }
+
+  // Process didn't die — try SIGKILL
+  try {
+    process.kill(pid, 'SIGKILL');
+  } catch {
+    // ignore
+  }
+  await sleep(200);
   cleanupPidFile();
   return true;
 }

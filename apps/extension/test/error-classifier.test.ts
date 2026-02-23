@@ -11,9 +11,7 @@ import { ErrorCode } from '@browser-cli/shared';
 
 describe('classifyError', () => {
   it('matches "Receiving end does not exist" → CONTENT_SCRIPT_NOT_READY', () => {
-    const result = classifyError(
-      'Could not establish connection. Receiving end does not exist',
-    );
+    const result = classifyError('Could not establish connection. Receiving end does not exist');
     expect(result.code).toBe(ErrorCode.CONTENT_SCRIPT_NOT_READY);
     expect(result.hint).toBeDefined();
   });

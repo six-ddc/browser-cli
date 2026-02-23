@@ -7,7 +7,7 @@ const windowCmd = new Command('window')
     // Default: list windows
     const result = await sendCommand(cmd, { action: 'windowList', params: {} });
     if (result) {
-      const windows = result.windows as Array<{ id: number; focused: boolean; type: string; tabs: number }>;
+      const { windows } = result;
       for (const win of windows) {
         const marker = win.focused ? '→' : ' ';
         console.log(`${marker} [${win.id}] ${win.type} (${win.tabs} tabs)`);
@@ -29,7 +29,7 @@ windowCmd
   .action(async (_opts: unknown, cmd: Command) => {
     const result = await sendCommand(cmd, { action: 'windowList', params: {} });
     if (result) {
-      const windows = result.windows as Array<{ id: number; focused: boolean; type: string; tabs: number }>;
+      const { windows } = result;
       for (const win of windows) {
         const marker = win.focused ? '→' : ' ';
         console.log(`${marker} [${win.id}] ${win.type} (${win.tabs} tabs)`);

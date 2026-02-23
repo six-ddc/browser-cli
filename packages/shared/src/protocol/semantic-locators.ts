@@ -144,21 +144,39 @@ export function parseSemanticLocator(value: string): SemanticLocator | null {
   const match = value.match(SEMANTIC_PATTERN);
   if (!match) return null;
 
-  const [, engine, rest] = match;
+  const engine = match[1];
+  const rest = match[2] ?? '';
+  if (!engine) return null;
 
   switch (engine as SemanticLocatorType) {
     case 'role':
       return parseRoleLocator(rest);
     case 'text':
-      return parseTextBasedLocator('text', rest, { exact: false, ignoreCase: true, includeHidden: false });
+      return parseTextBasedLocator('text', rest, {
+        exact: false,
+        ignoreCase: true,
+        includeHidden: false,
+      });
     case 'label':
       return parseLabelLocator(rest);
     case 'placeholder':
-      return parseTextBasedLocator('placeholder', rest, { exact: false, ignoreCase: true, includeHidden: false });
+      return parseTextBasedLocator('placeholder', rest, {
+        exact: false,
+        ignoreCase: true,
+        includeHidden: false,
+      });
     case 'alt':
-      return parseTextBasedLocator('alt', rest, { exact: false, ignoreCase: true, includeHidden: false });
+      return parseTextBasedLocator('alt', rest, {
+        exact: false,
+        ignoreCase: true,
+        includeHidden: false,
+      });
     case 'title':
-      return parseTextBasedLocator('title', rest, { exact: false, ignoreCase: true, includeHidden: false });
+      return parseTextBasedLocator('title', rest, {
+        exact: false,
+        ignoreCase: true,
+        includeHidden: false,
+      });
     case 'testid':
       return parseTestIdLocator(rest);
     case 'xpath':
@@ -227,10 +245,7 @@ function parseTextBasedLocator(
   if (type === 'text') {
     return { type: 'text', text, options };
   }
-  if (type === 'placeholder' || type === 'alt' || type === 'title') {
-    return { type, text, options };
-  }
-  return null;
+  return { type, text, options };
 }
 
 /**

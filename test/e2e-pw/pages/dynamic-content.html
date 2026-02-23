@@ -1,32 +1,67 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>The Internet - Dynamic Content</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    .row { display: flex; align-items: center; gap: 15px; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .large-2 { width: 60px; height: 60px; background: #ddd; border-radius: 4px; }
-    .large-10 { flex: 1; }
-  </style>
-</head>
-<body>
-  <div class="example">
-    <h3>Dynamic Content</h3>
-    <div id="content">
-      <div class="row">
-        <div class="large-2"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23ddd' width='60' height='60'/%3E%3C/svg%3E" alt="avatar"></div>
-        <div class="large-10">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div>
-      </div>
-      <div class="row">
-        <div class="large-2"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23bbb' width='60' height='60'/%3E%3C/svg%3E" alt="avatar"></div>
-        <div class="large-10">Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</div>
-      </div>
-      <div class="row">
-        <div class="large-2"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23999' width='60' height='60'/%3E%3C/svg%3E" alt="avatar"></div>
-        <div class="large-10">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>The Internet - Dynamic Content</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .large-2 {
+        width: 60px;
+        height: 60px;
+        background: #ddd;
+        border-radius: 4px;
+      }
+      .large-10 {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="example">
+      <h3>Dynamic Content</h3>
+      <div id="content">
+        <div class="row">
+          <div class="large-2">
+            <img
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23ddd' width='60' height='60'/%3E%3C/svg%3E"
+              alt="avatar"
+            />
+          </div>
+          <div class="large-10">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div>
+        </div>
+        <div class="row">
+          <div class="large-2">
+            <img
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23bbb' width='60' height='60'/%3E%3C/svg%3E"
+              alt="avatar"
+            />
+          </div>
+          <div class="large-10">
+            Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+          </div>
+        </div>
+        <div class="row">
+          <div class="large-2">
+            <img
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect fill='%23999' width='60' height='60'/%3E%3C/svg%3E"
+              alt="avatar"
+            />
+          </div>
+          <div class="large-10">
+            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</body>
+  </body>
 </html>

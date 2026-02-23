@@ -133,7 +133,7 @@ export function findByText(locator: TextLocator, root: Element = document.body):
   let currentNode: Node | null = walker.currentNode;
   while (currentNode) {
     const el = currentNode as Element;
-    const textContent = el.textContent?.trim() || '';
+    const textContent = el.textContent.trim();
 
     if (
       textContent &&
@@ -151,9 +151,7 @@ export function findByText(locator: TextLocator, root: Element = document.body):
   // Prefer the most specific (deepest) elements: remove any element
   // that has a descendant also in the results. This matches
   // Playwright's getByText behavior of returning the innermost match.
-  return results.filter(
-    (el) => !results.some((other) => other !== el && el.contains(other)),
-  );
+  return results.filter((el) => !results.some((other) => other !== el && el.contains(other)));
 }
 
 /**
@@ -171,7 +169,7 @@ export function findByLabel(locator: LabelLocator, root: Element = document.body
   const labels = root.querySelectorAll('label');
 
   for (const label of labels) {
-    const text = label.textContent?.trim() || '';
+    const text = label.textContent.trim();
     if (
       !matchText(text, labelText, {
         exact: options.exact ?? false,

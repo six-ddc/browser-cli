@@ -7,14 +7,11 @@ import { resolveElement } from './element-ref-store';
 
 const DEFAULT_SCROLL_AMOUNT = 400;
 
+// eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleScroll(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'scroll': {
-      const { direction, amount, selector } = command.params as {
-        direction: 'up' | 'down' | 'left' | 'right';
-        amount?: number;
-        selector?: string;
-      };
+      const { direction, amount, selector } = command.params;
       const px = amount ?? DEFAULT_SCROLL_AMOUNT;
 
       const target = selector ? resolveElement(selector) : null;
@@ -40,7 +37,7 @@ export async function handleScroll(command: Command): Promise<unknown> {
       return { scrolled: true };
     }
     case 'scrollIntoView': {
-      const { selector } = command.params as { selector: string };
+      const { selector } = command.params;
       const el = resolveElement(selector);
       if (!el) throw new Error(`Element not found: ${selector}`);
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -6,7 +6,7 @@ import { existsSync, statSync } from 'node:fs';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let screenshotDir: string;
 

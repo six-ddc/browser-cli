@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
-const mouseCmd = new Command('mouse')
-  .description('Low-level mouse control');
+const mouseCmd = new Command('mouse').description('Low-level mouse control');
 
 mouseCmd
   .command('move <x> <y>')
@@ -21,7 +20,7 @@ mouseCmd
   .action(async (button: string | undefined, _opts: unknown, cmd: Command) => {
     await sendCommand(cmd, {
       action: 'mouseDown',
-      params: { button: (button as 'left' | 'right' | 'middle') || undefined },
+      params: { button: button as 'left' | 'right' | 'middle' | undefined },
     });
     console.log('Mouse down');
   });
@@ -32,7 +31,7 @@ mouseCmd
   .action(async (button: string | undefined, _opts: unknown, cmd: Command) => {
     await sendCommand(cmd, {
       action: 'mouseUp',
-      params: { button: (button as 'left' | 'right' | 'middle') || undefined },
+      params: { button: button as 'left' | 'right' | 'middle' | undefined },
     });
     console.log('Mouse up');
   });

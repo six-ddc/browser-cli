@@ -21,11 +21,7 @@ export async function handleUpload(command: Command): Promise<unknown> {
     throw new Error(`Invalid upload command: ${command.action}`);
   }
 
-  const { selector, files: filesParam, clear = false } = command.params as {
-    selector: string;
-    files: string | string[];
-    clear?: boolean;
-  };
+  const { selector, files: filesParam, clear = false } = command.params;
 
   const el = resolveElement(selector);
   if (!el) throw new Error(`Element not found: ${selector}`);

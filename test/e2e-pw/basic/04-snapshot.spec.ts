@@ -244,7 +244,9 @@ test.describe('snapshot on different page types', () => {
     const r = bcli('snapshot', '-i');
     expect(r).toBcliSuccess();
     const out = r.stdout;
-    expect(out.includes('combobox') || out.includes('listbox') || out.includes('option')).toBeTruthy();
+    expect(
+      out.includes('combobox') || out.includes('listbox') || out.includes('option'),
+    ).toBeTruthy();
   });
 
   test('works on page with links', async ({ bcli, navigateAndWait }) => {

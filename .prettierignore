@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.output/
+.wxt/
+
+# Turbo
+.turbo/
+
+# Generated files
+*.tsbuildinfo
+pnpm-lock.yaml
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+
+# Reference repos
+.agent-browser-ref/

@@ -77,7 +77,7 @@ async function readEntries(level?: string, clear?: boolean): Promise<ConsoleEntr
 
   let entries: ConsoleEntry[] = [];
   try {
-    entries = JSON.parse(response?.result || '[]');
+    entries = JSON.parse(response?.result ?? '[]') as ConsoleEntry[];
   } catch {
     entries = [];
   }
@@ -94,10 +94,7 @@ export async function handleConsole(command: Command): Promise<unknown> {
 
   switch (command.action) {
     case 'getConsole': {
-      const { level, clear } = command.params as {
-        level?: string;
-        clear?: boolean;
-      };
+      const { level, clear } = command.params;
 
       const entries = await readEntries(level, clear);
       return { entries };

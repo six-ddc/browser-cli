@@ -100,7 +100,11 @@ test.describe('check / uncheck', () => {
     await expect(activePage.locator(`${SEL.CHECKBOX}:first-of-type`)).toBeChecked();
   });
 
-  test('checking an already-checked checkbox stays checked', async ({ bcli, navigateAndWait, activePage }) => {
+  test('checking an already-checked checkbox stays checked', async ({
+    bcli,
+    navigateAndWait,
+    activePage,
+  }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
     const r = bcli('check', `${SEL.CHECKBOX}:last-of-type`);
     expect(r).toBcliSuccess();
@@ -115,7 +119,11 @@ test.describe('check / uncheck', () => {
     await expect(activePage.locator(`${SEL.CHECKBOX}:last-of-type`)).not.toBeChecked();
   });
 
-  test('unchecking an already-unchecked checkbox stays unchecked', async ({ bcli, navigateAndWait, activePage }) => {
+  test('unchecking an already-unchecked checkbox stays unchecked', async ({
+    bcli,
+    navigateAndWait,
+    activePage,
+  }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
     const r = bcli('uncheck', `${SEL.CHECKBOX}:first-of-type`);
     expect(r).toBcliSuccess();
@@ -132,7 +140,11 @@ test.describe('select', () => {
     await expect(activePage.locator(SEL.DROPDOWN)).toHaveValue('1');
   });
 
-  test('selects a dropdown option by visible text', async ({ bcli, navigateAndWait, activePage }) => {
+  test('selects a dropdown option by visible text', async ({
+    bcli,
+    navigateAndWait,
+    activePage,
+  }) => {
     await navigateAndWait(PAGES.DROPDOWN);
     const r = bcli('select', SEL.DROPDOWN, 'Option 2');
     expect(r).toBcliSuccess();
@@ -220,6 +232,8 @@ test.describe('complete login flow (integration)', () => {
 
     await activePage.waitForURL(/secure/);
     expect(activePage.url()).toContain('/secure');
-    await expect(activePage.locator(SEL.FLASH_MESSAGE)).toContainText('You logged into a secure area');
+    await expect(activePage.locator(SEL.FLASH_MESSAGE)).toContainText(
+      'You logged into a secure area',
+    );
   });
 });

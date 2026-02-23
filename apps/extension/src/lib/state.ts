@@ -9,8 +9,7 @@ import { DEFAULT_WS_PORT } from '@browser-cli/shared';
  * WS port configured at build time via VITE_WS_PORT env var.
  * Defaults to DEFAULT_WS_PORT (9222). E2E builds override this.
  */
-export const CONFIGURED_WS_PORT: number =
-  Number(import.meta.env.VITE_WS_PORT) || DEFAULT_WS_PORT;
+export const CONFIGURED_WS_PORT: number = Number(import.meta.env.VITE_WS_PORT) || DEFAULT_WS_PORT;
 
 export interface ConnectionState {
   connected: boolean;

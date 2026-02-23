@@ -19,33 +19,33 @@ export default function App() {
 
   useEffect(() => {
     // Get initial state from storage
-    getState().then((s) => {
+    void getState().then((s) => {
       console.log('[browser-cli] Popup initial state:', s);
       setStateLocal(s);
       setPortInput(String(s.port));
     });
 
     // Query background for real-time connection status
-    browser.runtime.sendMessage({ type: 'getConnectionState' })
+    void browser.runtime
+      .sendMessage({ type: 'getConnectionState' })
       .then((response: { connected: boolean; sessionId: string | null }) => {
         console.log('[browser-cli] Background connection state:', response);
-        if (response) {
-          setStateLocal((prev) => ({
-            ...prev,
-            connected: response.connected,
-            sessionId: response.sessionId,
-          }));
-        }
+        setStateLocal((prev) => ({
+          ...prev,
+          connected: response.connected,
+          sessionId: response.sessionId,
+        }));
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error('[browser-cli] Failed to query connection state:', err);
       });
 
     // Listen for state changes
     const listener = (changes: { [key: string]: Browser.storage.StorageChange }) => {
       console.log('[browser-cli] Popup storage changed:', changes);
-      if (changes.browserCliState?.newValue) {
-        const newState = changes.browserCliState.newValue as ConnectionState;
+      const stateChange = changes['browserCliState'];
+      if (stateChange.newValue) {
+        const newState = stateChange.newValue as ConnectionState;
         console.log('[browser-cli] Popup updating state:', newState);
         setStateLocal(newState);
       }
@@ -60,7 +60,7 @@ export default function App() {
       setPortInput(String(state.port));
       return;
     }
-    setPort(p);
+    void setPort(p);
   };
 
   const copyCommand = async () => {
@@ -70,7 +70,7 @@ export default function App() {
   };
 
   const handleReconnect = () => {
-    browser.runtime.sendMessage({ type: 'reconnect' });
+    void browser.runtime.sendMessage({ type: 'reconnect' });
   };
 
   const copySessionId = async () => {
@@ -82,67 +82,86 @@ export default function App() {
   };
 
   return (
-    <div style={{
-      width: 380,
-      background: '#fff',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      color: '#000',
-    }}>
+    <div
+      style={{
+        width: 380,
+        background: '#fff',
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        color: '#000',
+      }}
+    >
       {/* Header */}
-      <div style={{
-        padding: '20px 20px 16px',
-        borderBottom: '1px solid #eaeaea',
-      }}>
-        <h1 style={{
-          margin: 0,
-          fontSize: 16,
-          fontWeight: 600,
-          letterSpacing: '-0.2px',
-        }}>
+      <div
+        style={{
+          padding: '20px 20px 16px',
+          borderBottom: '1px solid #eaeaea',
+        }}
+      >
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 16,
+            fontWeight: 600,
+            letterSpacing: '-0.2px',
+          }}
+        >
           {APP_NAME}
         </h1>
       </div>
 
       {/* Status */}
-      <div style={{
-        padding: '16px 20px',
-        borderBottom: '1px solid #eaeaea',
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div style={{
+      <div
+        style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid #eaeaea',
+        }}
+      >
+        <div
+          style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-          }}>
-            <div style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: state.connected ? '#0070f3' : '#999',
-            }} />
-            <span style={{
-              fontSize: 14,
-              color: '#666',
-            }}>
+            justifyContent: 'space-between',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: state.connected ? '#0070f3' : '#999',
+              }}
+            />
+            <span
+              style={{
+                fontSize: 14,
+                color: '#666',
+              }}
+            >
               {state.connected ? 'Connected' : 'Disconnected'}
             </span>
           </div>
           {state.reconnecting && (
-            <span style={{
-              fontSize: 12,
-              color: '#999',
-            }}>
+            <span
+              style={{
+                fontSize: 12,
+                color: '#999',
+              }}
+            >
               Reconnecting...
             </span>
           )}
         </div>
         {state.sessionId && (
           <div
-            onClick={copySessionId}
+            onClick={() => void copySessionId()}
             title="Click to copy full session ID"
             style={{
               fontSize: 11,
@@ -171,12 +190,14 @@ export default function App() {
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {state.sessionId}
             </span>
-            <span style={{
-              fontSize: 10,
-              color: sessionCopied ? '#0070f3' : '#999',
-              marginLeft: 8,
-              flexShrink: 0,
-            }}>
+            <span
+              style={{
+                fontSize: 10,
+                color: sessionCopied ? '#0070f3' : '#999',
+                marginLeft: 8,
+                flexShrink: 0,
+              }}
+            >
               {sessionCopied ? '✓' : '⎘'}
             </span>
           </div>
@@ -186,37 +207,45 @@ export default function App() {
       {/* Content */}
       <div style={{ padding: '16px 20px' }}>
         {!state.connected && (
-          <div style={{
-            background: '#fafafa',
-            border: '1px solid #eaeaea',
-            borderRadius: 5,
-            padding: 16,
-            marginBottom: 16,
-          }}>
-            <div style={{
-              fontSize: 13,
-              color: '#666',
-              marginBottom: 12,
-            }}>
+          <div
+            style={{
+              background: '#fafafa',
+              border: '1px solid #eaeaea',
+              borderRadius: 5,
+              padding: 16,
+              marginBottom: 16,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13,
+                color: '#666',
+                marginBottom: 12,
+              }}
+            >
               Start the daemon in your terminal:
             </div>
-            <div style={{
-              background: '#000',
-              borderRadius: 5,
-              padding: '10px 12px',
-              marginBottom: 12,
-              fontFamily: 'Menlo, Monaco, monospace',
-              fontSize: 12,
-              color: '#0070f3',
-            }}>
+            <div
+              style={{
+                background: '#000',
+                borderRadius: 5,
+                padding: '10px 12px',
+                marginBottom: 12,
+                fontFamily: 'Menlo, Monaco, monospace',
+                fontSize: 12,
+                color: '#0070f3',
+              }}
+            >
               $ browser-cli start
             </div>
-            <div style={{
-              display: 'flex',
-              gap: 8,
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+              }}
+            >
               <button
-                onClick={copyCommand}
+                onClick={() => void copyCommand()}
                 style={{
                   flex: 1,
                   height: 32,
@@ -273,13 +302,15 @@ export default function App() {
 
         {/* Settings */}
         <div>
-          <label style={{
-            display: 'block',
-            fontSize: 12,
-            fontWeight: 500,
-            color: '#666',
-            marginBottom: 8,
-          }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 12,
+              fontWeight: 500,
+              color: '#666',
+              marginBottom: 8,
+            }}
+          >
             WebSocket Port
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -336,13 +367,15 @@ export default function App() {
 
         {/* Footer */}
         {(state.lastConnected || state.lastDisconnected) && (
-          <div style={{
-            marginTop: 16,
-            paddingTop: 16,
-            borderTop: '1px solid #eaeaea',
-            fontSize: 11,
-            color: '#999',
-          }}>
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 16,
+              borderTop: '1px solid #eaeaea',
+              fontSize: 11,
+              color: '#999',
+            }}
+          >
             {state.lastConnected && (
               <div>Connected: {new Date(state.lastConnected).toLocaleTimeString()}</div>
             )}

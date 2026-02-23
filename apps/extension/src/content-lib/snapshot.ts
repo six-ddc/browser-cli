@@ -6,12 +6,7 @@
 import type { SnapshotNode, SnapshotOptions } from '@browser-cli/shared';
 import { serializeSnapshot } from '@browser-cli/shared';
 import type { SnapshotParams } from '@browser-cli/shared';
-import {
-  clearRefs,
-  registerElement,
-  generateSelector,
-  getRefCount,
-} from './element-ref-store';
+import { clearRefs, registerElement, generateSelector, getRefCount } from './element-ref-store';
 import {
   getAriaRole,
   getAccessibleName,
@@ -95,18 +90,12 @@ function buildSnapshotTree(
 
   // Handle text nodes
   if (children.length === 0 && !name && !ref) {
-    const text = element.textContent?.trim();
+    const text = element.textContent.trim();
     if (!text) return null;
   }
 
   // Skip non-semantic containers that only have one child with the same name
-  if (
-    !ref &&
-    !name &&
-    children.length === 1 &&
-    role === 'generic' &&
-    !options.interactive
-  ) {
+  if (!ref && !name && children.length === 1 && role === 'generic' && !options.interactive) {
     return children[0];
   }
 

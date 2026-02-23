@@ -37,6 +37,7 @@ browser-cli get text <selector>
 Returns the `textContent` of the matched element.
 
 **Examples:**
+
 ```bash
 browser-cli get text 'h1'
 browser-cli get text '.price'
@@ -51,11 +52,12 @@ browser-cli get text @e3
 browser-cli get html <selector> [--outer]
 ```
 
-| Option | Description |
-|--------|-------------|
+| Option    | Description                           |
+| --------- | ------------------------------------- |
 | `--outer` | Return outerHTML instead of innerHTML |
 
 **Examples:**
+
 ```bash
 browser-cli get html '.content'
 browser-cli get html '#article' --outer
@@ -72,6 +74,7 @@ browser-cli get value <selector>
 Returns the `value` property of an input, textarea, or select element.
 
 **Examples:**
+
 ```bash
 browser-cli get value 'input[name="email"]'
 browser-cli get value '#search-box'
@@ -87,6 +90,7 @@ browser-cli get attr <selector> <attribute>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli get attr 'a.logo' href
 browser-cli get attr 'img' src
@@ -105,6 +109,7 @@ browser-cli get count <selector>
 **Response:** `42`
 
 **Examples:**
+
 ```bash
 browser-cli get count '.product-item'
 browser-cli get count 'tr'
@@ -119,9 +124,10 @@ browser-cli get count 'input[type="checkbox"]:checked'
 browser-cli get box <selector>
 ```
 
-Returns `{ x, y, width, height }` of the element's bounding rectangle.
+Returns the element's bounding rectangle as `x=N y=N w=N h=N` (plain text format).
 
 **Examples:**
+
 ```bash
 browser-cli get box '#hero-image'
 browser-cli get box '.modal'
@@ -152,6 +158,7 @@ browser-cli is checked <selector>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli is visible '.error-message'
 browser-cli is enabled '#submit-btn'
@@ -168,12 +175,13 @@ browser-cli is checked 'input[name="agree"]'
 browser-cli wait <selector> [--timeout <ms>] [--hidden]
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--timeout` | Timeout in ms | `10000` |
-| `--hidden` | Wait until element is hidden | `false` |
+| Option      | Description                  | Default |
+| ----------- | ---------------------------- | ------- |
+| `--timeout` | Timeout in ms                | `10000` |
+| `--hidden`  | Wait until element is hidden | `false` |
 
 **Examples:**
+
 ```bash
 browser-cli wait '.loading-spinner' --hidden
 browser-cli wait '#content'
@@ -189,6 +197,7 @@ browser-cli wait <ms>
 Auto-detects numeric values as durations.
 
 **Examples:**
+
 ```bash
 browser-cli wait 1000           # Wait 1 second
 browser-cli wait 500            # Wait 500ms
@@ -203,10 +212,58 @@ browser-cli wait --url <pattern> [--timeout <ms>]
 Waits for the page URL to match the given pattern (glob or substring).
 
 **Examples:**
+
 ```bash
 browser-cli wait --url '**/dashboard*'
 browser-cli wait --url 'success'
 browser-cli waitforurl '/checkout/complete'    # Alias
+```
+
+### wait --text - Wait for Text Content
+
+```bash
+browser-cli wait --text <text> [--timeout <ms>]
+```
+
+Waits for text content to appear anywhere on the page.
+
+**Examples:**
+
+```bash
+browser-cli wait --text 'Welcome back'
+browser-cli wait --text 'Order confirmed' --timeout 15000
+```
+
+### wait --load - Wait for Load State
+
+```bash
+browser-cli wait --load [state] [--timeout <ms>]
+```
+
+Waits for a page load state event. Valid states: `load` (default), `domcontentloaded`, `networkidle`.
+
+**Examples:**
+
+```bash
+browser-cli wait --load                        # Wait for 'load'
+browser-cli wait --load domcontentloaded
+browser-cli wait --load networkidle --timeout 30000
+```
+
+### wait --fn - Wait for JS Condition
+
+```bash
+browser-cli wait --fn <expression> [--timeout <ms>]
+```
+
+Waits until a JavaScript expression returns a truthy value.
+
+**Examples:**
+
+```bash
+browser-cli wait --fn 'document.readyState === "complete"'
+browser-cli wait --fn 'window.myApp?.initialized'
+browser-cli wait --fn 'document.querySelectorAll(".item").length > 5' --timeout 10000
 ```
 
 ---
@@ -219,15 +276,16 @@ browser-cli snapshot [options]
 
 Captures the accessibility tree of the page. Output includes element refs (`@e1`, `@e2`...) for use in subsequent commands.
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--interactive` | `-i` | Only show interactive elements (buttons, inputs, links) |
-| `--compact` | `-c` | Compact single-line output |
-| `--cursor` | `-C` | Include cursor-interactive elements (cursor:pointer) |
-| `--depth <n>` | `-d` | Max tree depth |
-| `--selector <sel>` | `-s` | Scope to a specific element |
+| Flag               | Short | Description                                             |
+| ------------------ | ----- | ------------------------------------------------------- |
+| `--interactive`    | `-i`  | Only show interactive elements (buttons, inputs, links) |
+| `--compact`        | `-c`  | Compact single-line output                              |
+| `--cursor`         | `-C`  | Include cursor-interactive elements (cursor:pointer)    |
+| `--depth <n>`      | `-d`  | Max tree depth                                          |
+| `--selector <sel>` | `-s`  | Scope to a specific element                             |
 
 **Examples:**
+
 ```bash
 # Most useful: compact interactive elements
 browser-cli snapshot -ic
@@ -243,6 +301,7 @@ browser-cli snapshot -icC
 ```
 
 **Sample output (compact interactive):**
+
 ```
 @e1 link "Home" [/]
 @e2 link "Products" [/products]
@@ -260,14 +319,15 @@ browser-cli snapshot -icC
 browser-cli screenshot [options]
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--selector <sel>` | Capture specific element | full page |
-| `--path <path>` | Output file path | `screenshot.png` |
-| `--format <fmt>` | `png` or `jpeg` | `png` |
-| `--quality <n>` | JPEG quality (0-100) | - |
+| Option             | Description              | Default          |
+| ------------------ | ------------------------ | ---------------- |
+| `--selector <sel>` | Capture specific element | full page        |
+| `--path <path>`    | Output file path         | `screenshot.png` |
+| `--format <fmt>`   | `png` or `jpeg`          | `png`            |
+| `--quality <n>`    | JPEG quality (0-100)     | -                |
 
 **Examples:**
+
 ```bash
 browser-cli screenshot
 browser-cli screenshot --path /tmp/page.png
@@ -281,17 +341,26 @@ browser-cli screenshot --format jpeg --quality 80 --path photo.jpg
 
 ```bash
 browser-cli eval '<expression>'
+browser-cli eval -b '<base64-encoded-expression>'
+echo '<expression>' | browser-cli eval --stdin
 ```
 
 Evaluates JavaScript in the page context (MAIN world) and returns the result.
 
+| Option         | Description                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| `-b, --base64` | Decode expression from base64 before evaluating (useful for complex scripts with special characters) |
+| `--stdin`      | Read expression from stdin (useful for piping scripts)                                               |
+
 **Examples:**
+
 ```bash
 browser-cli eval 'document.title'
 browser-cli eval 'window.location.href'
 browser-cli eval 'document.querySelectorAll("a").length'
 browser-cli eval 'JSON.stringify(performance.timing)'
-browser-cli eval 'localStorage.getItem("token")'
+browser-cli eval -b 'ZG9jdW1lbnQudGl0bGU='
+cat script.js | browser-cli eval --stdin
 ```
 
 ---
@@ -304,10 +373,10 @@ browser-cli eval 'localStorage.getItem("token")'
 browser-cli console [--level <level>] [--clear]
 ```
 
-| Option | Description |
-|--------|-------------|
+| Option    | Description                                     |
+| --------- | ----------------------------------------------- |
 | `--level` | Filter: `log`, `warn`, `error`, `info`, `debug` |
-| `--clear` | Clear buffer after reading |
+| `--clear` | Clear buffer after reading                      |
 
 ### errors - Get Page Errors
 
@@ -316,6 +385,7 @@ browser-cli errors
 ```
 
 **Examples:**
+
 ```bash
 browser-cli console                    # All console output
 browser-cli console --level error      # Only errors
@@ -328,6 +398,7 @@ browser-cli errors                     # Page errors
 ## Common Patterns
 
 ### Wait for page load, then extract data
+
 ```bash
 browser-cli navigate https://example.com/data
 browser-cli wait '.data-table'
@@ -336,6 +407,7 @@ browser-cli get text '.data-table tr:first-child td'
 ```
 
 ### Check if operation succeeded
+
 ```bash
 browser-cli click '#submit'
 browser-cli wait '.success-message'
@@ -344,6 +416,7 @@ browser-cli get text '.success-message'
 ```
 
 ### Debug page state
+
 ```bash
 browser-cli get url
 browser-cli get title
@@ -353,6 +426,7 @@ browser-cli errors
 ```
 
 ### Extract structured data via eval
+
 ```bash
 browser-cli eval 'JSON.stringify(Array.from(document.querySelectorAll(".item")).map(e => ({title: e.querySelector("h3").textContent, price: e.querySelector(".price").textContent})))'
 ```

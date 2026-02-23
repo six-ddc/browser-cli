@@ -155,7 +155,13 @@ test.describe('wait --text', () => {
   test('times out when text never appears', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('wait', '--text', 'This text will never appear on the page', '--timeout', '2000');
+    const r = bcli(
+      'wait',
+      '--text',
+      'This text will never appear on the page',
+      '--timeout',
+      '2000',
+    );
     expect(r).toBcliFailure();
   });
 });
@@ -219,7 +225,13 @@ test.describe('wait --fn', () => {
   test('times out for false condition', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
 
-    const r = bcli('wait', '--fn', "document.getElementById('does-not-exist') !== null", '--timeout', '2000');
+    const r = bcli(
+      'wait',
+      '--fn',
+      "document.getElementById('does-not-exist') !== null",
+      '--timeout',
+      '2000',
+    );
     expect(r).toBcliFailure();
   });
 });

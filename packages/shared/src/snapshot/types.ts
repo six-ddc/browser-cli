@@ -45,10 +45,7 @@ export interface SnapshotOptions {
  * Serialize a snapshot tree to indented text format.
  * Output matches agent-browser's snapshot format.
  */
-export function serializeSnapshot(
-  nodes: SnapshotNode[],
-  options?: { compact?: boolean },
-): string {
+export function serializeSnapshot(nodes: SnapshotNode[], options?: { compact?: boolean }): string {
   const lines: string[] = [];
   const indent = options?.compact ? '  ' : '    ';
 
@@ -68,7 +65,7 @@ export function serializeSnapshot(
     if (node.value !== undefined) attrs.push(`value="${node.value}"`);
     if (node.expanded !== undefined) attrs.push(`expanded=${node.expanded}`);
     if (node.required) attrs.push('required');
-    if (node.url) attrs.push(`url="${truncateUrl(node.url)}"`);
+    if (node.url) attrs.push(`url="${truncateUrl(node.url, { maxQueryLength: 20 })}"`);
 
     if (attrs.length > 0) {
       line += ` (${attrs.join(', ')})`;

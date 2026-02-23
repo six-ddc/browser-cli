@@ -31,4 +31,3 @@ export const reloadCommand = new Command('reload')
     const result = await sendCommand(cmd, { action: 'reload', params: {} });
     if (result) console.log(`${result.title}\n${result.url}`);
   });
-

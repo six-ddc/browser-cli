@@ -14,14 +14,16 @@ export const consoleCommand = new Command('console')
       },
     });
     if (result) {
-      const entries = result.entries as Array<{ level: string; args: unknown[]; timestamp: number }>;
+      const { entries } = result;
       if (entries.length === 0) {
         console.log('(no console output)');
         return;
       }
       for (const entry of entries) {
         const time = new Date(entry.timestamp).toLocaleTimeString();
-        const args = entry.args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+        const args = entry.args
+          .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+          .join(' ');
         console.log(`[${time}] [${entry.level}] ${args}`);
       }
     }
@@ -32,14 +34,16 @@ export const errorsCommand = new Command('errors')
   .action(async (_opts: unknown, cmd: Command) => {
     const result = await sendCommand(cmd, { action: 'getErrors', params: {} });
     if (result) {
-      const errors = result.errors as Array<{ level: string; args: unknown[]; timestamp: number }>;
+      const { errors } = result;
       if (errors.length === 0) {
         console.log('(no errors)');
         return;
       }
       for (const entry of errors) {
         const time = new Date(entry.timestamp).toLocaleTimeString();
-        const args = entry.args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+        const args = entry.args
+          .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+          .join(' ');
         console.log(`[${time}] ${args}`);
       }
     }

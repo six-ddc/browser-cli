@@ -216,7 +216,9 @@ describe('keydown + keyup combined', () => {
     (input as HTMLInputElement).focus();
 
     const events: string[] = [];
-    input.addEventListener('keydown', (e: Event) => events.push(`down:${(e as KeyboardEvent).key}`));
+    input.addEventListener('keydown', (e: Event) =>
+      events.push(`down:${(e as KeyboardEvent).key}`),
+    );
     input.addEventListener('keyup', (e: Event) => events.push(`up:${(e as KeyboardEvent).key}`));
 
     await handleInteraction({ action: 'keydown', params: { key: 'Shift' } } as Command);

@@ -233,7 +233,10 @@ test.describe('testid= locator', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     // Add a test element with data-testid
-    bcli('eval', 'document.querySelector("button").setAttribute("data-testid", "LoginButton"); true');
+    bcli(
+      'eval',
+      'document.querySelector("button").setAttribute("data-testid", "LoginButton"); true',
+    );
 
     // Exact case match should work
     const r = bcli('click', 'testid=LoginButton');
@@ -241,7 +244,10 @@ test.describe('testid= locator', () => {
     expect(r.stdout).toContain('Clicked');
 
     // Wrong case should fail (testid is case-sensitive)
-    bcli('eval', 'document.querySelector("button").setAttribute("data-testid", "LoginButton"); true');
+    bcli(
+      'eval',
+      'document.querySelector("button").setAttribute("data-testid", "LoginButton"); true',
+    );
     const r2 = bcli('click', 'testid=loginbutton');
     expect(r2).toBcliFailure();
   });

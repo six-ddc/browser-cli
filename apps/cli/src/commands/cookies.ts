@@ -10,15 +10,7 @@ const cookiesCmd = new Command('cookies')
       params: {},
     });
     if (result) {
-      const cookies = result.cookies as Array<{
-        name: string;
-        value: string;
-        domain: string;
-        path: string;
-        secure: boolean;
-        httpOnly: boolean;
-        sameSite: string;
-      }>;
+      const { cookies } = result;
       if (cookies.length === 0) {
         console.log('(no cookies)');
         return;
@@ -42,38 +34,32 @@ cookiesCmd
   .description('Get cookies (optionally filter by name)')
   .option('--url <url>', 'URL to get cookies for')
   .option('--domain <domain>', 'Domain to filter by')
-  .action(async (name: string | undefined, opts: { url?: string; domain?: string }, cmd: Command) => {
-    const result = await sendCommand(cmd, {
-      action: 'cookiesGet',
-      params: { name, url: opts.url, domain: opts.domain },
-    });
-    if (result) {
-      const cookies = result.cookies as Array<{
-        name: string;
-        value: string;
-        domain: string;
-        path: string;
-        secure: boolean;
-        httpOnly: boolean;
-        sameSite: string;
-      }>;
-      if (cookies.length === 0) {
-        console.log('(no cookies)');
-        return;
+  .action(
+    async (name: string | undefined, opts: { url?: string; domain?: string }, cmd: Command) => {
+      const result = await sendCommand(cmd, {
+        action: 'cookiesGet',
+        params: { name, url: opts.url, domain: opts.domain },
+      });
+      if (result) {
+        const { cookies } = result;
+        if (cookies.length === 0) {
+          console.log('(no cookies)');
+          return;
+        }
+        for (const c of cookies) {
+          const flags = [
+            c.secure ? 'Secure' : '',
+            c.httpOnly ? 'HttpOnly' : '',
+            c.sameSite !== 'unspecified' ? `SameSite=${c.sameSite}` : '',
+          ]
+            .filter(Boolean)
+            .join(', ');
+          console.log(`${c.name}=${c.value.substring(0, 50)}${c.value.length > 50 ? '...' : ''}`);
+          console.log(`  Domain: ${c.domain}  Path: ${c.path}  ${flags}`);
+        }
       }
-      for (const c of cookies) {
-        const flags = [
-          c.secure ? 'Secure' : '',
-          c.httpOnly ? 'HttpOnly' : '',
-          c.sameSite !== 'unspecified' ? `SameSite=${c.sameSite}` : '',
-        ]
-          .filter(Boolean)
-          .join(', ');
-        console.log(`${c.name}=${c.value.substring(0, 50)}${c.value.length > 50 ? '...' : ''}`);
-        console.log(`  Domain: ${c.domain}  Path: ${c.path}  ${flags}`);
-      }
-    }
-  });
+    },
+  );
 
 cookiesCmd
   .command('set <name> <value>')
@@ -84,29 +70,36 @@ cookiesCmd
   .option('--secure', 'Secure flag')
   .option('--httponly', 'HttpOnly flag')
   .option('--samesite <v>', 'SameSite: no_restriction, lax, strict')
-  .action(async (name: string, value: string, opts: {
-    url: string;
-    domain?: string;
-    path?: string;
-    secure?: boolean;
-    httponly?: boolean;
-    samesite?: string;
-  }, cmd: Command) => {
-    await sendCommand(cmd, {
-      action: 'cookiesSet',
-      params: {
-        url: opts.url,
-        name,
-        value,
-        domain: opts.domain,
-        path: opts.path,
-        secure: opts.secure,
-        httpOnly: opts.httponly,
-        sameSite: opts.samesite as 'no_restriction' | 'lax' | 'strict' | undefined,
+  .action(
+    async (
+      name: string,
+      value: string,
+      opts: {
+        url: string;
+        domain?: string;
+        path?: string;
+        secure?: boolean;
+        httponly?: boolean;
+        samesite?: string;
       },
-    });
-    console.log('Cookie set');
-  });
+      cmd: Command,
+    ) => {
+      await sendCommand(cmd, {
+        action: 'cookiesSet',
+        params: {
+          url: opts.url,
+          name,
+          value,
+          domain: opts.domain,
+          path: opts.path,
+          secure: opts.secure,
+          httpOnly: opts.httponly,
+          sameSite: opts.samesite as 'no_restriction' | 'lax' | 'strict' | undefined,
+        },
+      });
+      console.log('Cookie set');
+    },
+  );
 
 cookiesCmd
   .command('clear')

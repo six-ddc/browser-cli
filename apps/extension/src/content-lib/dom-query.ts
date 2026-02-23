@@ -6,10 +6,12 @@
 import type { Command } from '@browser-cli/shared';
 import { resolveElement, resolveElements } from './element-ref-store';
 
+// eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleQuery(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'getText': {
       const el = requireElement(command.params.selector);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- textContent can be null at runtime
       return { text: el.textContent?.trim() ?? '' };
     }
     case 'getHtml': {
@@ -19,11 +21,12 @@ export async function handleQuery(command: Command): Promise<unknown> {
     }
     case 'getValue': {
       const el = requireElement(command.params.selector) as HTMLInputElement;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- value may be undefined at runtime
       return { value: el.value ?? '' };
     }
     case 'getAttribute': {
       const el = requireElement(command.params.selector);
-      const attr = (command.params as { attribute: string }).attribute;
+      const { attribute: attr } = command.params;
       return { value: el.getAttribute(attr) };
     }
     case 'isVisible': {
@@ -39,7 +42,7 @@ export async function handleQuery(command: Command): Promise<unknown> {
     case 'isChecked': {
       const el = resolveElement(command.params.selector);
       if (!el) return { checked: false };
-      return { checked: (el as HTMLInputElement).checked ?? false };
+      return { checked: (el as HTMLInputElement).checked };
     }
     case 'count': {
       const elements = resolveElements(command.params.selector);

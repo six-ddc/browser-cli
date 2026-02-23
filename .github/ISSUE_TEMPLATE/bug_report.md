@@ -11,6 +11,7 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
+
 1. Run `browser-cli ...`
 2. ...
 
@@ -18,6 +19,7 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Environment**
+
 - OS: [e.g. macOS 15, Ubuntu 24.04]
 - Browser: [e.g. Chrome 130]
 - Node.js: [e.g. 20.11.0]

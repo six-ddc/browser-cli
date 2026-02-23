@@ -12,9 +12,7 @@ const CHROME_PROFILE = path.resolve(__dirname, '../../.e2e-chrome-profile');
 export default async function globalSetup() {
   // Ensure CLI is built
   if (!existsSync(CLI_BIN)) {
-    throw new Error(
-      `CLI not built: ${CLI_BIN} not found. Run 'pnpm build' first.`,
-    );
+    throw new Error(`CLI not built: ${CLI_BIN} not found. Run 'pnpm build' first.`);
   }
 
   // Clean Chrome profile to avoid stale cached extension state

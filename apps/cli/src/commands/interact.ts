@@ -6,7 +6,10 @@ export const clickCommand = new Command('click')
   .argument('<selector>', 'CSS selector or @ref')
   .option('--button <button>', 'Mouse button: left, right, middle', 'left')
   .action(async (selector: string, opts: { button: string }, cmd: Command) => {
-    await sendCommand(cmd, { action: 'click', params: { selector, button: opts.button as 'left' | 'right' | 'middle' } });
+    await sendCommand(cmd, {
+      action: 'click',
+      params: { selector, button: opts.button as 'left' | 'right' | 'middle' },
+    });
     console.log('Clicked');
   });
 

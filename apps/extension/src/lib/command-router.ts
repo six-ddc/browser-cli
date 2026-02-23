@@ -9,8 +9,28 @@ import { ErrorCode, createError } from '@browser-cli/shared';
 import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
 
+/** Typed response from content script via browser.tabs.sendMessage */
+interface ContentScriptResponse {
+  success: boolean;
+  data?: unknown;
+  error?: { message?: string };
+}
+
+/** Send a typed message to content script and get a typed response */
+async function sendToContentScript(
+  tabId: number,
+  message: unknown,
+  options?: { frameId: number },
+): Promise<ContentScriptResponse> {
+  return await browser.tabs.sendMessage(tabId, message, options);
+}
+
 // Firefox: persistent listener for setHeaders (webRequest blocking mode)
-let setHeadersListener: ((details: Browser.webRequest.OnBeforeSendHeadersDetails) => Browser.webRequest.BlockingResponse) | null = null;
+let setHeadersListener:
+  | ((
+      details: Browser.webRequest.OnBeforeSendHeadersDetails,
+    ) => Browser.webRequest.BlockingResponse)
+  | null = null;
 
 export async function handleBackgroundCommand(
   msg: RequestMessage,
@@ -41,10 +61,11 @@ async function routeCommand(
   switch (command.action) {
     // ─── Navigation ────────────────────────────────────────────
     case 'navigate': {
-      const { url } = command.params as { url: string };
+      const { url } = command.params;
       // Block dangerous URL schemes
       const scheme = url.split(':')[0].toLowerCase();
       if (['javascript', 'data', 'vbscript'].includes(scheme)) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught and classified upstream
         throw createError(
           ErrorCode.INVALID_URL,
           `Blocked navigation to "${scheme}:" URL — this scheme is not allowed for security reasons`,
@@ -94,7 +115,7 @@ async function routeCommand(
 
     // ─── Tabs ──────────────────────────────────────────────────
     case 'tabNew': {
-      const { url } = command.params as { url?: string };
+      const { url } = command.params;
       const tab = await browser.tabs.create({ url: url || 'about:blank' });
       return { tabId: tab.id, url: tab.url || url || 'about:blank' };
     }
@@ -110,24 +131,20 @@ async function routeCommand(
       };
     }
     case 'tabSwitch': {
-      const { tabId } = command.params as { tabId: number };
+      const { tabId } = command.params;
       await browser.tabs.update(tabId, { active: true });
       const tab = await browser.tabs.get(tabId);
       return { tabId: tab.id, url: tab.url, title: tab.title };
     }
     case 'tabClose': {
-      const { tabId: closeId } = command.params as { tabId?: number };
+      const { tabId: closeId } = command.params;
       await browser.tabs.remove(closeId ?? targetTabId);
       return { closed: true };
     }
 
     // ─── Cookies ───────────────────────────────────────────────
     case 'cookiesGet': {
-      const { name, url, domain } = command.params as {
-        name?: string;
-        url?: string;
-        domain?: string;
-      };
+      const { name, url, domain } = command.params;
       // Need a URL to get cookies
       let cookieUrl = url;
       if (!cookieUrl) {
@@ -145,25 +162,11 @@ async function routeCommand(
       return { cookies: cookies.map(cookieToInfo) };
     }
     case 'cookiesSet': {
-      const params = command.params as {
-        url: string;
-        name: string;
-        value: string;
-        domain?: string;
-        path?: string;
-        secure?: boolean;
-        httpOnly?: boolean;
-        sameSite?: 'no_restriction' | 'lax' | 'strict';
-        expirationDate?: number;
-      };
-      await browser.cookies.set(params);
+      await browser.cookies.set(command.params);
       return { set: true };
     }
     case 'cookiesClear': {
-      const { url: clearUrl, domain: clearDomain } = command.params as {
-        url?: string;
-        domain?: string;
-      };
+      const { url: clearUrl, domain: clearDomain } = command.params;
       let targetUrl = clearUrl;
       if (!targetUrl) {
         const tab = await browser.tabs.get(targetTabId);
@@ -186,29 +189,33 @@ async function routeCommand(
 
     // ─── Screenshot ────────────────────────────────────────────
     case 'screenshot': {
-      const { selector, format, quality } = command.params as {
-        selector?: string;
-        format?: 'png' | 'jpeg';
-        quality?: number;
-      };
+      const { selector, format, quality } = command.params;
 
       // If selector is provided, scroll element into view first via content script
       let cropRect: { x: number; y: number; width: number; height: number } | null = null;
       if (selector) {
-        const csResponse = await browser.tabs.sendMessage(targetTabId, {
-          type: 'browser-cli-command',
-          id: `screenshot-prep-${Date.now()}`,
-          command: { action: 'scrollIntoView', params: { selector } },
-        }, { frameId: 0 });
+        const csResponse = await sendToContentScript(
+          targetTabId,
+          {
+            type: 'browser-cli-command',
+            id: `screenshot-prep-${Date.now()}`,
+            command: { action: 'scrollIntoView', params: { selector } },
+          },
+          { frameId: 0 },
+        );
         if (!csResponse.success) {
           throw new Error(csResponse.error?.message || `Element not found: ${selector}`);
         }
         // Get bounding box for crop metadata
-        const bboxResponse = await browser.tabs.sendMessage(targetTabId, {
-          type: 'browser-cli-command',
-          id: `screenshot-bbox-${Date.now()}`,
-          command: { action: 'boundingBox', params: { selector } },
-        }, { frameId: 0 });
+        const bboxResponse = await sendToContentScript(
+          targetTabId,
+          {
+            type: 'browser-cli-command',
+            id: `screenshot-bbox-${Date.now()}`,
+            command: { action: 'boundingBox', params: { selector } },
+          },
+          { frameId: 0 },
+        );
         if (bboxResponse.success && bboxResponse.data) {
           cropRect = bboxResponse.data as { x: number; y: number; width: number; height: number };
         }
@@ -252,14 +259,18 @@ async function routeCommand(
 
     // ─── Evaluate ──────────────────────────────────────────────
     case 'evaluate': {
-      const { expression } = command.params as { expression: string };
+      const { expression } = command.params;
       if (import.meta.env.FIREFOX) {
         // Firefox: delegate to content script's <script> injection approach
-        const response = await browser.tabs.sendMessage(targetTabId, {
-          type: 'browser-cli-command',
-          id: `bg-evaluate-${Date.now()}`,
-          command: { action: 'evaluate', params: { expression } },
-        }, { frameId: 0 });
+        const response = await sendToContentScript(
+          targetTabId,
+          {
+            type: 'browser-cli-command',
+            id: `bg-evaluate-${Date.now()}`,
+            command: { action: 'evaluate', params: { expression } },
+          },
+          { frameId: 0 },
+        );
         if (!response.success) {
           throw new Error(response.error?.message || 'evaluate failed');
         }
@@ -270,40 +281,32 @@ async function routeCommand(
         target: { tabId: targetTabId },
         world: 'MAIN',
         func: (expr: string) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- eval returns any by design
           return (0, eval)(expr);
         },
         args: [expression],
       });
-      const result = results?.[0]?.result;
-      return { value: result };
+      const scriptResult: unknown = results[0]?.result;
+      return { value: scriptResult };
     }
 
     // ─── Network ───────────────────────────────────────────────
     case 'route': {
       if (!networkManager) throw new Error('NetworkManager not initialized');
-      const { pattern, action, redirectUrl } = command.params as {
-        pattern: string;
-        action: 'block' | 'redirect';
-        redirectUrl?: string;
-      };
+      const { pattern, action, redirectUrl } = command.params;
       const route = await networkManager.addRoute(pattern, action, redirectUrl);
       return { routeId: route.id, pattern: route.pattern, action: route.action };
     }
     case 'unroute': {
       if (!networkManager) throw new Error('NetworkManager not initialized');
-      const { routeId } = command.params as { routeId: number };
+      const { routeId } = command.params;
       const removed = await networkManager.removeRoute(routeId);
       if (!removed) throw new Error(`Route ${routeId} not found`);
       return { removed: true };
     }
     case 'getRequests': {
       if (!networkManager) throw new Error('NetworkManager not initialized');
-      const { pattern, tabId, blockedOnly, limit } = command.params as {
-        pattern?: string;
-        tabId?: number;
-        blockedOnly?: boolean;
-        limit?: number;
-      };
+      const { pattern, tabId, blockedOnly, limit } = command.params;
       const result = networkManager.getRequests({ pattern, tabId, blockedOnly, limit });
       return result;
     }
@@ -320,7 +323,7 @@ async function routeCommand(
 
     // ─── Window Management ─────────────────────────────────────
     case 'windowNew': {
-      const { url } = command.params as { url?: string };
+      const { url } = command.params;
       const win = await browser.windows.create({ url: url || 'about:blank' });
       if (!win) throw new Error('Failed to create window');
       const tab = win.tabs?.[0];
@@ -342,7 +345,7 @@ async function routeCommand(
       };
     }
     case 'windowClose': {
-      const { windowId } = command.params as { windowId?: number };
+      const { windowId } = command.params;
       if (windowId) {
         await browser.windows.remove(windowId);
       } else {
@@ -359,8 +362,13 @@ async function routeCommand(
 
       // Get all cookies for the current tab's URL
       let cookies: Array<{
-        name: string; value: string; domain: string; path: string;
-        secure: boolean; httpOnly: boolean; sameSite: string;
+        name: string;
+        value: string;
+        domain: string;
+        path: string;
+        secure: boolean;
+        httpOnly: boolean;
+        sameSite: string;
         expirationDate?: number;
       }> = [];
       if (tabUrl && (tabUrl.startsWith('http://') || tabUrl.startsWith('https://'))) {
@@ -369,35 +377,38 @@ async function routeCommand(
       }
 
       // Get localStorage and sessionStorage via content script
-      const localStorageResp = await browser.tabs.sendMessage(targetTabId, {
-        type: 'browser-cli-command',
-        id: `state-export-local-${Date.now()}`,
-        command: { action: 'storageGet', params: { area: 'local' } },
-      }, { frameId: 0 });
-      const sessionStorageResp = await browser.tabs.sendMessage(targetTabId, {
-        type: 'browser-cli-command',
-        id: `state-export-session-${Date.now()}`,
-        command: { action: 'storageGet', params: { area: 'session' } },
-      }, { frameId: 0 });
+      const localStorageResp = await sendToContentScript(
+        targetTabId,
+        {
+          type: 'browser-cli-command',
+          id: `state-export-local-${Date.now()}`,
+          command: { action: 'storageGet', params: { area: 'local' } },
+        },
+        { frameId: 0 },
+      );
+      const sessionStorageResp = await sendToContentScript(
+        targetTabId,
+        {
+          type: 'browser-cli-command',
+          id: `state-export-session-${Date.now()}`,
+          command: { action: 'storageGet', params: { area: 'session' } },
+        },
+        { frameId: 0 },
+      );
 
       return {
         url: tabUrl,
         cookies,
-        localStorage: localStorageResp.success ? (localStorageResp.data as { entries: Record<string, string> }).entries : {},
-        sessionStorage: sessionStorageResp.success ? (sessionStorageResp.data as { entries: Record<string, string> }).entries : {},
+        localStorage: localStorageResp.success
+          ? (localStorageResp.data as { entries: Record<string, string> }).entries
+          : {},
+        sessionStorage: sessionStorageResp.success
+          ? (sessionStorageResp.data as { entries: Record<string, string> }).entries
+          : {},
       };
     }
     case 'stateImport': {
-      const params = command.params as {
-        cookies?: Array<{
-          url: string; name: string; value: string;
-          domain?: string; path?: string; secure?: boolean;
-          httpOnly?: boolean; sameSite?: 'no_restriction' | 'lax' | 'strict';
-          expirationDate?: number;
-        }>;
-        localStorage?: Record<string, string>;
-        sessionStorage?: Record<string, string>;
-      };
+      const params = command.params;
 
       let cookieCount = 0;
       let localCount = 0;
@@ -408,9 +419,18 @@ async function routeCommand(
         for (const cookie of params.cookies) {
           try {
             // chrome.cookies.set only accepts specific fields
-            const { url, name, value, domain, path, secure, httpOnly, sameSite, expirationDate } = cookie;
+            const { url, name, value, domain, path, secure, httpOnly, sameSite, expirationDate } =
+              cookie;
             await browser.cookies.set({
-              url, name, value, domain, path, secure, httpOnly, sameSite, expirationDate,
+              url,
+              name,
+              value,
+              domain,
+              path,
+              secure,
+              httpOnly,
+              sameSite,
+              expirationDate,
             });
             cookieCount++;
           } catch (err) {
@@ -422,11 +442,15 @@ async function routeCommand(
       // Import localStorage
       if (params.localStorage) {
         for (const [key, value] of Object.entries(params.localStorage)) {
-          await browser.tabs.sendMessage(targetTabId, {
-            type: 'browser-cli-command',
-            id: `state-import-local-${Date.now()}-${key}`,
-            command: { action: 'storageSet', params: { key, value, area: 'local' } },
-          }, { frameId: 0 });
+          await sendToContentScript(
+            targetTabId,
+            {
+              type: 'browser-cli-command',
+              id: `state-import-local-${Date.now()}-${key}`,
+              command: { action: 'storageSet', params: { key, value, area: 'local' } },
+            },
+            { frameId: 0 },
+          );
           localCount++;
         }
       }
@@ -434,11 +458,15 @@ async function routeCommand(
       // Import sessionStorage
       if (params.sessionStorage) {
         for (const [key, value] of Object.entries(params.sessionStorage)) {
-          await browser.tabs.sendMessage(targetTabId, {
-            type: 'browser-cli-command',
-            id: `state-import-session-${Date.now()}-${key}`,
-            command: { action: 'storageSet', params: { key, value, area: 'session' } },
-          }, { frameId: 0 });
+          await sendToContentScript(
+            targetTabId,
+            {
+              type: 'browser-cli-command',
+              id: `state-import-session-${Date.now()}-${key}`,
+              command: { action: 'storageSet', params: { key, value, area: 'session' } },
+            },
+            { frameId: 0 },
+          );
           sessionCount++;
         }
       }
@@ -450,7 +478,7 @@ async function routeCommand(
 
     // ─── Browser Config ─────────────────────────────────────────
     case 'setViewport': {
-      const { width, height } = command.params as { width: number; height: number };
+      const { width, height } = command.params;
       const current = await browser.windows.getCurrent();
       if (current.id) {
         await browser.windows.update(current.id, { width, height });
@@ -458,7 +486,7 @@ async function routeCommand(
       return { set: true, width, height };
     }
     case 'setHeaders': {
-      const { headers } = command.params as { headers: Record<string, string> };
+      const { headers } = command.params;
 
       if (import.meta.env.FIREFOX) {
         // Firefox: use webRequest.onBeforeSendHeaders with blocking to modify headers
@@ -470,7 +498,9 @@ async function routeCommand(
           setHeadersListener = (details: Browser.webRequest.OnBeforeSendHeadersDetails) => {
             const requestHeaders = details.requestHeaders || [];
             for (const [name, value] of Object.entries(headers)) {
-              const existing = requestHeaders.find((h) => h.name.toLowerCase() === name.toLowerCase());
+              const existing = requestHeaders.find(
+                (h) => h.name.toLowerCase() === name.toLowerCase(),
+              );
               if (existing) {
                 existing.value = value;
               } else {
@@ -494,7 +524,10 @@ async function routeCommand(
       const rules: Array<{
         id: number;
         priority: number;
-        action: { type: string; requestHeaders: Array<{ header: string; operation: string; value: string }> };
+        action: {
+          type: string;
+          requestHeaders: Array<{ header: string; operation: string; value: string }>;
+        };
         condition: { resourceTypes: string[] };
       }> = [];
       let ruleId = 9000; // Use high IDs to avoid conflicts with network manager
@@ -507,7 +540,17 @@ async function routeCommand(
             requestHeaders: [{ header, operation: 'set', value }],
           },
           condition: {
-            resourceTypes: ['main_frame', 'sub_frame', 'xmlhttprequest', 'script', 'stylesheet', 'image', 'font', 'media', 'other'],
+            resourceTypes: [
+              'main_frame',
+              'sub_frame',
+              'xmlhttprequest',
+              'script',
+              'stylesheet',
+              'image',
+              'font',
+              'media',
+              'other',
+            ],
           },
         });
       }
@@ -564,11 +607,7 @@ export function cookieToInfo(c: Browser.cookies.Cookie) {
  * Wait for the tab URL to change from `previousUrl`, then wait for load to complete.
  * Used for goBack/goForward where `tabs.goBack()` resolves before navigation starts.
  */
-function waitForUrlChange(
-  tabId: number,
-  previousUrl: string,
-  timeoutMs = 15_000,
-): Promise<void> {
+function waitForUrlChange(tabId: number, previousUrl: string, timeoutMs = 15_000): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       browser.tabs.onUpdated.removeListener(listener);
@@ -577,10 +616,7 @@ function waitForUrlChange(
 
     let navigationStarted = false;
 
-    const listener = (
-      updatedTabId: number,
-      changeInfo: Browser.tabs.OnUpdatedInfo,
-    ) => {
+    const listener = (updatedTabId: number, changeInfo: Browser.tabs.OnUpdatedInfo) => {
       if (updatedTabId !== tabId) return;
 
       // Detect navigation start via URL change or loading status
@@ -610,10 +646,7 @@ function waitForTabLoad(tabId: number, timeoutMs = 15_000): Promise<void> {
       resolve(); // Resolve anyway, don't block on slow pages
     }, timeoutMs);
 
-    const listener = (
-      updatedTabId: number,
-      changeInfo: Browser.tabs.OnUpdatedInfo,
-    ) => {
+    const listener = (updatedTabId: number, changeInfo: Browser.tabs.OnUpdatedInfo) => {
       if (updatedTabId === tabId && changeInfo.status === 'complete') {
         clearTimeout(timer);
         browser.tabs.onUpdated.removeListener(listener);
@@ -624,7 +657,7 @@ function waitForTabLoad(tabId: number, timeoutMs = 15_000): Promise<void> {
     browser.tabs.onUpdated.addListener(listener);
 
     // Check if already complete
-    browser.tabs.get(tabId).then((tab) => {
+    void browser.tabs.get(tabId).then((tab) => {
       if (tab.status === 'complete') {
         clearTimeout(timer);
         browser.tabs.onUpdated.removeListener(listener);
@@ -640,7 +673,8 @@ async function getDevicePixelRatio(tabId: number): Promise<number> {
       target: { tabId },
       func: () => window.devicePixelRatio,
     });
-    return results?.[0]?.result ?? 1;
+
+    return (results[0]?.result as number) || 1;
   } catch {
     return 1;
   }
@@ -671,7 +705,8 @@ async function cropImage(
   const sh = Math.round(rect.height * dpr);
 
   const canvas = new OffscreenCanvas(sw, sh);
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Failed to get 2d canvas context');
   ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, sw, sh);
   bitmap.close();
 

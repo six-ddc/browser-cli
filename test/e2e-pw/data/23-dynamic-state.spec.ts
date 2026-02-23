@@ -144,7 +144,10 @@ test.describe('dynamic remove/add', () => {
 // ===========================================================================
 
 test.describe('dynamic loading 1', () => {
-  test('is visible returns false for initially hidden #finish', async ({ bcli, navigateAndWait }) => {
+  test('is visible returns false for initially hidden #finish', async ({
+    bcli,
+    navigateAndWait,
+  }) => {
     await navigateAndWait(PAGES.DYNAMIC_LOADING_1);
 
     const r = bcli('is', 'visible', '#finish');
@@ -158,7 +161,13 @@ test.describe('dynamic loading 1', () => {
     bcli('click', '#start button');
 
     // Wait for finish to appear (hidden → visible via style change)
-    const waitR = bcli('wait', '--fn', "document.getElementById('finish').style.display === 'block'", '--timeout', '10000');
+    const waitR = bcli(
+      'wait',
+      '--fn',
+      "document.getElementById('finish').style.display === 'block'",
+      '--timeout',
+      '10000',
+    );
     expect(waitR).toBcliSuccess();
 
     const textR = bcli('get', 'text', '#finish h4');

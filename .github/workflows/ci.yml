@@ -27,14 +27,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Format check
+        run: pnpm format:check
+
       - name: Lint
         run: pnpm turbo lint
 
       - name: Type check
         run: pnpm turbo typecheck
 
-      - name: Test
-        run: pnpm turbo test
+      - name: Test with coverage
+        run: pnpm turbo test:coverage
 
       - name: Build
         run: pnpm turbo build

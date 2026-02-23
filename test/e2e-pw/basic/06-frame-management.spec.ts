@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 import { PAGES } from '../helpers/constants';
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 test.describe('frame list', () => {
   test('lists all frames on page with iframes', async ({ bcli, navigateAndWait }) => {
@@ -33,7 +33,10 @@ test.describe('frame current', () => {
 });
 
 test.describe('frame <selector> — switch to iframe', () => {
-  test.fixme(true, 'frame switching fails in headless mode with CONTENT_SCRIPT_NOT_READY or iframe not found');
+  test.fixme(
+    true,
+    'frame switching fails in headless mode with CONTENT_SCRIPT_NOT_READY or iframe not found',
+  );
 
   test('switches to iframe by selector', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.IFRAME);
@@ -72,7 +75,10 @@ test.describe('frame <selector> — switch to iframe', () => {
 
 test.describe('frame main — switch back to main frame', () => {
   test('returns to main frame', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'frame switching fails in headless mode with CONTENT_SCRIPT_NOT_READY or iframe not found');
+    test.fixme(
+      true,
+      'frame switching fails in headless mode with CONTENT_SCRIPT_NOT_READY or iframe not found',
+    );
 
     await navigateAndWait(PAGES.IFRAME);
     await sleep(3000);
@@ -95,7 +101,10 @@ test.describe('frame main — switch back to main frame', () => {
   });
 
   test('page operations work after returning from iframe', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'frame switching fails in headless mode with CONTENT_SCRIPT_NOT_READY or iframe not found');
+    test.fixme(
+      true,
+      'frame switching fails in headless mode with CONTENT_SCRIPT_NOT_READY or iframe not found',
+    );
 
     await navigateAndWait(PAGES.IFRAME);
     await sleep(3000);
@@ -119,7 +128,10 @@ test.describe('frame — error handling', () => {
 });
 
 test.describe('frame — integration', () => {
-  test.fixme(true, 'frame switching fails in headless mode with CONTENT_SCRIPT_NOT_READY or iframe not found');
+  test.fixme(
+    true,
+    'frame switching fails in headless mode with CONTENT_SCRIPT_NOT_READY or iframe not found',
+  );
 
   test('switch to frame and back preserves main page access', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.IFRAME);
