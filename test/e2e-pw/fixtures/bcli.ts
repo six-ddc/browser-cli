@@ -7,10 +7,7 @@ import { E2E_DIR } from '../helpers/constants';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI_BIN = path.resolve(__dirname, '../../../apps/cli/bin/cli.js');
-const EXTENSION_PATH = path.resolve(
-  __dirname,
-  '../../../apps/extension/.output/chrome-mv3',
-);
+const EXTENSION_PATH = path.resolve(__dirname, '../../../apps/extension/.output/chrome-mv3');
 
 // Strip ANSI escape codes from CLI output
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
@@ -89,8 +86,7 @@ export const test = base.extend<
 
   activePage: [
     async ({ extensionContext }, use) => {
-      const page =
-        extensionContext.pages()[0] || (await extensionContext.newPage());
+      const page = extensionContext.pages()[0] || (await extensionContext.newPage());
       await use(page);
     },
     { scope: 'worker' },
@@ -104,11 +100,11 @@ export const test = base.extend<
   bcli: async ({ extensionContext: _ctx }, use) => {
     const fn: BcliFn = (...args) => {
       try {
-        const stdout = execFileSync(
-          'node',
-          [CLI_BIN, ...args],
-          { encoding: 'utf-8', timeout: 15_000, env: CLI_ENV },
-        );
+        const stdout = execFileSync('node', [CLI_BIN, ...args], {
+          encoding: 'utf-8',
+          timeout: 15_000,
+          env: CLI_ENV,
+        });
         return { stdout: stripAnsi(stdout.trim()), stderr: '', exitCode: 0, success: true };
       } catch (err: unknown) {
         const e = err as {
@@ -131,9 +127,21 @@ export const test = base.extend<
   _autoCleanup: [
     async ({ bcli }, use) => {
       // Clean before each test
-      try { bcli('cookies', 'clear'); } catch { /* ignore if daemon not ready */ }
-      try { bcli('storage', 'local', 'clear'); } catch { /* ignore */ }
-      try { bcli('storage', 'session', 'clear'); } catch { /* ignore */ }
+      try {
+        bcli('cookies', 'clear');
+      } catch {
+        /* ignore if daemon not ready */
+      }
+      try {
+        bcli('storage', 'local', 'clear');
+      } catch {
+        /* ignore */
+      }
+      try {
+        bcli('storage', 'session', 'clear');
+      } catch {
+        /* ignore */
+      }
       await use();
     },
     { auto: true },
@@ -141,9 +149,7 @@ export const test = base.extend<
 
   navigateAndWait: async ({ bcli, activePage, baseURL }, use) => {
     const fn = async (urlOrPath: string) => {
-      const url = urlOrPath.startsWith('http')
-        ? urlOrPath
-        : `${baseURL}/${urlOrPath}`;
+      const url = urlOrPath.startsWith('http') ? urlOrPath : `${baseURL}/${urlOrPath}`;
       const result = bcli('navigate', url);
       if (!result.success) {
         throw new Error(`navigate failed: ${result.stderr || result.stdout}`);
@@ -155,10 +161,9 @@ export const test = base.extend<
       try {
         const urlObj = new URL(url);
         const targetPath = urlObj.pathname.replace(/\.html$/, '');
-        await activePage.waitForURL(
-          (u) => new URL(u).pathname.startsWith(targetPath),
-          { timeout: 10_000 },
-        );
+        await activePage.waitForURL((u) => new URL(u).pathname.startsWith(targetPath), {
+          timeout: 10_000,
+        });
         await activePage.waitForLoadState('domcontentloaded');
       } catch {
         // activePage may be detached after window/tab CLI operations — that's OK
@@ -172,11 +177,11 @@ async function waitForExtensionConnection(timeoutMs: number) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const out = execFileSync(
-        'node',
-        [CLI_BIN, 'status'],
-        { encoding: 'utf-8', timeout: 5_000, env: CLI_ENV },
-      );
+      const out = execFileSync('node', [CLI_BIN, 'status'], {
+        encoding: 'utf-8',
+        timeout: 5_000,
+        env: CLI_ENV,
+      });
       if (/Browsers connected/i.test(out)) return;
     } catch {
       // Ignore — daemon may not be ready yet

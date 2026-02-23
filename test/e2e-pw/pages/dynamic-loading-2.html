@@ -1,37 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>The Internet - Dynamic Loading 2</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    button { padding: 8px 16px; cursor: pointer; }
-    #loading { display: none; margin-top: 10px; }
-    #finish h4 { color: #333; }
-  </style>
-</head>
-<body>
-  <div class="example">
-    <h3>Dynamically Loaded Page Elements</h3>
-    <h4>Example 2: Element rendered after the fact</h4>
-    <div id="start">
-      <button onclick="startLoading()">Start</button>
+  <head>
+    <meta charset="UTF-8" />
+    <title>The Internet - Dynamic Loading 2</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      button {
+        padding: 8px 16px;
+        cursor: pointer;
+      }
+      #loading {
+        display: none;
+        margin-top: 10px;
+      }
+      #finish h4 {
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="example">
+      <h3>Dynamically Loaded Page Elements</h3>
+      <h4>Example 2: Element rendered after the fact</h4>
+      <div id="start">
+        <button onclick="startLoading()">Start</button>
+      </div>
+      <div id="loading">
+        <img
+          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"
+          alt="Loading..."
+        />
+        Loading...
+      </div>
     </div>
-    <div id="loading"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="Loading..."> Loading...</div>
-  </div>
 
-  <script>
-    function startLoading() {
-      document.getElementById('start').style.display = 'none';
-      document.getElementById('loading').style.display = 'block';
-      setTimeout(() => {
-        document.getElementById('loading').style.display = 'none';
-        const finish = document.createElement('div');
-        finish.id = 'finish';
-        finish.innerHTML = '<h4>Hello World!</h4>';
-        document.querySelector('.example').appendChild(finish);
-      }, 1500);
-    }
-  </script>
-</body>
+    <script>
+      function startLoading() {
+        document.getElementById('start').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        setTimeout(() => {
+          document.getElementById('loading').style.display = 'none';
+          const finish = document.createElement('div');
+          finish.id = 'finish';
+          finish.innerHTML = '<h4>Hello World!</h4>';
+          document.querySelector('.example').appendChild(finish);
+        }, 1500);
+      }
+    </script>
+  </body>
 </html>

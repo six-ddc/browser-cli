@@ -152,7 +152,7 @@ describe('findByText', () => {
     `;
     const elements = resolve('text=more');
     expect(elements.length).toBeGreaterThanOrEqual(1);
-    const hasMatch = elements.some(el => el.textContent?.includes('more information'));
+    const hasMatch = elements.some((el) => el.textContent?.includes('more information'));
     expect(hasMatch).toBe(true);
   });
 });

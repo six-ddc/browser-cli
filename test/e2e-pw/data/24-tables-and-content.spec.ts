@@ -80,7 +80,10 @@ test.describe('horizontal slider', () => {
 
   test('eval changes slider value', async ({ bcli }) => {
     // Set slider value via eval (fill does not work on range inputs)
-    bcli('eval', "document.getElementById('slider').value = '3'; document.getElementById('slider').dispatchEvent(new Event('input'))");
+    bcli(
+      'eval',
+      "document.getElementById('slider').value = '3'; document.getElementById('slider').dispatchEvent(new Event('input'))",
+    );
 
     const r = bcli('get', 'value', '#slider');
     expect(r).toBcliSuccess();

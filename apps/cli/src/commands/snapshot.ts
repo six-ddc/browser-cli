@@ -8,19 +8,30 @@ export const snapshotCommand = new Command('snapshot')
   .option('-C, --cursor', 'Include cursor-interactive elements (cursor:pointer)')
   .option('-d, --depth <n>', 'Max tree depth')
   .option('-s, --selector <selector>', 'Scope snapshot to a specific element')
-  .action(async (opts: { interactive?: boolean; compact?: boolean; cursor?: boolean; depth?: string; selector?: string }, cmd: Command) => {
-    const result = await sendCommand(cmd, {
-      action: 'snapshot',
-      params: {
-        interactive: opts.interactive,
-        compact: opts.compact,
-        cursor: opts.cursor,
-        depth: opts.depth ? parseInt(opts.depth, 10) : undefined,
-        selector: opts.selector,
+  .action(
+    async (
+      opts: {
+        interactive?: boolean;
+        compact?: boolean;
+        cursor?: boolean;
+        depth?: string;
+        selector?: string;
       },
-    });
-    if (result) {
-      console.log(result.snapshot);
-      console.error(`\n(${result.refCount} interactive elements)`);
-    }
-  });
+      cmd: Command,
+    ) => {
+      const result = await sendCommand(cmd, {
+        action: 'snapshot',
+        params: {
+          interactive: opts.interactive,
+          compact: opts.compact,
+          cursor: opts.cursor,
+          depth: opts.depth ? parseInt(opts.depth, 10) : undefined,
+          selector: opts.selector,
+        },
+      });
+      if (result) {
+        console.log(result.snapshot);
+        console.error(`\n(${result.refCount} interactive elements)`);
+      }
+    },
+  );

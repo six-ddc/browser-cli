@@ -1,84 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>The Internet - Dynamic Controls</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    button { padding: 8px 16px; cursor: pointer; }
-    #message { margin-top: 10px; color: green; font-weight: bold; }
-    #loading { display: none; margin-top: 10px; }
-    .example > div { margin-bottom: 20px; }
-  </style>
-</head>
-<body>
-  <div class="example">
-    <h3>Dynamic Controls</h3>
+  <head>
+    <meta charset="UTF-8" />
+    <title>The Internet - Dynamic Controls</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      button {
+        padding: 8px 16px;
+        cursor: pointer;
+      }
+      #message {
+        margin-top: 10px;
+        color: green;
+        font-weight: bold;
+      }
+      #loading {
+        display: none;
+        margin-top: 10px;
+      }
+      .example > div {
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="example">
+      <h3>Dynamic Controls</h3>
 
-    <div id="checkbox-example">
-      <h4>Remove/add</h4>
-      <div id="checkbox">
-        <input type="checkbox"> A checkbox
+      <div id="checkbox-example">
+        <h4>Remove/add</h4>
+        <div id="checkbox"><input type="checkbox" /> A checkbox</div>
+        <button id="btn-toggle" onclick="toggleCheckbox()">Remove</button>
+        <div id="loading"></div>
+        <p id="message"></p>
       </div>
-      <button id="btn-toggle" onclick="toggleCheckbox()">Remove</button>
-      <div id="loading"></div>
-      <p id="message"></p>
+
+      <div id="input-example">
+        <h4>Enable/disable</h4>
+        <input type="text" id="txt-input" disabled />
+        <button id="btn-enable" onclick="toggleInput()">Enable</button>
+      </div>
     </div>
 
-    <div id="input-example">
-      <h4>Enable/disable</h4>
-      <input type="text" id="txt-input" disabled>
-      <button id="btn-enable" onclick="toggleInput()">Enable</button>
-    </div>
-  </div>
+    <script>
+      let checkboxVisible = true;
+      function toggleCheckbox() {
+        const cb = document.getElementById('checkbox');
+        const btn = document.getElementById('btn-toggle');
+        const msg = document.getElementById('message');
+        const loading = document.getElementById('loading');
 
-  <script>
-    let checkboxVisible = true;
-    function toggleCheckbox() {
-      const cb = document.getElementById('checkbox');
-      const btn = document.getElementById('btn-toggle');
-      const msg = document.getElementById('message');
-      const loading = document.getElementById('loading');
+        loading.style.display = 'block';
+        loading.textContent = 'Wait for it...';
 
-      loading.style.display = 'block';
-      loading.textContent = 'Wait for it...';
+        setTimeout(() => {
+          loading.style.display = 'none';
+          if (checkboxVisible) {
+            cb.querySelector('input').remove();
+            btn.textContent = 'Add';
+            msg.textContent = "It's gone!";
+          } else {
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            cb.prepend(input);
+            btn.textContent = 'Remove';
+            msg.textContent = "It's back!";
+          }
+          checkboxVisible = !checkboxVisible;
+        }, 1000);
+      }
 
-      setTimeout(() => {
-        loading.style.display = 'none';
-        if (checkboxVisible) {
-          cb.querySelector('input').remove();
-          btn.textContent = 'Add';
-          msg.textContent = "It's gone!";
-        } else {
-          const input = document.createElement('input');
-          input.type = 'checkbox';
-          cb.prepend(input);
-          btn.textContent = 'Remove';
-          msg.textContent = "It's back!";
-        }
-        checkboxVisible = !checkboxVisible;
-      }, 1000);
-    }
+      let inputEnabled = false;
+      function toggleInput() {
+        const input = document.getElementById('txt-input');
+        const btn = document.getElementById('btn-enable');
+        const msg = document.getElementById('message');
 
-    let inputEnabled = false;
-    function toggleInput() {
-      const input = document.getElementById('txt-input');
-      const btn = document.getElementById('btn-enable');
-      const msg = document.getElementById('message');
-
-      setTimeout(() => {
-        if (!inputEnabled) {
-          input.disabled = false;
-          btn.textContent = 'Disable';
-          msg.textContent = "It's enabled!";
-        } else {
-          input.disabled = true;
-          btn.textContent = 'Enable';
-          msg.textContent = "It's disabled!";
-        }
-        inputEnabled = !inputEnabled;
-      }, 500);
-    }
-  </script>
-</body>
+        setTimeout(() => {
+          if (!inputEnabled) {
+            input.disabled = false;
+            btn.textContent = 'Disable';
+            msg.textContent = "It's enabled!";
+          } else {
+            input.disabled = true;
+            btn.textContent = 'Enable';
+            msg.textContent = "It's disabled!";
+          }
+          inputEnabled = !inputEnabled;
+        }, 500);
+      }
+    </script>
+  </body>
 </html>

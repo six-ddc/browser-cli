@@ -91,7 +91,9 @@ test.describe('timeout behavior', () => {
     await navigateAndWait(PAGES.ERROR_TEST);
   });
 
-  test('wait for nonexistent selector with short timeout fails within time limit', async ({ bcli }) => {
+  test('wait for nonexistent selector with short timeout fails within time limit', async ({
+    bcli,
+  }) => {
     const startTime = Date.now();
     const r = bcli('wait', '.never-going-to-exist', '--timeout', '1000');
     const elapsed = Date.now() - startTime;

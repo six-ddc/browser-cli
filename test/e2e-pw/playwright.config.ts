@@ -12,9 +12,7 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
-    ...(process.env.CI
-      ? [['junit', { outputFile: 'test-results/results.xml' }] as const]
-      : []),
+    ...(process.env.CI ? [['junit', { outputFile: 'test-results/results.xml' }] as const] : []),
   ],
 
   use: {

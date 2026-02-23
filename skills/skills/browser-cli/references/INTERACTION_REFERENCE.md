@@ -16,12 +16,13 @@ browser-cli click <selector> [--button <button>]
 
 **Parameters:**
 
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `selector` | string | Yes | - | CSS selector, semantic locator, or element ref |
-| `--button` | string | No | `left` | Mouse button: `left`, `right`, `middle` |
+| Name       | Type   | Required | Default | Description                                    |
+| ---------- | ------ | -------- | ------- | ---------------------------------------------- |
+| `selector` | string | Yes      | -       | CSS selector, semantic locator, or element ref |
+| `--button` | string | No       | `left`  | Mouse button: `left`, `right`, `middle`        |
 
 **Examples:**
+
 ```bash
 browser-cli click '#submit-btn'
 browser-cli click 'role=button[name="Submit"]'
@@ -38,6 +39,7 @@ browser-cli dblclick <selector>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli dblclick '.editable-cell'
 browser-cli dblclick 'text=Edit'
@@ -54,6 +56,7 @@ browser-cli hover <selector>
 Moves the mouse over the element, triggering hover effects, tooltips, or dropdown menus.
 
 **Examples:**
+
 ```bash
 browser-cli hover '.dropdown-trigger'
 browser-cli hover 'text=Menu'
@@ -70,6 +73,7 @@ browser-cli fill <selector> <value>
 Replaces the current content of the input. Works with React/Vue controlled components (uses native value setter).
 
 **Examples:**
+
 ```bash
 browser-cli fill 'input[name="email"]' user@example.com
 browser-cli fill 'label=Password' secret123
@@ -86,13 +90,14 @@ browser-cli type <selector> <text> [--delay <ms>]
 
 Types each character individually, triggering keydown/keypress/keyup events. Useful for autocomplete or typeahead inputs.
 
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `selector` | string | Yes | - | Target element |
-| `text` | string | Yes | - | Text to type |
-| `--delay` | number | No | `0` | Delay between keystrokes in ms |
+| Name       | Type   | Required | Default | Description                    |
+| ---------- | ------ | -------- | ------- | ------------------------------ |
+| `selector` | string | Yes      | -       | Target element                 |
+| `text`     | string | Yes      | -       | Text to type                   |
+| `--delay`  | number | No       | `0`     | Delay between keystrokes in ms |
 
 **Examples:**
+
 ```bash
 browser-cli type 'input[name="search"]' "hello world" --delay 50
 browser-cli type 'label=Search' query
@@ -100,21 +105,22 @@ browser-cli type 'label=Search' query
 
 ---
 
-### press - Press a Key (Page-Level)
+### press - Press a Key
 
 ```bash
-browser-cli press <key>
+browser-cli press <key> [selector]
 ```
 
 Alias: `key`
 
-Presses a key at the page level (not targeted at a specific element). Supports modifier combinations.
+Presses a key at the page level or targeted at a specific element (optional selector). Supports modifier combinations with `+` separator.
 
 **Key names:** `Enter`, `Tab`, `Escape`, `Backspace`, `Delete`, `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Home`, `End`, `PageUp`, `PageDown`, `F1`-`F12`, `Space`
 
 **Modifier combinations:** `Control+a`, `Control+c`, `Control+v`, `Shift+Tab`, `Alt+F4`, `Control+Shift+k`
 
 **Examples:**
+
 ```bash
 browser-cli press Enter
 browser-cli press Tab
@@ -132,6 +138,7 @@ browser-cli clear <selector>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli clear 'input[name="search"]'
 browser-cli clear @e5
@@ -146,6 +153,7 @@ browser-cli focus <selector>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli focus 'input[name="email"]'
 browser-cli focus @e2
@@ -161,6 +169,7 @@ browser-cli uncheck <selector>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli check 'input[type="checkbox"]'
 browser-cli check 'label=Remember me'
@@ -175,9 +184,10 @@ browser-cli uncheck 'label=Subscribe to newsletter'
 browser-cli select <selector> <value>
 ```
 
-Selects an `<option>` by its `value` attribute.
+Selects an `<option>` by its `value` attribute, or by its visible text/label as a fallback.
 
 **Examples:**
+
 ```bash
 browser-cli select 'select[name="country"]' US
 browser-cli select '#color-picker' red
@@ -193,13 +203,14 @@ browser-cli upload <selector> <files...> [--clear]
 
 Uploads files to a file input element. Uses DataTransfer API with data URLs.
 
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `selector` | string | Yes | - | File input selector |
-| `files` | string[] | Yes | - | File paths to upload |
-| `--clear` | boolean | No | `false` | Clear existing files first |
+| Name       | Type     | Required | Default | Description                |
+| ---------- | -------- | -------- | ------- | -------------------------- |
+| `selector` | string   | Yes      | -       | File input selector        |
+| `files`    | string[] | Yes      | -       | File paths to upload       |
+| `--clear`  | boolean  | No       | `false` | Clear existing files first |
 
 **Examples:**
+
 ```bash
 browser-cli upload 'input[type="file"]' /path/to/image.png
 browser-cli upload '#avatar' /path/to/photo.jpg --clear
@@ -216,6 +227,7 @@ browser-cli drag <source> <target>
 Drags the source element to the target element.
 
 **Examples:**
+
 ```bash
 browser-cli drag '#item-1' '#drop-zone'
 browser-cli drag '.draggable' '.container'
@@ -233,6 +245,7 @@ browser-cli keyup <key>
 Press or release a key without the full press cycle. Useful for holding modifier keys.
 
 **Examples:**
+
 ```bash
 browser-cli keydown Shift
 browser-cli click '.item-1'
@@ -266,6 +279,7 @@ browser-cli mouse wheel <deltaY> [deltaX]
 ```
 
 **Examples:**
+
 ```bash
 browser-cli mouse move 100 200
 browser-cli mouse down
@@ -285,13 +299,14 @@ browser-cli mouse wheel -500           # Scroll up
 browser-cli scroll <direction> [--amount <px>] [--selector <sel>]
 ```
 
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `direction` | string | Yes | - | `up`, `down`, `left`, `right` |
-| `--amount` | number | No | `400` | Scroll amount in pixels |
-| `--selector` | string | No | page | Element to scroll |
+| Name         | Type   | Required | Default | Description                   |
+| ------------ | ------ | -------- | ------- | ----------------------------- |
+| `direction`  | string | Yes      | -       | `up`, `down`, `left`, `right` |
+| `--amount`   | number | No       | `400`   | Scroll amount in pixels       |
+| `--selector` | string | No       | page    | Element to scroll             |
 
 **Examples:**
+
 ```bash
 browser-cli scroll down
 browser-cli scroll down --amount 1000
@@ -305,6 +320,7 @@ browser-cli scrollintoview <selector>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli scrollintoview '#footer'
 browser-cli scrollintoview 'text=Contact Us'
@@ -315,6 +331,7 @@ browser-cli scrollintoview 'text=Contact Us'
 ## Common Patterns
 
 ### Fill a login form
+
 ```bash
 browser-cli fill 'label=Email' user@example.com
 browser-cli fill 'label=Password' secret
@@ -322,6 +339,7 @@ browser-cli click 'role=button[name="Log In"]'
 ```
 
 ### Navigate a dropdown menu
+
 ```bash
 browser-cli hover '.nav-dropdown'
 browser-cli wait '.dropdown-menu'
@@ -329,6 +347,7 @@ browser-cli click '.dropdown-menu a:first-child'
 ```
 
 ### Multi-select with Shift
+
 ```bash
 browser-cli click '.list-item:first-child'
 browser-cli keydown Shift

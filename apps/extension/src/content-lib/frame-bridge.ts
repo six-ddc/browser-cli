@@ -74,7 +74,7 @@ export function findFrame(params: {
     if (params.index === 0) {
       throw new Error('Cannot switch to main frame using index 0 - use main: true instead');
     }
-    const iframe = iframes[params.index - 1];
+    const iframe = iframes[params.index - 1] as HTMLIFrameElement | undefined;
     if (!iframe) {
       throw new Error(`Frame index ${params.index} not found (${iframes.length} frames available)`);
     }
@@ -103,11 +103,12 @@ export function findFrame(params: {
 
   // By URL (partial match)
   if (params.url) {
+    const url = params.url;
     const iframe = iframes.find((f) => {
       try {
-        return f.contentWindow?.location.href.includes(params.url!);
+        return f.contentWindow?.location.href.includes(url);
       } catch {
-        return f.src.includes(params.url!);
+        return f.src.includes(url);
       }
     });
     if (!iframe) {
@@ -139,6 +140,7 @@ export async function executeInFrame(
   }
 
   if (!isSameOrigin) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is a structured error object, not an Error instance
     throw createError(
       ErrorCode.FRAME_ERROR,
       'Cross-origin iframe access not supported. Only same-origin iframes can be automated.',
@@ -146,6 +148,7 @@ export async function executeInFrame(
   }
 
   if (!iframe.contentWindow) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is a structured error object, not an Error instance
     throw createError(ErrorCode.FRAME_ERROR, 'Iframe contentWindow not accessible');
   }
 
@@ -153,18 +156,29 @@ export async function executeInFrame(
   // Since we're already in a content script, we can use postMessage
   // However, the simpler approach is to execute directly in the iframe's context
 
+  const contentWindow = iframe.contentWindow;
+
   // Create a promise that will be resolved by the frame
   const messageId = `frame-cmd-${Date.now()}-${Math.random()}`;
 
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       window.removeEventListener('message', handler);
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- ProtocolError is a structured error object
       reject(createError(ErrorCode.TIMEOUT, 'Frame command timeout'));
     }, 30000);
 
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type !== 'browser-cli-frame-response') return;
-      if (event.data?.id !== messageId) return;
+    const handler = (
+      event: MessageEvent<{
+        type?: string;
+        id?: string;
+        success?: boolean;
+        data?: unknown;
+        error?: { message?: string };
+      }>,
+    ) => {
+      if (event.data.type !== 'browser-cli-frame-response') return;
+      if (event.data.id !== messageId) return;
       if (event.source !== iframe.contentWindow) return;
 
       clearTimeout(timeout);
@@ -173,20 +187,20 @@ export async function executeInFrame(
       if (event.data.success) {
         resolve(event.data.data);
       } else {
-        reject(new Error(event.data.error?.message || 'Frame command failed'));
+        reject(new Error(event.data.error?.message ?? 'Frame command failed'));
       }
     };
 
     window.addEventListener('message', handler);
 
     // Send command to iframe (same-origin already verified above)
-    iframe.contentWindow!.postMessage(
+    contentWindow.postMessage(
       {
         type: 'browser-cli-frame-command',
         id: messageId,
         command,
       },
-      iframe.contentWindow!.location.origin,
+      contentWindow.location.origin,
     );
   });
 }
@@ -202,107 +216,116 @@ export function isInsideFrame(): boolean {
  * Initialize frame bridge in iframe context.
  * This allows iframes to receive and execute commands.
  */
+interface FrameCommandMessage {
+  type: string;
+  id: string;
+  command: Command;
+}
+
 export function initFrameBridge(): void {
   if (!isInsideFrame()) return;
 
-  window.addEventListener('message', async (event: MessageEvent) => {
-    if (event.data?.type !== 'browser-cli-frame-command') return;
+  window.addEventListener('message', (event: MessageEvent) => {
+    const data = event.data as FrameCommandMessage | undefined;
+    if (data?.type !== 'browser-cli-frame-command') return;
     if (event.source !== window.parent) return;
 
-    const { id, command } = event.data;
+    const { id, command } = data;
 
-    try {
-      // Dynamically import the appropriate handler
-      let result: unknown;
+    void (async () => {
+      try {
+        // Dynamically import the appropriate handler
+        let result: unknown;
 
-      switch (command.action) {
-        case 'click':
-        case 'dblclick':
-        case 'hover':
-        case 'fill':
-        case 'type':
-        case 'press':
-        case 'clear':
-        case 'focus': {
-          const { handleInteraction } = await import('./dom-interact');
-          result = await handleInteraction(command);
-          break;
+        switch (command.action) {
+          case 'click':
+          case 'dblclick':
+          case 'hover':
+          case 'fill':
+          case 'type':
+          case 'press':
+          case 'clear':
+          case 'focus': {
+            const { handleInteraction } = await import('./dom-interact');
+            result = await handleInteraction(command);
+            break;
+          }
+
+          case 'getText':
+          case 'getHtml':
+          case 'getValue':
+          case 'getAttribute':
+          case 'isVisible':
+          case 'isEnabled':
+          case 'isChecked':
+          case 'count':
+          case 'boundingBox': {
+            const { handleQuery } = await import('./dom-query');
+            result = handleQuery(command);
+            break;
+          }
+
+          case 'check':
+          case 'uncheck':
+          case 'select': {
+            const { handleForm } = await import('./form');
+            result = handleForm(command);
+            break;
+          }
+
+          case 'scroll':
+          case 'scrollIntoView': {
+            const { handleScroll } = await import('./scroll');
+            result = handleScroll(command);
+            break;
+          }
+
+          case 'wait': {
+            const { handleWait } = await import('./wait');
+            result = await handleWait(command);
+            break;
+          }
+
+          case 'evaluate': {
+            const { handleEvaluate } = await import('./evaluate');
+            result = await handleEvaluate(command.params);
+            break;
+          }
+
+          case 'highlight': {
+            const { handleHighlight } = await import('./highlight');
+            result = handleHighlight(command.params);
+            break;
+          }
+
+          default:
+            throw new Error(`Unsupported frame command: ${(command as { action: string }).action}`);
         }
 
-        case 'getText':
-        case 'getHtml':
-        case 'getValue':
-        case 'getAttribute':
-        case 'isVisible':
-        case 'isEnabled':
-        case 'isChecked':
-        case 'count':
-        case 'boundingBox': {
-          const { handleQuery } = await import('./dom-query');
-          result = await handleQuery(command);
-          break;
-        }
-
-        case 'check':
-        case 'uncheck':
-        case 'select': {
-          const { handleForm } = await import('./form');
-          result = await handleForm(command);
-          break;
-        }
-
-        case 'scroll':
-        case 'scrollIntoView': {
-          const { handleScroll } = await import('./scroll');
-          result = await handleScroll(command);
-          break;
-        }
-
-        case 'wait': {
-          const { handleWait } = await import('./wait');
-          result = await handleWait(command);
-          break;
-        }
-
-        case 'evaluate': {
-          const { handleEvaluate } = await import('./evaluate');
-          result = await handleEvaluate(command.params);
-          break;
-        }
-
-        case 'highlight': {
-          const { handleHighlight } = await import('./highlight');
-          result = await handleHighlight(command.params);
-          break;
-        }
-
-        default:
-          throw new Error(`Unsupported frame command: ${(command as { action: string }).action}`);
-      }
-
-      // Send success response back to parent (same-origin: we're inside an iframe)
-      window.parent.postMessage(
-        {
-          type: 'browser-cli-frame-response',
-          id,
-          success: true,
-          data: result,
-        },
-        window.parent.location.origin,
-      );
-    } catch (err) {
-      // Send error response back to parent (same-origin: we're inside an iframe)
-      window.parent.postMessage(
-        {
-          type: 'browser-cli-frame-response',
-          id,
-          success: false,
-          error: {
-            message: (err as Error).message || 'Unknown error',
+        // Send success response back to parent (same-origin: we're inside an iframe)
+        window.parent.postMessage(
+          {
+            type: 'browser-cli-frame-response',
+            id,
+            success: true,
+            data: result,
           },
-        },
-        window.parent.location.origin,
-      );
-    }
+          window.parent.location.origin,
+        );
+      } catch (err) {
+        // Send error response back to parent (same-origin: we're inside an iframe)
+        window.parent.postMessage(
+          {
+            type: 'browser-cli-frame-response',
+            id,
+            success: false,
+            error: {
+              message: (err as Error).message || 'Unknown error',
+            },
+          },
+          window.parent.location.origin,
+        );
+      }
+    })();
   });
 }

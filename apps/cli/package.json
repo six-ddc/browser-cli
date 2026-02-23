@@ -20,7 +20,8 @@
     "build": "tsdown",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@browser-cli/shared": "workspace:*",

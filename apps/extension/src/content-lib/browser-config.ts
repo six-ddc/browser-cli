@@ -5,14 +5,11 @@
 
 import type { Command } from '@browser-cli/shared';
 
+// eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleBrowserConfig(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'setGeo': {
-      const { latitude, longitude, accuracy } = command.params as {
-        latitude: number;
-        longitude: number;
-        accuracy?: number;
-      };
+      const { latitude, longitude, accuracy } = command.params;
       injectMainWorldScript(`
         (function() {
           const coords = {
@@ -37,7 +34,7 @@ export async function handleBrowserConfig(command: Command): Promise<unknown> {
     }
 
     case 'setMedia': {
-      const { colorScheme } = command.params as { colorScheme: 'dark' | 'light' };
+      const { colorScheme } = command.params;
       injectMainWorldScript(`
         (function() {
           const original = window.matchMedia;

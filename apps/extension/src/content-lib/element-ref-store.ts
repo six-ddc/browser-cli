@@ -136,9 +136,7 @@ export function generateSelector(element: Element): string {
     const parent: Element | null = current.parentElement;
     if (parent) {
       const tag = current.tagName;
-      const siblings = Array.from(parent.children).filter(
-        (s: Element) => s.tagName === tag,
-      );
+      const siblings = Array.from(parent.children).filter((s: Element) => s.tagName === tag);
       if (siblings.length > 1) {
         const index = siblings.indexOf(current) + 1;
         selector += `:nth-of-type(${index})`;

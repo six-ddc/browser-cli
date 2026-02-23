@@ -20,7 +20,16 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 /** Semantic locator engines */
-const ENGINES = ['role', 'text', 'label', 'placeholder', 'alt', 'title', 'testid', 'xpath'] as const;
+const ENGINES = [
+  'role',
+  'text',
+  'label',
+  'placeholder',
+  'alt',
+  'title',
+  'testid',
+  'xpath',
+] as const;
 type Engine = (typeof ENGINES)[number];
 
 /** Position selectors */
@@ -29,8 +38,17 @@ type PositionSelector = (typeof POSITION_SELECTORS)[number];
 
 /** All supported actions */
 const ALL_ACTIONS = new Set([
-  'click', 'dblclick', 'fill', 'type', 'hover',
-  'check', 'uncheck', 'select', 'press', 'clear', 'focus',
+  'click',
+  'dblclick',
+  'fill',
+  'type',
+  'hover',
+  'check',
+  'uncheck',
+  'select',
+  'press',
+  'clear',
+  'focus',
 ]);
 
 interface ParsedFind {
@@ -43,7 +61,11 @@ interface ParsedFind {
 /**
  * Build a semantic locator string from engine, value, and options.
  */
-function buildLocator(engine: Engine, value: string, opts: { name?: string; exact?: boolean }): string {
+function buildLocator(
+  engine: Engine,
+  value: string,
+  opts: { name?: string; exact?: boolean },
+): string {
   if (engine === 'role') {
     let locator = `role=${value}`;
     const brackets: string[] = [];
@@ -74,9 +96,14 @@ function buildLocator(engine: Engine, value: string, opts: { name?: string; exac
  *   last <selector> <action> [actionValue]
  *   nth <n> <selector> <action> [actionValue]
  */
-export function parseFindArgs(args: string[], opts: { name?: string; exact?: boolean }): ParsedFind {
+export function parseFindArgs(
+  args: string[],
+  opts: { name?: string; exact?: boolean },
+): ParsedFind {
   if (args.length < 2) {
-    throw new Error('Usage: find <engine> <value> [action] [action-value]\n  or:  find first|last <selector> [action] [action-value]\n  or:  find nth <n> <selector> [action] [action-value]');
+    throw new Error(
+      'Usage: find <engine> <value> [action] [action-value]\n  or:  find first|last <selector> [action] [action-value]\n  or:  find nth <n> <selector> [action] [action-value]',
+    );
   }
 
   const first = args[0];
@@ -103,8 +130,8 @@ export function parseFindArgs(args: string[], opts: { name?: string; exact?: boo
       throw new Error('Usage: find nth <n> <selector> [action] [action-value]');
     }
     const index = parseInt(indexStr, 10);
-    if (isNaN(index) || index < 0) {
-      throw new Error(`Invalid index: ${indexStr}. Must be a non-negative integer.`);
+    if (isNaN(index) || index < 1) {
+      throw new Error(`Invalid index: ${indexStr}. Must be a positive integer (1-based).`);
     }
     const resolvedAction = action || 'click';
     validateAction(resolvedAction);
@@ -119,7 +146,9 @@ export function parseFindArgs(args: string[], opts: { name?: string; exact?: boo
   // Semantic locator engines
   const engine = first as Engine;
   if (!ENGINES.includes(engine)) {
-    throw new Error(`Unknown engine: "${engine}". Use one of: ${[...ENGINES, ...POSITION_SELECTORS].join(', ')}`);
+    throw new Error(
+      `Unknown engine: "${engine}". Use one of: ${[...ENGINES, ...POSITION_SELECTORS].join(', ')}`,
+    );
   }
 
   const [, value, action, ...rest] = args;
@@ -196,7 +225,8 @@ export const findCommand = new Command('find')
     const result = await sendCommand(cmd, command as Parameters<typeof sendCommand>[1]);
 
     const label = ACTION_LABELS[parsed.action] || parsed.action;
-    if (result && parsed.action === 'select' && result.value) {
+    if (result && parsed.action === 'select' && 'value' in result && result.value) {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- result.value is a string at runtime from select action
       console.log(`${label}: ${result.value}`);
     } else {
       console.log(label);

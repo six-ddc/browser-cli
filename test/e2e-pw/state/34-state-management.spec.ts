@@ -4,7 +4,7 @@ import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let stateTempDir: string;
 
@@ -112,7 +112,14 @@ test.describe('state save/load round-trip', () => {
     await navigateAndWait(PAGES.HOME);
 
     // Set cookies
-    bcli('cookies', 'set', 'roundtrip-cookie', 'cookie-preserved', '--url', `${baseURL}/${PAGES.HOME}`);
+    bcli(
+      'cookies',
+      'set',
+      'roundtrip-cookie',
+      'cookie-preserved',
+      '--url',
+      `${baseURL}/${PAGES.HOME}`,
+    );
     await sleep(1000);
 
     // Save state

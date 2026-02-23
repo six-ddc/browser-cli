@@ -5,12 +5,16 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 test.describe('tab + interaction cross-tests', () => {
-  test('open tab, fill form, switch back, verify different pages', async ({ bcli, navigateAndWait, baseURL }) => {
+  test('open tab, fill form, switch back, verify different pages', async ({
+    bcli,
+    navigateAndWait,
+    baseURL,
+  }) => {
     await navigateAndWait(PAGES.HOME);
 
     // Record original tab IDs
     const origList = bcli('tab', 'list');
-    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
 
     bcli('tab', 'new', `${baseURL}/${PAGES.LOGIN}`);
     bcli('wait', '2000');
@@ -28,8 +32,8 @@ test.describe('tab + interaction cross-tests', () => {
 
     // Clean up — close extra tabs (not the original)
     const list = bcli('tab', 'list');
-    const allIds = [...list.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
-    const extraIds = allIds.filter(id => !origTabIds.includes(id));
+    const allIds = [...list.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
+    const extraIds = allIds.filter((id) => !origTabIds.includes(id));
     for (const id of extraIds) {
       bcli('tab', id);
       bcli('tab', 'close');
@@ -59,7 +63,10 @@ test.describe('eval + get verification cross-tests', () => {
     expect(before.exitCode).toBe(0);
     expect(before.stdout).toContain('0');
 
-    bcli('eval', 'for(let i=0;i<3;i++){const el=document.createElement("span");el.className="cross-test-el";document.body.appendChild(el)} true');
+    bcli(
+      'eval',
+      'for(let i=0;i<3;i++){const el=document.createElement("span");el.className="cross-test-el";document.body.appendChild(el)} true',
+    );
 
     const after = bcli('get', 'count', '.cross-test-el');
     expect(after.exitCode).toBe(0);
@@ -207,7 +214,12 @@ test.describe('snapshot refs + navigation (ref invalidation)', () => {
 });
 
 test.describe('cookies + storage + state save/load cross-tests', () => {
-  test('set cookies and storage, save state, clear, load, verify', async ({ bcli, navigateAndWait, baseURL, activePage }) => {
+  test('set cookies and storage, save state, clear, load, verify', async ({
+    bcli,
+    navigateAndWait,
+    baseURL,
+    activePage,
+  }) => {
     await navigateAndWait(PAGES.HOME);
 
     bcli('cookies', 'set', 'cross-cookie', 'cross-val', '--url', `${baseURL}/${PAGES.HOME}`);
@@ -229,7 +241,9 @@ test.describe('cookies + storage + state save/load cross-tests', () => {
 
     const cookie = bcli('cookies', 'get', 'cross-cookie');
     expect(cookie).toBcliSuccess();
-    expect(cookie.stdout.includes('cross-val') || cookie.stdout.includes('cross-cookie')).toBeTruthy();
+    expect(
+      cookie.stdout.includes('cross-val') || cookie.stdout.includes('cross-cookie'),
+    ).toBeTruthy();
 
     rmSync(tempDir, { recursive: true });
   });
@@ -264,7 +278,11 @@ test.describe('console + eval cross-tests', () => {
 });
 
 test.describe('multi-step workflow cross-tests', () => {
-  test('complete login workflow with multiple command types', async ({ bcli, navigateAndWait, activePage }) => {
+  test('complete login workflow with multiple command types', async ({
+    bcli,
+    navigateAndWait,
+    activePage,
+  }) => {
     await navigateAndWait(PAGES.LOGIN);
 
     const snap = bcli('snapshot', '-ic');

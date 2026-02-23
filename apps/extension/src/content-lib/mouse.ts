@@ -10,25 +10,27 @@ let currentY = 0;
 
 function buttonToIndex(button?: string): number {
   switch (button) {
-    case 'right': return 2;
-    case 'middle': return 1;
-    default: return 0;
+    case 'right':
+      return 2;
+    case 'middle':
+      return 1;
+    default:
+      return 0;
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleMouse(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'mouseMove': {
-      const { x, y } = command.params as { x: number; y: number };
+      const { x, y } = command.params;
       const target = document.elementFromPoint(x, y) || document.body;
 
       // Dispatch leave events on old target, enter events on new target
       target.dispatchEvent(
         new PointerEvent('pointermove', { bubbles: true, clientX: x, clientY: y }),
       );
-      target.dispatchEvent(
-        new MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }),
-      );
+      target.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }));
 
       currentX = x;
       currentY = y;
@@ -36,35 +38,55 @@ export async function handleMouse(command: Command): Promise<unknown> {
     }
 
     case 'mouseDown': {
-      const { button } = command.params as { button?: string };
+      const { button } = command.params;
       const btn = buttonToIndex(button);
       const target = document.elementFromPoint(currentX, currentY) || document.body;
 
       target.dispatchEvent(
-        new PointerEvent('pointerdown', { bubbles: true, clientX: currentX, clientY: currentY, button: btn }),
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          clientX: currentX,
+          clientY: currentY,
+          button: btn,
+        }),
       );
       target.dispatchEvent(
-        new MouseEvent('mousedown', { bubbles: true, clientX: currentX, clientY: currentY, button: btn }),
+        new MouseEvent('mousedown', {
+          bubbles: true,
+          clientX: currentX,
+          clientY: currentY,
+          button: btn,
+        }),
       );
       return { pressed: true };
     }
 
     case 'mouseUp': {
-      const { button } = command.params as { button?: string };
+      const { button } = command.params;
       const btn = buttonToIndex(button);
       const target = document.elementFromPoint(currentX, currentY) || document.body;
 
       target.dispatchEvent(
-        new PointerEvent('pointerup', { bubbles: true, clientX: currentX, clientY: currentY, button: btn }),
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          clientX: currentX,
+          clientY: currentY,
+          button: btn,
+        }),
       );
       target.dispatchEvent(
-        new MouseEvent('mouseup', { bubbles: true, clientX: currentX, clientY: currentY, button: btn }),
+        new MouseEvent('mouseup', {
+          bubbles: true,
+          clientX: currentX,
+          clientY: currentY,
+          button: btn,
+        }),
       );
       return { released: true };
     }
 
     case 'mouseWheel': {
-      const { deltaY, deltaX } = command.params as { deltaY: number; deltaX?: number };
+      const { deltaY, deltaX } = command.params;
       const target = document.elementFromPoint(currentX, currentY) || document.body;
 
       target.dispatchEvent(

@@ -8,6 +8,7 @@ import { resolveElement } from './element-ref-store';
 const DEFAULT_COLOR = '#2196F3';
 const DEFAULT_DURATION = 2000;
 
+// eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleHighlight(params: HighlightParams): Promise<{ highlighted: true }> {
   const { selector, color, duration } = params;
 

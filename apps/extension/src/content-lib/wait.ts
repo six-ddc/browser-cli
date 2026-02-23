@@ -10,15 +10,7 @@ const POLL_INTERVAL = 100;
 export async function handleWait(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'wait': {
-      const { selector, duration, timeout, visible, text, load, fn } = command.params as {
-        selector?: string;
-        duration?: number;
-        timeout?: number;
-        visible?: boolean;
-        text?: string;
-        load?: 'load' | 'domcontentloaded' | 'networkidle';
-        fn?: string;
-      };
+      const { selector, duration, timeout, visible, text, load, fn } = command.params;
 
       // Duration-based wait (simple time delay)
       if (duration !== undefined) {
@@ -56,10 +48,7 @@ export async function handleWait(command: Command): Promise<unknown> {
       return { found: true };
     }
     case 'waitForUrl': {
-      const { pattern, timeout } = command.params as {
-        pattern: string;
-        timeout?: number;
-      };
+      const { pattern, timeout } = command.params;
       const url = await waitForUrl(pattern, timeout ?? DEFAULT_TIMEOUT);
       return { url };
     }
@@ -161,13 +150,13 @@ function waitForUrl(pattern: string, timeout: number): Promise<string> {
 function waitForText(text: string, timeout: number): Promise<void> {
   return new Promise((resolve, reject) => {
     // Check immediately
-    if ((document.body.textContent ?? '').includes(text)) {
+    if (document.body.textContent.includes(text)) {
       resolve();
       return;
     }
 
     const observer = new MutationObserver(() => {
-      if ((document.body.textContent ?? '').includes(text)) {
+      if (document.body.textContent.includes(text)) {
         observer.disconnect();
         clearInterval(poll);
         clearTimeout(timer);
@@ -182,7 +171,7 @@ function waitForText(text: string, timeout: number): Promise<void> {
     });
 
     const poll = setInterval(() => {
-      if ((document.body.textContent ?? '').includes(text)) {
+      if (document.body.textContent.includes(text)) {
         observer.disconnect();
         clearInterval(poll);
         clearTimeout(timer);
@@ -212,22 +201,31 @@ function waitForLoadState(
         clearTimeout(timer);
         resolve();
       } else {
-        document.addEventListener('DOMContentLoaded', () => {
-          clearTimeout(timer);
-          resolve();
-        }, { once: true });
+        document.addEventListener(
+          'DOMContentLoaded',
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
       }
     } else if (state === 'load') {
       if (document.readyState === 'complete') {
         clearTimeout(timer);
         resolve();
       } else {
-        window.addEventListener('load', () => {
-          clearTimeout(timer);
-          resolve();
-        }, { once: true });
+        window.addEventListener(
+          'load',
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
       }
-    } else if (state === 'networkidle') {
+    } else {
+      // state === 'networkidle'
       // Approximate networkidle: wait for load then an additional 500ms of no new requests
       const checkIdle = () => {
         clearTimeout(timer);
@@ -246,21 +244,23 @@ function waitForLoadState(
 
 function waitForFunction(expression: string, timeout: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    const poll = setInterval(async () => {
-      try {
-        // Use background script to evaluate in MAIN world (bypasses CSP)
-        const response = await browser.runtime.sendMessage({
-          type: 'browser-cli-eval-in-main',
-          expression: `!!(${expression})`,
-        });
-        if (response?.result) {
-          clearInterval(poll);
-          clearTimeout(timer);
-          resolve();
+    const poll = setInterval(() => {
+      void (async () => {
+        try {
+          // Use background script to evaluate in MAIN world (bypasses CSP)
+          const response = await browser.runtime.sendMessage({
+            type: 'browser-cli-eval-in-main',
+            expression: `!!(${expression})`,
+          });
+          if (response?.result) {
+            clearInterval(poll);
+            clearTimeout(timer);
+            resolve();
+          }
+        } catch {
+          // Ignore errors during polling
         }
-      } catch {
-        // Ignore errors during polling
-      }
+      })();
     }, POLL_INTERVAL);
 
     const timer = setTimeout(() => {
@@ -279,10 +279,10 @@ function patternToRegex(pattern: string): RegExp {
   // If it looks like a glob pattern (contains unescaped * or **), convert to regex
   if (pattern.includes('*')) {
     const escaped = pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // escape regex special chars (except *)
-      .replace(/\*\*/g, '\0')                  // placeholder for **
-      .replace(/\*/g, '[^/]*')                 // * → match non-slash
-      .replace(/\0/g, '.*');                   // ** → match anything
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&') // escape regex special chars (except *)
+      .replace(/\*\*/g, '\0') // placeholder for **
+      .replace(/\*/g, '[^/]*') // * → match non-slash
+      .replace(/\0/g, '.*'); // ** → match anything
     return new RegExp(escaped);
   }
   // Otherwise treat as regex

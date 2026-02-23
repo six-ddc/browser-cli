@@ -1,11 +1,14 @@
 import { test, expect } from '../fixtures';
 import { PAGES } from '../helpers/constants';
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 test.describe('console (basic)', () => {
   test('gets console output', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'console capture is unreliable after network route tests destabilize extension connection');
+    test.fixme(
+      true,
+      'console capture is unreliable after network route tests destabilize extension connection',
+    );
     await navigateAndWait(PAGES.HOME);
 
     // Generate a console.log via eval (runs in MAIN world)
@@ -18,7 +21,10 @@ test.describe('console (basic)', () => {
   });
 
   test('captures console.warn', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'console capture is unreliable after network route tests destabilize extension connection');
+    test.fixme(
+      true,
+      'console capture is unreliable after network route tests destabilize extension connection',
+    );
     await navigateAndWait(PAGES.HOME);
 
     bcli('eval', 'console.warn("test-warning-message"); true');
@@ -30,7 +36,10 @@ test.describe('console (basic)', () => {
   });
 
   test('captures console.error', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'console capture is unreliable after network route tests destabilize extension connection');
+    test.fixme(
+      true,
+      'console capture is unreliable after network route tests destabilize extension connection',
+    );
     await navigateAndWait(PAGES.HOME);
 
     bcli('eval', 'console.error("test-error-message"); true');
@@ -44,7 +53,10 @@ test.describe('console (basic)', () => {
 
 test.describe('console --level', () => {
   test('filters log messages', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'console capture is unreliable after network route tests destabilize extension connection');
+    test.fixme(
+      true,
+      'console capture is unreliable after network route tests destabilize extension connection',
+    );
     await navigateAndWait(PAGES.HOME);
 
     // Clear console first
@@ -166,7 +178,10 @@ test.describe('errors', () => {
   });
 
   test('captures runtime errors from eval', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'eval-thrown async errors via setTimeout are not reliably captured by the errors command');
+    test.fixme(
+      true,
+      'eval-thrown async errors via setTimeout are not reliably captured by the errors command',
+    );
     await navigateAndWait(PAGES.HOME);
 
     // Trigger a page-level error via eval

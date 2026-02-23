@@ -121,7 +121,10 @@ test.describe('eval DOM modification', () => {
     expect(r1.stdout).toContain('0');
 
     // Add an element
-    const r2 = bcli('eval', 'const el = document.createElement("div"); el.className = "eval-test-element"; document.body.appendChild(el); true');
+    const r2 = bcli(
+      'eval',
+      'const el = document.createElement("div"); el.className = "eval-test-element"; document.body.appendChild(el); true',
+    );
     expect(r2).toBcliSuccess();
 
     // Verify element exists
@@ -221,7 +224,10 @@ test.describe('eval integration', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     // Create a custom button via eval
-    const r1 = bcli('eval', 'const btn = document.createElement("button"); btn.id = "eval-btn"; btn.textContent = "EvalButton"; document.body.appendChild(btn); true');
+    const r1 = bcli(
+      'eval',
+      'const btn = document.createElement("button"); btn.id = "eval-btn"; btn.textContent = "EvalButton"; document.body.appendChild(btn); true',
+    );
     expect(r1).toBcliSuccess();
 
     // Click the button we just created

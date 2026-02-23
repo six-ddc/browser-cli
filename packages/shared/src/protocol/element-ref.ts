@@ -31,7 +31,7 @@ export function isElementRef(value: string): value is ElementRef {
 /** Parse an element ref string, returning the numeric index or null */
 export function parseElementRef(value: string): number | null {
   const match = value.match(REF_PATTERN);
-  return match ? parseInt(match[1], 10) : null;
+  return match?.[1] != null ? parseInt(match[1], 10) : null;
 }
 
 /** Create an element ref from an index */

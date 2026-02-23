@@ -1,11 +1,4 @@
 /**
- * Returns a formatted greeting message.
- */
-export function greet(name: string): string {
-  return `Hello, ${name}! Welcome to Browser-CLI.`;
-}
-
-/**
  * Application name constant shared across packages.
  */
 export const APP_NAME = 'Browser-CLI';

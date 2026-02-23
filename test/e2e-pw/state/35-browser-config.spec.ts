@@ -4,7 +4,7 @@ import { mkdtempSync, existsSync, statSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 test.describe('set viewport', () => {
   test('sets viewport to specific size', async ({ bcli, navigateAndWait }) => {
@@ -104,7 +104,10 @@ test.describe('set media (color scheme)', () => {
   });
 
   test('dark mode verifiable via matchMedia', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'set media dark/light may not work in headless Chrome or Playwright-managed browser');
+    test.fixme(
+      true,
+      'set media dark/light may not work in headless Chrome or Playwright-managed browser',
+    );
     await navigateAndWait(PAGES.HOME);
 
     const r = bcli('set', 'media', 'dark');
@@ -198,7 +201,10 @@ test.describe('browser config integration', () => {
   });
 
   test('switch between dark and light media', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'set media dark/light may not work in headless Chrome or Playwright-managed browser');
+    test.fixme(
+      true,
+      'set media dark/light may not work in headless Chrome or Playwright-managed browser',
+    );
     await navigateAndWait(PAGES.HOME);
 
     // Set dark

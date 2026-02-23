@@ -4,6 +4,7 @@ import {
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
   generateFriendlyId,
+  schemas,
 } from '@browser-cli/shared';
 import type {
   RequestMessage,
@@ -96,10 +97,14 @@ export class WsServer {
       this.wss.on('connection', (ws) => {
         logger.info('Extension connecting...');
 
-        ws.on('message', (raw) => {
+        ws.on('message', (raw: { toString(): string }) => {
           try {
-            const msg = JSON.parse(raw.toString()) as WsMessage;
-            this.handleMessage(ws, msg);
+            const parsed = schemas.wsMessageSchema.safeParse(JSON.parse(raw.toString()));
+            if (!parsed.success) {
+              logger.warn('Invalid WS message schema:', parsed.error.message);
+              return;
+            }
+            this.handleMessage(ws, parsed.data as WsMessage);
           } catch (e) {
             logger.error('Invalid message from extension:', (e as Error).message);
           }
@@ -146,17 +151,17 @@ export class WsServer {
   private handleMessage(ws: WebSocket, msg: WsMessage) {
     switch (msg.type) {
       case 'handshake':
-        this.handleHandshake(ws, msg as HandshakeMessage);
+        this.handleHandshake(ws, msg);
         break;
       case 'pong':
-        this.handlePong(ws, msg as PongMessage);
+        this.handlePong(ws, msg);
         break;
       case 'response':
-        this.handleResponse(msg as ResponseMessage);
+        this.handleResponse(msg);
         break;
       case 'event':
         logger.debug(`Event from extension: ${msg.event}`);
-        this.storeEvent(msg as EventMessage);
+        this.storeEvent(msg);
         break;
       default:
         logger.warn('Unexpected message type from extension:', (msg as { type: string }).type);
@@ -189,7 +194,9 @@ export class WsServer {
     ws.send(JSON.stringify(ack));
 
     const browserStr = msg.browser ? `, browser=${msg.browser.name} ${msg.browser.version}` : '';
-    logger.success(`Extension connected (id=${msg.extensionId}, session=${sessionId}${browserStr})`);
+    logger.success(
+      `Extension connected (id=${msg.extensionId}, session=${sessionId}${browserStr})`,
+    );
   }
 
   private handlePong(ws: WebSocket, msg: PongMessage) {
@@ -255,16 +262,22 @@ export class WsServer {
   }
 
   /** Send a command to the extension and wait for a response */
-  sendRequest(msg: RequestMessage, timeoutMs: number = 30_000, sessionId?: string): Promise<ResponseMessage> {
+  sendRequest(
+    msg: RequestMessage,
+    timeoutMs: number = 30_000,
+    sessionId?: string,
+  ): Promise<ResponseMessage> {
     return new Promise((resolve, reject) => {
       const conn = this.getConnection(sessionId);
 
       if (!conn || conn.ws.readyState !== WebSocket.OPEN) {
         if (sessionId) {
           const available = Array.from(this.connections.keys()).join(', ');
-          reject(new Error(
-            `Browser session '${sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'}`,
-          ));
+          reject(
+            new Error(
+              `Browser session '${sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'}`,
+            ),
+          );
         } else {
           reject(new Error('Extension not connected'));
         }

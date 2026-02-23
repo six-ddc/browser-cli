@@ -26,13 +26,17 @@
     "test:e2e:state": "playwright test --config test/e2e-pw/playwright.config.ts state/",
     "test:e2e:cross": "playwright test --config test/e2e-pw/playwright.config.ts cross/",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "@playwright/test": "^1.58.2",
     "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.39.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.8.0",
     "serve": "^14.2.5",
     "turbo": "^2.8.0",
@@ -44,6 +48,9 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,json,css,md,yml,yaml}": "prettier --write"
   },
   "packageManager": "pnpm@10.29.3",
   "engines": {

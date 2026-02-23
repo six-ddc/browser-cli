@@ -22,7 +22,7 @@ async function main() {
     strict: false,
   });
 
-  const wsPort = parseInt(String(values.port ?? DEFAULT_WS_PORT), 10);
+  const wsPort = parseInt(String(values.port), 10);
   const socketPath = getSocketPath();
 
   logger.info(`Starting daemon (wsPort=${wsPort})`);
@@ -57,14 +57,25 @@ async function main() {
     process.exit(0);
   };
 
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  const onSignal = () => void shutdown();
+  process.on('SIGTERM', onSignal);
+  process.on('SIGINT', onSignal);
+  process.on('SIGHUP', onSignal);
+
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled rejection:', reason instanceof Error ? reason.message : String(reason));
+  });
+
+  process.on('uncaughtException', (err) => {
+    logger.error('Uncaught exception:', err.message);
+    void shutdown();
+  });
 
   // Keep the process alive
   // Node.js will stay alive as long as the servers are listening
 }
 
-main().catch((err) => {
-  logger.error('Daemon failed to start:', err.message);
+main().catch((err: unknown) => {
+  logger.error('Daemon failed to start:', err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

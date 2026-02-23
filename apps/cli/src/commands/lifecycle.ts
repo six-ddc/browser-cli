@@ -1,12 +1,7 @@
 import { Command } from 'commander';
 import { DEFAULT_WS_PORT } from '@browser-cli/shared';
-import {
-  startDaemon,
-  stopDaemon,
-  getDaemonPid,
-} from '../daemon/process.js';
+import { startDaemon, stopDaemon, getDaemonPid } from '../daemon/process.js';
 import { getSocketPath, getWsPort } from '../util/paths.js';
-import { SocketClient } from '../client/socket-client.js';
 import { logger } from '../util/logger.js';
 import { getRootOpts } from './shared.js';
 
@@ -35,9 +30,9 @@ export const startCommand = new Command('start')
 
 export const stopCommand = new Command('stop')
   .description('Stop the browser-cli daemon')
-  .action((_opts: unknown, cmd: Command) => {
+  .action(async (_opts: unknown, cmd: Command) => {
     const rootOpts = getRootOpts(cmd);
-    const stopped = stopDaemon();
+    const stopped = await stopDaemon();
     if (rootOpts.json) {
       console.log(JSON.stringify({ success: true, stopped }));
       return;
@@ -53,9 +48,9 @@ export const closeCommand = new Command('close')
   .alias('quit')
   .alias('exit')
   .description('Close the browser-cli session (stop daemon)')
-  .action((_opts: unknown, cmd: Command) => {
+  .action(async (_opts: unknown, cmd: Command) => {
     const rootOpts = getRootOpts(cmd);
-    const stopped = stopDaemon();
+    const stopped = await stopDaemon();
     if (rootOpts.json) {
       console.log(JSON.stringify({ success: true, stopped }));
       return;
@@ -111,7 +106,7 @@ export const statusCommand = new Command('status')
       );
 
       if (response.success && response.data) {
-        const data = response.data as {
+        const data = response.data as unknown as {
           connections: Array<{
             extensionId: string;
             sessionId: string;

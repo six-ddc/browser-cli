@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 import { PAGES } from '../helpers/constants';
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 test.describe('cookies set', () => {
   test.beforeEach(async ({ navigateAndWait, bcli }) => {
@@ -10,7 +10,14 @@ test.describe('cookies set', () => {
   });
 
   test('sets a basic cookie', async ({ bcli, baseURL }) => {
-    const r = bcli('cookies', 'set', 'testcookie', 'testvalue', '--url', `${baseURL}/${PAGES.HOME}`);
+    const r = bcli(
+      'cookies',
+      'set',
+      'testcookie',
+      'testvalue',
+      '--url',
+      `${baseURL}/${PAGES.HOME}`,
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Cookie set');
 
@@ -22,7 +29,16 @@ test.describe('cookies set', () => {
   });
 
   test('sets cookie with domain', async ({ bcli, baseURL }) => {
-    const r = bcli('cookies', 'set', 'domcookie', 'domvalue', '--url', `${baseURL}/${PAGES.HOME}`, '--domain', 'localhost');
+    const r = bcli(
+      'cookies',
+      'set',
+      'domcookie',
+      'domvalue',
+      '--url',
+      `${baseURL}/${PAGES.HOME}`,
+      '--domain',
+      'localhost',
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Cookie set');
 
@@ -34,7 +50,16 @@ test.describe('cookies set', () => {
   });
 
   test('sets cookie with path', async ({ bcli, baseURL }) => {
-    const r = bcli('cookies', 'set', 'pathcookie', 'pathvalue', '--url', `${baseURL}/${PAGES.LOGIN}`, '--path', '/login');
+    const r = bcli(
+      'cookies',
+      'set',
+      'pathcookie',
+      'pathvalue',
+      '--url',
+      `${baseURL}/${PAGES.LOGIN}`,
+      '--path',
+      '/login',
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Cookie set');
     // Note: no read-back verification — path-restricted cookies are only visible
@@ -43,7 +68,15 @@ test.describe('cookies set', () => {
   });
 
   test('sets cookie with secure flag', async ({ bcli, baseURL }) => {
-    const r = bcli('cookies', 'set', 'securecookie', 'securevalue', '--url', `${baseURL}/${PAGES.HOME}`, '--secure');
+    const r = bcli(
+      'cookies',
+      'set',
+      'securecookie',
+      'securevalue',
+      '--url',
+      `${baseURL}/${PAGES.HOME}`,
+      '--secure',
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Cookie set');
 
@@ -55,7 +88,15 @@ test.describe('cookies set', () => {
   });
 
   test('sets cookie with httponly flag', async ({ bcli, baseURL }) => {
-    const r = bcli('cookies', 'set', 'httponlycookie', 'httponlyvalue', '--url', `${baseURL}/${PAGES.HOME}`, '--httponly');
+    const r = bcli(
+      'cookies',
+      'set',
+      'httponlycookie',
+      'httponlyvalue',
+      '--url',
+      `${baseURL}/${PAGES.HOME}`,
+      '--httponly',
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Cookie set');
 
@@ -67,7 +108,16 @@ test.describe('cookies set', () => {
   });
 
   test('sets cookie with samesite', async ({ bcli, baseURL }) => {
-    const r = bcli('cookies', 'set', 'samecookie', 'samevalue', '--url', `${baseURL}/${PAGES.HOME}`, '--samesite', 'lax');
+    const r = bcli(
+      'cookies',
+      'set',
+      'samecookie',
+      'samevalue',
+      '--url',
+      `${baseURL}/${PAGES.HOME}`,
+      '--samesite',
+      'lax',
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Cookie set');
 
@@ -153,7 +203,15 @@ test.describe('cookies (list all)', () => {
   });
 
   test('displays cookie flags', async ({ bcli, baseURL }) => {
-    bcli('cookies', 'set', 'flagtest', 'flagvalue', '--url', `${baseURL}/${PAGES.HOME}`, '--httponly');
+    bcli(
+      'cookies',
+      'set',
+      'flagtest',
+      'flagvalue',
+      '--url',
+      `${baseURL}/${PAGES.HOME}`,
+      '--httponly',
+    );
     await sleep(500);
 
     const r = bcli('cookies');

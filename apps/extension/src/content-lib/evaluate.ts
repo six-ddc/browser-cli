@@ -14,8 +14,8 @@ export async function handleEvaluate(params: EvaluateParams): Promise<{ value: u
   return new Promise((resolve, reject) => {
     const messageId = `browser-cli-eval-${Date.now()}-${Math.random()}`;
 
-    const handler = (event: MessageEvent) => {
-      if (event.data?.type === messageId) {
+    const handler = (event: MessageEvent<{ type?: string; error?: string; result?: unknown }>) => {
+      if (event.data.type === messageId) {
         window.removeEventListener('message', handler);
         if (event.data.error) {
           reject(new Error(event.data.error));

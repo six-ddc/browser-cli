@@ -1,30 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>The Internet - Large Page</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    .row { padding: 10px; border-bottom: 1px solid #eee; }
-    #bottom-marker { padding: 20px; background: #dff0d8; margin-top: 20px; font-weight: bold; }
-    #scroll-target { margin-top: 500px; padding: 20px; background: #fcf8e3; }
-  </style>
-</head>
-<body>
-  <h3>Large &amp; Deep DOM</h3>
-  <div id="content"></div>
-  <div id="scroll-target">Scroll Target Element</div>
-  <div id="bottom-marker">Bottom of the page</div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>The Internet - Large Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      .row {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+      }
+      #bottom-marker {
+        padding: 20px;
+        background: #dff0d8;
+        margin-top: 20px;
+        font-weight: bold;
+      }
+      #scroll-target {
+        margin-top: 500px;
+        padding: 20px;
+        background: #fcf8e3;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>Large &amp; Deep DOM</h3>
+    <div id="content"></div>
+    <div id="scroll-target">Scroll Target Element</div>
+    <div id="bottom-marker">Bottom of the page</div>
 
-  <script>
-    const content = document.getElementById('content');
-    for (let i = 1; i <= 50; i++) {
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.id = 'row-' + i;
-      row.textContent = 'Row ' + i + ': ' + 'Lorem ipsum dolor sit amet. '.repeat(3);
-      content.appendChild(row);
-    }
-  </script>
-</body>
+    <script>
+      const content = document.getElementById('content');
+      for (let i = 1; i <= 50; i++) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.id = 'row-' + i;
+        row.textContent = 'Row ' + i + ': ' + 'Lorem ipsum dolor sit amet. '.repeat(3);
+        content.appendChild(row);
+      }
+    </script>
+  </body>
 </html>

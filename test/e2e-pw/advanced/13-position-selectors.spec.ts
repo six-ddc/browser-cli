@@ -235,7 +235,10 @@ test.describe('nth equivalence', () => {
     expect(r.stdout).toContain('Clicked');
   });
 
-  test('nth 2 targets the last checkbox (on 2-checkbox page)', async ({ bcli, navigateAndWait }) => {
+  test('nth 2 targets the last checkbox (on 2-checkbox page)', async ({
+    bcli,
+    navigateAndWait,
+  }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     // /checkboxes has exactly 2 checkboxes, so nth 2 = last
@@ -340,7 +343,11 @@ test.describe('position selector error handling', () => {
 // ---- Position Selectors in Multi-Element Scenarios ----
 
 test.describe('multi-element scenarios', () => {
-  test('first and last target different elements', async ({ bcli, navigateAndWait, activePage }) => {
+  test('first and last target different elements', async ({
+    bcli,
+    navigateAndWait,
+    activePage,
+  }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     // Verify we have 2 checkboxes

@@ -36,6 +36,7 @@ browser-cli fill 'role=combobox' query                 # Combobox
 ```
 
 Bracket options:
+
 - `[name="..."]` — match accessible name
 - `[exact]` — require exact name match
 - `[hidden]` — include hidden elements
@@ -64,12 +65,16 @@ browser-cli fill 'label="Email Address"' user@test.com
 browser-cli click 'label=Remember me'
 ```
 
+Bracket options: `[exact]`, `[hidden]`
+
 #### placeholder - Input Placeholder
 
 ```bash
 browser-cli fill 'placeholder=Search...' query
 browser-cli fill 'placeholder="Enter your name"' John
 ```
+
+Bracket options: `[exact]`, `[hidden]`
 
 #### alt - Image Alt Text
 
@@ -78,12 +83,16 @@ browser-cli click 'alt=Company Logo'
 browser-cli click 'alt="Profile Picture"'
 ```
 
+Bracket options: `[exact]`, `[hidden]`
+
 #### title - Title Attribute
 
 ```bash
 browser-cli click 'title=Help'
 browser-cli click 'title="Close dialog"'
 ```
+
+Bracket options: `[exact]`, `[hidden]`
 
 #### testid - Test ID
 
@@ -110,11 +119,11 @@ After running `snapshot`, elements are assigned refs like `@e1`, `@e2`:
 ```bash
 browser-cli snapshot -ic
 # Output:
-# @e1 link "Home"
-# @e2 link "Products"
-# @e3 textbox "Search"
-# @e4 button "Search"
-# @e5 link "Login"
+# link "Home" (url="/") [@e1]
+# link "Products" (url="/products") [@e2]
+# textbox "Search" [@e3]
+# button "Search" [@e4]
+# link "Login" (url="/login") [@e5]
 
 browser-cli click @e5              # Click "Login"
 browser-cli fill @e3 "laptop"      # Fill search box
@@ -135,49 +144,49 @@ browser-cli find <engine> <value> [action] [action-value]
 
 ### Engines
 
-| Engine | Description | Example |
-|--------|-------------|---------|
-| `role` | ARIA role | `find role button` |
-| `text` | Text content | `find text "Sign In"` |
-| `label` | Form label | `find label Email` |
+| Engine        | Description      | Example                   |
+| ------------- | ---------------- | ------------------------- |
+| `role`        | ARIA role        | `find role button`        |
+| `text`        | Text content     | `find text "Sign In"`     |
+| `label`       | Form label       | `find label Email`        |
 | `placeholder` | Placeholder text | `find placeholder Search` |
-| `alt` | Image alt text | `find alt Logo` |
-| `title` | Title attribute | `find title Help` |
-| `testid` | Test ID | `find testid login-btn` |
-| `xpath` | XPath expression | `find xpath "//button"` |
+| `alt`         | Image alt text   | `find alt Logo`           |
+| `title`       | Title attribute  | `find title Help`         |
+| `testid`      | Test ID          | `find testid login-btn`   |
+| `xpath`       | XPath expression | `find xpath "//button"`   |
 
 ### Position Selectors
 
 When multiple elements match, use position selectors:
 
-| Selector | Description | Example |
-|----------|-------------|---------|
-| `first` | First match | `find first .item click` |
-| `last` | Last match | `find last .item click` |
-| `nth` | Nth match (1-based) | `find nth 2 .item click` |
+| Selector | Description         | Example                  |
+| -------- | ------------------- | ------------------------ |
+| `first`  | First match         | `find first .item click` |
+| `last`   | Last match          | `find last .item click`  |
+| `nth`    | Nth match (1-based) | `find nth 2 .item click` |
 
 ### Actions
 
-| Action | Description | Requires value |
-|--------|-------------|----------------|
-| `click` | Click (default when omitted) | No |
-| `dblclick` | Double-click | No |
-| `fill` | Fill input | Yes |
-| `type` | Type characters | Yes |
-| `hover` | Hover | No |
-| `check` | Check checkbox | No |
-| `uncheck` | Uncheck checkbox | No |
-| `select` | Select option | Yes |
-| `press` | Press key | Yes |
-| `clear` | Clear input | No |
-| `focus` | Focus element | No |
+| Action     | Description                  | Requires value |
+| ---------- | ---------------------------- | -------------- |
+| `click`    | Click (default when omitted) | No             |
+| `dblclick` | Double-click                 | No             |
+| `fill`     | Fill input                   | Yes            |
+| `type`     | Type characters              | Yes            |
+| `hover`    | Hover                        | No             |
+| `check`    | Check checkbox               | No             |
+| `uncheck`  | Uncheck checkbox             | No             |
+| `select`   | Select option                | Yes            |
+| `press`    | Press key                    | Yes            |
+| `clear`    | Clear input                  | No             |
+| `focus`    | Focus element                | No             |
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
+| Option          | Description                         |
+| --------------- | ----------------------------------- |
 | `--name <name>` | Accessible name (for `role` engine) |
-| `--exact` | Exact text match |
+| `--exact`       | Exact text match                    |
 
 ### Examples
 
@@ -220,9 +229,8 @@ browser-cli find nth 1 ".tab" fill "New Value"
 When choosing a selector, prefer in this order:
 
 1. **Element refs** (`@e1`) — most reliable, from snapshot
-2. **Semantic locators** (`role=`, `label=`, `text=`) — resilient to DOM changes
-3. **Test IDs** (`testid=`) — stable, developer-intended
-4. **CSS selectors** (`#id`, `.class`) — brittle if DOM changes
+2. **Semantic locators** (`role=`, `label=`, `text=`, `testid=`) — resilient to DOM changes, testid is always exact and case-sensitive
+3. **CSS selectors** (`#id`, `.class`) — brittle if DOM changes
 
 ---
 

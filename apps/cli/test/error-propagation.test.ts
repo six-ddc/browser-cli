@@ -8,7 +8,12 @@ vi.mock('../src/util/logger.js', () => ({
   logger: { success: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
-function createErrorBridge(error: { code: string; message: string; hint?: string; details?: unknown }) {
+function createErrorBridge(error: {
+  code: string;
+  message: string;
+  hint?: string;
+  details?: unknown;
+}) {
   const ws = {
     isConnected: true,
     sendRequest: vi.fn().mockResolvedValue({

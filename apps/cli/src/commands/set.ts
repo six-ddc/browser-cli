@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
-const setCmd = new Command('set')
-  .description('Browser configuration');
+const setCmd = new Command('set').description('Browser configuration');
 
 setCmd
   .command('viewport <width> <height>')

@@ -13,14 +13,15 @@ browser-cli network route <pattern> --abort
 browser-cli network route <pattern> --redirect <url>
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--abort` | Block/abort matching requests |
+| Option             | Description                       |
+| ------------------ | --------------------------------- |
+| `--abort`          | Block/abort matching requests     |
 | `--redirect <url>` | Redirect matching requests to URL |
 
 **Pattern**: URL match pattern (glob-style).
 
 **Examples:**
+
 ```bash
 # Block analytics
 browser-cli network route '*google-analytics*' --abort
@@ -48,12 +49,12 @@ browser-cli network routes
 browser-cli network requests [options]
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--pattern <pattern>` | Filter by URL pattern | - |
-| `--tab <tabId>` | Filter by tab ID | - |
-| `--blocked` | Only show blocked/redirected | `false` |
-| `--limit <n>` | Max results | `50` |
+| Option                | Description                  | Default |
+| --------------------- | ---------------------------- | ------- |
+| `--pattern <pattern>` | Filter by URL pattern        | -       |
+| `--tab <tabId>`       | Filter by tab ID             | -       |
+| `--blocked`           | Only show blocked/redirected | `false` |
+| `--limit <n>`         | Max results                  | `50`    |
 
 ### clear - Clear Tracked Requests
 
@@ -96,6 +97,7 @@ browser-cli cookies get [name] [--url <url>] [--domain <domain>]
 ```
 
 **Examples:**
+
 ```bash
 browser-cli cookies                           # All cookies
 browser-cli cookies get session_id            # By name
@@ -109,16 +111,17 @@ browser-cli cookies get --url https://example.com/page
 browser-cli cookies set <name> <value> [options]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--url <url>` | URL for the cookie (required) |
-| `--domain <domain>` | Cookie domain |
-| `--path <path>` | Cookie path |
-| `--secure` | Secure flag |
-| `--httponly` | HttpOnly flag |
-| `--samesite <v>` | `no_restriction`, `lax`, `strict` |
+| Option              | Description                       |
+| ------------------- | --------------------------------- |
+| `--url <url>`       | URL for the cookie (required)     |
+| `--domain <domain>` | Cookie domain                     |
+| `--path <path>`     | Cookie path                       |
+| `--secure`          | Secure flag                       |
+| `--httponly`        | HttpOnly flag                     |
+| `--samesite <v>`    | `no_restriction`, `lax`, `strict` |
 
 **Examples:**
+
 ```bash
 browser-cli cookies set token abc123 --url https://example.com
 browser-cli cookies set pref dark --url https://example.com --path / --samesite lax
@@ -132,6 +135,7 @@ browser-cli cookies clear [--url <url>] [--domain <domain>]
 ```
 
 **Examples:**
+
 ```bash
 browser-cli cookies clear                     # Clear all
 browser-cli cookies clear --domain example.com
@@ -166,6 +170,7 @@ browser-cli storage session clear
 ```
 
 **Examples:**
+
 ```bash
 # Read
 browser-cli storage local                    # All localStorage
@@ -194,6 +199,7 @@ browser-cli tab close [tabId]               # Close tab (default: active)
 ```
 
 **Examples:**
+
 ```bash
 browser-cli tab                              # See all open tabs
 browser-cli tab new https://example.com      # Open in new tab
@@ -214,6 +220,7 @@ browser-cli frame current                    # Show current frame
 ```
 
 **Examples:**
+
 ```bash
 # Work inside an iframe
 browser-cli frame list                       # Find frames
@@ -251,9 +258,10 @@ browser-cli dialog accept [text]             # Accept (optionally with prompt te
 browser-cli dialog dismiss                   # Dismiss/cancel
 ```
 
-**Important**: Set the handler *before* triggering the dialog.
+**Important**: Set the handler _before_ triggering the dialog.
 
 **Examples:**
+
 ```bash
 # Handle an alert
 browser-cli dialog accept
@@ -279,6 +287,7 @@ browser-cli set viewport <width> <height>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli set viewport 1920 1080           # Desktop
 browser-cli set viewport 375 812             # iPhone X
@@ -288,10 +297,11 @@ browser-cli set viewport 768 1024            # iPad
 ### set geo - Override Geolocation
 
 ```bash
-browser-cli set geo <latitude> <longitude> [--accuracy <meters>]
+browser-cli set geo <latitude> <longitude> [--accuracy <meters>]   # default: 100m
 ```
 
 **Examples:**
+
 ```bash
 browser-cli set geo 37.7749 -122.4194                   # San Francisco
 browser-cli set geo 51.5074 -0.1278 --accuracy 10       # London, 10m accuracy
@@ -304,6 +314,7 @@ browser-cli set media <colorScheme>
 ```
 
 **Examples:**
+
 ```bash
 browser-cli set media dark                   # Dark mode
 browser-cli set media light                  # Light mode
@@ -316,6 +327,7 @@ browser-cli set headers '<json>'
 ```
 
 **Examples:**
+
 ```bash
 browser-cli set headers '{"X-Custom-Header": "value"}'
 browser-cli set headers '{"Authorization": "Bearer token123"}'
@@ -329,15 +341,68 @@ browser-cli set headers '{"Authorization": "Bearer token123"}'
 browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--color` | `#2196F3` | Highlight color |
-| `--duration` | `2000` | Duration in ms |
+| Option       | Default   | Description     |
+| ------------ | --------- | --------------- |
+| `--color`    | `#2196F3` | Highlight color |
+| `--duration` | `2000`    | Duration in ms  |
 
 **Examples:**
+
 ```bash
 browser-cli highlight '#submit-btn'
 browser-cli highlight '.error' --color red --duration 5000
+```
+
+---
+
+## State Management (Save/Load)
+
+Save and restore browser state (cookies + localStorage + sessionStorage) to a JSON file. Useful for preserving login sessions across runs.
+
+### state save - Export State
+
+```bash
+browser-cli state save <path>
+```
+
+Exports cookies, localStorage, and sessionStorage to a JSON file.
+
+**Examples:**
+
+```bash
+browser-cli state save ./session.json
+browser-cli state save /tmp/auth-state.json
+```
+
+### state load - Import State
+
+```bash
+browser-cli state load <path>
+```
+
+Imports cookies and storage from a previously saved JSON file.
+
+**Examples:**
+
+```bash
+browser-cli state load ./session.json
+browser-cli state load /tmp/auth-state.json
+```
+
+### Common Pattern
+
+```bash
+# Save state after login
+browser-cli navigate https://app.example.com/login
+browser-cli find label Email fill admin@example.com
+browser-cli find label Password fill secret
+browser-cli find role button --name "Log In"
+browser-cli wait --url '**/dashboard*'
+browser-cli state save ./auth.json
+
+# Restore state in a later session
+browser-cli state load ./auth.json
+browser-cli navigate https://app.example.com/dashboard
 ```
 
 ---

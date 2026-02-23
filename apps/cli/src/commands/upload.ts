@@ -7,13 +7,24 @@ import { sendCommand } from './shared.js';
 function getMimeType(filePath: string): string {
   const ext = extname(filePath).toLowerCase();
   const mimeMap: Record<string, string> = {
-    '.txt': 'text/plain', '.html': 'text/html', '.css': 'text/css',
-    '.js': 'application/javascript', '.json': 'application/json',
-    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
-    '.pdf': 'application/pdf', '.zip': 'application/zip',
-    '.csv': 'text/csv', '.xml': 'application/xml',
-    '.mp4': 'video/mp4', '.mp3': 'audio/mpeg', '.webm': 'video/webm',
+    '.txt': 'text/plain',
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.pdf': 'application/pdf',
+    '.zip': 'application/zip',
+    '.csv': 'text/csv',
+    '.xml': 'application/xml',
+    '.mp4': 'video/mp4',
+    '.mp3': 'audio/mpeg',
+    '.webm': 'video/webm',
   };
   return mimeMap[ext] || 'application/octet-stream';
 }
@@ -46,7 +57,7 @@ export const uploadCommand = new Command('upload')
       action: 'upload',
       params: {
         selector,
-        files: resolvedFiles.length === 1 ? resolvedFiles[0] : resolvedFiles,
+        files: resolvedFiles.length === 1 ? (resolvedFiles[0] ?? resolvedFiles) : resolvedFiles,
         clear: opts.clear,
       },
     });

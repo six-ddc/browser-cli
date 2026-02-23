@@ -81,7 +81,7 @@ export async function handleDialog(command: Command): Promise<unknown> {
 
   switch (command.action) {
     case 'dialogAccept': {
-      const { text } = command.params as { text?: string };
+      const { text } = command.params;
       await updateConfig({
         autoAccept: true,
         autoDismiss: false,

@@ -16,7 +16,11 @@ export class NetworkManager {
   private routes: Map<number, NetworkRoute> = new Map();
   private requests: NetworkRequest[] = [];
   private nextRouteId = 1;
-  private requestListener: ((details: Browser.webRequest.OnBeforeRequestDetails) => Browser.webRequest.BlockingResponse | undefined) | null = null;
+  private requestListener:
+    | ((
+        details: Browser.webRequest.OnBeforeRequestDetails,
+      ) => Browser.webRequest.BlockingResponse | undefined)
+    | null = null;
 
   constructor() {
     this.initRequestTracking();
@@ -48,7 +52,8 @@ export class NetworkManager {
               this.trimRequests();
               return { cancel: true };
             }
-          } else if (route.action === 'redirect' && route.redirectUrl) {
+          } else if (route.redirectUrl) {
+            // action === 'redirect'
             request.redirectedTo = route.redirectUrl;
             if (IS_FIREFOX) {
               this.requests.push(request);
@@ -81,7 +86,11 @@ export class NetworkManager {
   /**
    * Add a new route (block or redirect).
    */
-  async addRoute(pattern: string, action: 'block' | 'redirect', redirectUrl?: string): Promise<NetworkRoute> {
+  async addRoute(
+    pattern: string,
+    action: 'block' | 'redirect',
+    redirectUrl?: string,
+  ): Promise<NetworkRoute> {
     const routeId = this.nextRouteId++;
 
     const route: NetworkRoute = {
@@ -122,7 +131,7 @@ export class NetworkManager {
             ? { type: 'block' as Browser.declarativeNetRequest.RuleActionType }
             : {
                 type: 'redirect' as Browser.declarativeNetRequest.RuleActionType,
-                redirect: { url: redirectUrl! },
+                redirect: { url: redirectUrl ?? '' },
               },
       };
 

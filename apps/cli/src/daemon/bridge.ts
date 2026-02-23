@@ -1,9 +1,5 @@
 import { COMMAND_TIMEOUT_MS, ErrorCode, createError } from '@browser-cli/shared';
-import type {
-  DaemonRequest,
-  DaemonResponse,
-  RequestMessage,
-} from '@browser-cli/shared';
+import type { DaemonRequest, DaemonResponse, RequestMessage } from '@browser-cli/shared';
 import type { WsServer } from './ws-server.js';
 import { logger } from '../util/logger.js';
 
@@ -51,22 +47,28 @@ export class Bridge {
     };
 
     try {
-      const response = await this.wsServer.sendRequest(wsRequest, COMMAND_TIMEOUT_MS, req.sessionId);
+      const response = await this.wsServer.sendRequest(
+        wsRequest,
+        COMMAND_TIMEOUT_MS,
+        req.sessionId,
+      );
       return {
         id: req.id,
         success: response.success,
-        data: response.data,
+        data: response.data as DaemonResponse['data'],
         error: response.error,
       };
     } catch (err) {
-      logger.error(`Command ${req.command.action} failed:`, (err as Error).message);
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error(`Command ${req.command.action} failed:`, msg);
+      const code =
+        msg.includes('disconnected') || msg.includes('not connected')
+          ? ErrorCode.EXTENSION_NOT_CONNECTED
+          : ErrorCode.TIMEOUT;
       return {
         id: req.id,
         success: false,
-        error: createError(
-          ErrorCode.TIMEOUT,
-          (err as Error).message,
-        ),
+        error: createError(code, msg),
       };
     }
   }

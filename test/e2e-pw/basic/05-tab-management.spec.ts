@@ -51,7 +51,7 @@ test.describe('tab switch', () => {
 
     // Record original tab ID
     const origList = bcli('tab', 'list');
-    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
 
     bcli('tab', 'new', `${baseURL}/${PAGES.LOGIN}`);
     bcli('wait', '2000');
@@ -68,8 +68,8 @@ test.describe('tab switch', () => {
     // Clean up — close the extra tab (the login tab, not the original)
     // Switch to the new tab and close it
     const list = bcli('tab', 'list');
-    const allIds = [...list.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
-    const extraIds = allIds.filter(id => !origTabIds.includes(id));
+    const allIds = [...list.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
+    const extraIds = allIds.filter((id) => !origTabIds.includes(id));
     for (const id of extraIds) {
       bcli('tab', id);
       bcli('tab', 'close');
@@ -87,7 +87,7 @@ test.describe('tab close', () => {
 
     // Record original tab
     const origList = bcli('tab', 'list');
-    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
 
     bcli('tab', 'new', `${baseURL}/${PAGES.LOGIN}`);
     bcli('wait', '2000');
@@ -108,7 +108,7 @@ test.describe('tab close', () => {
 
     // Record original tab IDs
     const origList = bcli('tab', 'list');
-    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
 
     // Open a new tab
     bcli('tab', 'new', `${baseURL}/${PAGES.LOGIN}`);
@@ -116,8 +116,8 @@ test.describe('tab close', () => {
 
     // Get the new tab's ID
     const afterList = bcli('tab', 'list');
-    const allIds = [...afterList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
-    const newTabId = allIds.find(id => !origTabIds.includes(id));
+    const allIds = [...afterList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
+    const newTabId = allIds.find((id) => !origTabIds.includes(id));
     expect(newTabId).toBeDefined();
 
     // Switch back to original tab first
@@ -143,7 +143,7 @@ test.describe('tab integration', () => {
 
     // Record original tab
     const origList = bcli('tab', 'list');
-    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
 
     bcli('tab', 'new', `${baseURL}/${PAGES.LOGIN}`);
     bcli('wait', '2000');
@@ -159,8 +159,8 @@ test.describe('tab integration', () => {
 
     // Clean up — close extra tabs
     const list = bcli('tab', 'list');
-    const allIds = [...list.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
-    const extraIds = allIds.filter(id => !origTabIds.includes(id));
+    const allIds = [...list.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
+    const extraIds = allIds.filter((id) => !origTabIds.includes(id));
     for (const id of extraIds) {
       bcli('tab', id);
       bcli('tab', 'close');
@@ -175,7 +175,7 @@ test.describe('tab integration', () => {
 
     // Record original tab
     const origList = bcli('tab', 'list');
-    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
+    const origTabIds = [...origList.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
 
     bcli('tab', 'new', `${baseURL}/${PAGES.LOGIN}`);
     bcli('wait', '1000');
@@ -186,8 +186,8 @@ test.describe('tab integration', () => {
     expect(list.exitCode).toBe(0);
 
     // Close all extras (not the original)
-    const allIds = [...list.stdout.matchAll(/\[(\d+)\]/g)].map(m => m[1]);
-    const extraIds = allIds.filter(id => !origTabIds.includes(id));
+    const allIds = [...list.stdout.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
+    const extraIds = allIds.filter((id) => !origTabIds.includes(id));
     for (const id of extraIds) {
       bcli('tab', id);
       bcli('tab', 'close');

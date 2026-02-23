@@ -5,13 +5,11 @@
 import type { Command } from '@browser-cli/shared';
 import { resolveElement } from './element-ref-store';
 
+// eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleForm(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'check': {
-      const { selector, position } = command.params as {
-        selector: string;
-        position?: { type: 'first' | 'last' | 'nth'; index?: number };
-      };
+      const { selector, position } = command.params;
       const el = requireCheckable(selector, position);
       if (!el.checked) {
         el.checked = true;
@@ -21,10 +19,7 @@ export async function handleForm(command: Command): Promise<unknown> {
       return { checked: true };
     }
     case 'uncheck': {
-      const { selector, position } = command.params as {
-        selector: string;
-        position?: { type: 'first' | 'last' | 'nth'; index?: number };
-      };
+      const { selector, position } = command.params;
       const el = requireCheckable(selector, position);
       if (el.checked) {
         el.checked = false;
@@ -34,11 +29,7 @@ export async function handleForm(command: Command): Promise<unknown> {
       return { unchecked: true };
     }
     case 'select': {
-      const { selector, value, position } = command.params as {
-        selector: string;
-        value: string;
-        position?: { type: 'first' | 'last' | 'nth'; index?: number };
-      };
+      const { selector, value, position } = command.params;
       const el = resolveElement(selector, position);
       if (!el) throw new Error(`Element not found: ${selector}`);
       if (!(el instanceof HTMLSelectElement)) {
@@ -64,8 +55,12 @@ export async function handleForm(command: Command): Promise<unknown> {
         }
       }
       if (!matched) {
-        const available = Array.from(el.options).map(o => `"${o.text}" (value="${o.value}")`).join(', ');
-        throw new Error(`No option matching "${value}" in <select>. Available options: ${available}`);
+        const available = Array.from(el.options)
+          .map((o) => `"${o.text}" (value="${o.value}")`)
+          .join(', ');
+        throw new Error(
+          `No option matching "${value}" in <select>. Available options: ${available}`,
+        );
       }
 
       el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -79,7 +74,7 @@ export async function handleForm(command: Command): Promise<unknown> {
 
 function requireCheckable(
   selector: string,
-  position?: { type: 'first' | 'last' | 'nth'; index?: number }
+  position?: { type: 'first' | 'last' | 'nth'; index?: number },
 ): HTMLInputElement {
   const el = resolveElement(selector, position);
   if (!el) throw new Error(`Element not found: ${selector}`);

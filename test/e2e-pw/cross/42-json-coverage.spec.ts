@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 import { PAGES, SEL } from '../helpers/constants';
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const isHeadless = process.env.HEADLESS !== '0';
 
@@ -279,7 +279,9 @@ test.describe('--json upload', () => {
     expect(parsed.success).toBe(true);
 
     // Clean up temp file
-    try { fs.unlinkSync(tmpFile); } catch {}
+    try {
+      fs.unlinkSync(tmpFile);
+    } catch {}
   });
 });
 
@@ -318,7 +320,9 @@ test.describe('--json state', () => {
 
     // Clean up (file may not be created since --json exits before write)
     const fs = await import('node:fs');
-    try { fs.unlinkSync(tmpFile); } catch {}
+    try {
+      fs.unlinkSync(tmpFile);
+    } catch {}
   });
 
   test('--json state load returns valid JSON', async ({ bcli, navigateAndWait }) => {
@@ -336,7 +340,9 @@ test.describe('--json state', () => {
 
     // Clean up
     const fs = await import('node:fs');
-    try { fs.unlinkSync(tmpFile); } catch {}
+    try {
+      fs.unlinkSync(tmpFile);
+    } catch {}
   });
 });
 
@@ -405,7 +411,10 @@ test.describe('--json window', () => {
 
 test.describe('--json set', () => {
   test('--json set viewport returns valid JSON', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'set viewport unreliable: navigateAndWait fails due to session state after window tests');
+    test.fixme(
+      true,
+      'set viewport unreliable: navigateAndWait fails due to session state after window tests',
+    );
     await navigateAndWait(PAGES.HOME);
     const r = bcli('--json', 'set', 'viewport', '1024', '768');
     expect(r).toBcliSuccess();
@@ -414,7 +423,10 @@ test.describe('--json set', () => {
   });
 
   test('--json set media returns valid JSON', async ({ bcli, navigateAndWait }) => {
-    test.fixme(true, 'set media only accepts dark/light colorScheme, not CSS media types like print');
+    test.fixme(
+      true,
+      'set media only accepts dark/light colorScheme, not CSS media types like print',
+    );
     await navigateAndWait(PAGES.HOME);
     const r = bcli('--json', 'set', 'media', 'print');
     expect(r).toBcliSuccess();

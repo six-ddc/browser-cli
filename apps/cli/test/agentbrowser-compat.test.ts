@@ -45,7 +45,10 @@ vi.mock('../src/commands/shared.js', () => ({
       snapshot: 'tree',
       refCount: 5,
       count: 3,
-      x: 0, y: 0, width: 100, height: 100,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
       visible: true,
       enabled: true,
       checked: false,
@@ -53,7 +56,8 @@ vi.mock('../src/commands/shared.js', () => ({
       entries: {},
       tabs: [],
       routes: [],
-      requests: [], total: 0,
+      requests: [],
+      total: 0,
       cleared: 0,
       frame: { index: 0, name: null, src: 'about:blank', isMainFrame: true, isSameOrigin: true },
       currentFrame: 0,
@@ -88,10 +92,7 @@ vi.mock('../src/commands/shared.js', () => ({
  * Commander calls process.exit on errors — we override that.
  */
 async function parseArgs(...args: string[]): Promise<void> {
-  const program = new Command()
-    .name('browser-cli')
-    .option('--json', 'JSON output')
-    .exitOverride(); // throw instead of process.exit
+  const program = new Command().name('browser-cli').option('--json', 'JSON output').exitOverride(); // throw instead of process.exit
 
   registerCommands(program);
 
@@ -126,7 +127,6 @@ beforeEach(() => {
 });
 
 describe('AgentBrowser CLI syntax compatibility', () => {
-
   // ─── Navigation ────────────────────────────────────────────────────
 
   describe('navigate / goto / open', () => {
@@ -330,7 +330,15 @@ describe('AgentBrowser CLI syntax compatibility', () => {
     });
 
     it('snapshot --interactive --compact --depth 5 --selector .main', async () => {
-      await parseArgs('snapshot', '--interactive', '--compact', '--depth', '5', '--selector', '.main');
+      await parseArgs(
+        'snapshot',
+        '--interactive',
+        '--compact',
+        '--depth',
+        '5',
+        '--selector',
+        '.main',
+      );
       expectCommand('snapshot', { interactive: true, compact: true, depth: 5, selector: '.main' });
     });
   });
@@ -465,8 +473,22 @@ describe('AgentBrowser CLI syntax compatibility', () => {
     });
 
     it('cookies set with all flags', async () => {
-      await parseArgs('cookies', 'set', 'token', 'xyz', '--url', 'https://example.com',
-        '--domain', '.example.com', '--path', '/', '--secure', '--httponly', '--samesite', 'lax');
+      await parseArgs(
+        'cookies',
+        'set',
+        'token',
+        'xyz',
+        '--url',
+        'https://example.com',
+        '--domain',
+        '.example.com',
+        '--path',
+        '/',
+        '--secure',
+        '--httponly',
+        '--samesite',
+        'lax',
+      );
       expectCommand('cookiesSet', {
         name: 'token',
         value: 'xyz',
@@ -1027,14 +1049,17 @@ describe('AgentBrowser CLI syntax compatibility', () => {
       // Create a temp state file for the load command to read
       const { writeFileSync } = await import('node:fs');
       const tmpPath = '/tmp/test-state-load.json';
-      writeFileSync(tmpPath, JSON.stringify({
-        version: 1,
-        timestamp: new Date().toISOString(),
-        url: 'https://example.com',
-        cookies: [],
-        localStorage: { key: 'value' },
-        sessionStorage: {},
-      }));
+      writeFileSync(
+        tmpPath,
+        JSON.stringify({
+          version: 1,
+          timestamp: new Date().toISOString(),
+          url: 'https://example.com',
+          cookies: [],
+          localStorage: { key: 'value' },
+          sessionStorage: {},
+        }),
+      );
 
       await parseArgs('state', 'load', tmpPath);
       expectCommand('stateImport', {

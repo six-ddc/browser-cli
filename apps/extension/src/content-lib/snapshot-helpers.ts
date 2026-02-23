@@ -78,7 +78,7 @@ export function getAccessibleName(el: Element): string {
   } catch (error) {
     // Fallback to simple text content if library fails
     console.warn('Accessible name computation failed, using fallback:', error);
-    return el.textContent?.trim() || '';
+    return el.textContent.trim();
   }
 }
 

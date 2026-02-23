@@ -46,19 +46,28 @@ test.describe('shadow DOM', () => {
   });
 
   test('eval can access shadow DOM elements', async ({ bcli }) => {
-    const r = bcli('eval', "document.getElementById('shadow-host').shadowRoot.querySelector('#shadow-text').textContent");
+    const r = bcli(
+      'eval',
+      "document.getElementById('shadow-host').shadowRoot.querySelector('#shadow-text').textContent",
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain("Let's have some different text!");
   });
 
   test('eval can access shadow DOM input', async ({ bcli }) => {
-    const r = bcli('eval', "document.getElementById('shadow-host-2').shadowRoot.querySelector('#shadow-input').placeholder");
+    const r = bcli(
+      'eval',
+      "document.getElementById('shadow-host-2').shadowRoot.querySelector('#shadow-input').placeholder",
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Shadow input');
   });
 
   test('eval can access shadow DOM button text', async ({ bcli }) => {
-    const r = bcli('eval', "document.getElementById('shadow-host-2').shadowRoot.querySelector('#shadow-button').textContent");
+    const r = bcli(
+      'eval',
+      "document.getElementById('shadow-host-2').shadowRoot.querySelector('#shadow-button').textContent",
+    );
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Shadow Button');
   });

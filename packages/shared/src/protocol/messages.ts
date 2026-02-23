@@ -2,7 +2,7 @@
  * Wire protocol messages between CLI ↔ Daemon ↔ Extension.
  */
 
-import type { Command } from './actions.js';
+import type { ActionResultMap, ActionType, Command } from './actions.js';
 import type { ProtocolError } from './errors.js';
 
 // ─── CLI ↔ Daemon (NDJSON over Unix socket) ─────────────────────────
@@ -18,10 +18,10 @@ export interface DaemonRequest {
 }
 
 /** Daemon replies to CLI */
-export interface DaemonResponse {
+export interface DaemonResponse<A extends ActionType = ActionType> {
   id: string;
   success: boolean;
-  data?: unknown;
+  data?: ActionResultMap[A];
   error?: ProtocolError;
 }
 

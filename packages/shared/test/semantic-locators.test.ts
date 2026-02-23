@@ -369,7 +369,9 @@ describe('parseSemanticLocator — xpath', () => {
   });
 
   it('parses XPath with complex expression', () => {
-    const result = parseSemanticLocator('xpath=//div[@class="container"]//a[contains(text(),"Link")]') as XPathLocator;
+    const result = parseSemanticLocator(
+      'xpath=//div[@class="container"]//a[contains(text(),"Link")]',
+    ) as XPathLocator;
     expect(result).not.toBeNull();
     expect(result.expression).toBe('//div[@class="container"]//a[contains(text(),"Link")]');
   });
@@ -464,91 +466,119 @@ describe('quoted values', () => {
 describe('formatSemanticLocator', () => {
   it('formats bare role', () => {
     const locator: RoleLocator = {
-      type: 'role', role: 'button', options: { exact: false, ignoreCase: true },
+      type: 'role',
+      role: 'button',
+      options: { exact: false, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('role=button');
   });
 
   it('formats role with name', () => {
     const locator: RoleLocator = {
-      type: 'role', role: 'button', name: 'Submit', options: { exact: false, ignoreCase: true },
+      type: 'role',
+      role: 'button',
+      name: 'Submit',
+      options: { exact: false, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('role=button[name="Submit"]');
   });
 
   it('formats role with name and exact', () => {
     const locator: RoleLocator = {
-      type: 'role', role: 'button', name: 'Submit', options: { exact: true, ignoreCase: true },
+      type: 'role',
+      role: 'button',
+      name: 'Submit',
+      options: { exact: true, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('role=button[name="Submit"][exact]');
   });
 
   it('formats role with hidden', () => {
     const locator: RoleLocator = {
-      type: 'role', role: 'button', options: { exact: false, ignoreCase: true, includeHidden: true },
+      type: 'role',
+      role: 'button',
+      options: { exact: false, ignoreCase: true, includeHidden: true },
     };
     expect(formatSemanticLocator(locator)).toBe('role=button[hidden]');
   });
 
   it('formats text (substring)', () => {
     const locator: TextLocator = {
-      type: 'text', text: 'Sign In', options: { exact: false, ignoreCase: true },
+      type: 'text',
+      text: 'Sign In',
+      options: { exact: false, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('text=Sign In');
   });
 
   it('formats text (exact) with quotes', () => {
     const locator: TextLocator = {
-      type: 'text', text: 'Sign In', options: { exact: true, ignoreCase: true },
+      type: 'text',
+      text: 'Sign In',
+      options: { exact: true, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('text="Sign In"');
   });
 
   it('formats text with hidden', () => {
     const locator: TextLocator = {
-      type: 'text', text: 'Hello', options: { exact: false, ignoreCase: true, includeHidden: true },
+      type: 'text',
+      text: 'Hello',
+      options: { exact: false, ignoreCase: true, includeHidden: true },
     };
     expect(formatSemanticLocator(locator)).toBe('text=Hello[hidden]');
   });
 
   it('formats label (exact) with quotes', () => {
     const locator: LabelLocator = {
-      type: 'label', labelText: 'Email', options: { exact: true, ignoreCase: true },
+      type: 'label',
+      labelText: 'Email',
+      options: { exact: true, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('label="Email"');
   });
 
   it('formats testid', () => {
     const locator: TestIdLocator = {
-      type: 'testid', value: 'login-button', options: { exact: true, ignoreCase: false },
+      type: 'testid',
+      value: 'login-button',
+      options: { exact: true, ignoreCase: false },
     };
     expect(formatSemanticLocator(locator)).toBe('testid=login-button');
   });
 
   it('formats xpath', () => {
     const locator: XPathLocator = {
-      type: 'xpath', expression: '//button[@type="submit"]', options: { exact: true, ignoreCase: false },
+      type: 'xpath',
+      expression: '//button[@type="submit"]',
+      options: { exact: true, ignoreCase: false },
     };
     expect(formatSemanticLocator(locator)).toBe('xpath=//button[@type="submit"]');
   });
 
   it('formats placeholder (exact) with quotes', () => {
     const locator: PlaceholderLocator = {
-      type: 'placeholder', text: 'Search', options: { exact: true, ignoreCase: true },
+      type: 'placeholder',
+      text: 'Search',
+      options: { exact: true, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('placeholder="Search"');
   });
 
   it('formats alt (substring)', () => {
     const locator: AltLocator = {
-      type: 'alt', text: 'Logo', options: { exact: false, ignoreCase: true },
+      type: 'alt',
+      text: 'Logo',
+      options: { exact: false, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('alt=Logo');
   });
 
   it('formats title (exact) with quotes', () => {
     const locator: TitleLocator = {
-      type: 'title', text: 'Help', options: { exact: true, ignoreCase: true },
+      type: 'title',
+      text: 'Help',
+      options: { exact: true, ignoreCase: true },
     };
     expect(formatSemanticLocator(locator)).toBe('title="Help"');
   });
@@ -585,11 +615,7 @@ describe('round-trip', () => {
   });
 
   it('formats then reparses locators with hidden option', () => {
-    const inputs = [
-      'text=Hello[hidden]',
-      'role=button[hidden]',
-      'testid=btn[hidden]',
-    ];
+    const inputs = ['text=Hello[hidden]', 'role=button[hidden]', 'testid=btn[hidden]'];
 
     for (const input of inputs) {
       const parsed = parseSemanticLocator(input);

@@ -1,6 +1,7 @@
-import { connect, Socket } from 'node:net';
+import type { Socket } from 'node:net';
+import { connect } from 'node:net';
 import { randomUUID } from 'node:crypto';
-import { COMMAND_TIMEOUT_MS } from '@browser-cli/shared';
+import { COMMAND_TIMEOUT_MS, schemas } from '@browser-cli/shared';
 import type { Command, DaemonRequest, DaemonResponse } from '@browser-cli/shared';
 
 /**
@@ -15,8 +16,16 @@ export class SocketClient {
     return new Promise((resolve, reject) => {
       this.socket = connect(socketPath);
 
-      this.socket.on('connect', () => resolve());
-      this.socket.on('error', (err) => reject(err));
+      const onError = (err: Error) => reject(err);
+      this.socket.on('error', onError);
+      this.socket.on('connect', () => {
+        // Replace connect-phase error listener with a no-op to avoid leaks
+        this.socket?.off('error', onError);
+        this.socket?.on('error', () => {
+          /* handled per-command */
+        });
+        resolve();
+      });
     });
   }
 
@@ -39,21 +48,16 @@ export class SocketClient {
         sessionId: options?.sessionId,
       };
 
-      const timeout = options?.timeout ?? COMMAND_TIMEOUT_MS;
-      const timer = setTimeout(() => {
-        reject(new Error(`Command timed out after ${timeout}ms`));
-      }, timeout);
-
       let buffer = '';
       const onData = (data: Buffer) => {
         buffer += data.toString();
         const lines = buffer.split('\n');
-        buffer = lines.pop()!;
+        buffer = lines.pop() ?? '';
 
         for (const line of lines) {
           if (!line.trim()) continue;
           try {
-            const response = JSON.parse(line) as DaemonResponse;
+            const response = schemas.daemonResponseSchema.parse(JSON.parse(line)) as DaemonResponse;
             if (response.id === id) {
               clearTimeout(timer);
               this.socket?.off('data', onData);
@@ -64,6 +68,12 @@ export class SocketClient {
           }
         }
       };
+
+      const timeout = options?.timeout ?? COMMAND_TIMEOUT_MS;
+      const timer = setTimeout(() => {
+        this.socket?.off('data', onData);
+        reject(new Error(`Command timed out after ${timeout}ms`));
+      }, timeout);
 
       this.socket.on('data', onData);
       this.socket.write(JSON.stringify(request) + '\n');

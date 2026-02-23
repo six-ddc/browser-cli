@@ -25,6 +25,7 @@ Playwright test runner
 ```
 
 Key design decisions:
+
 - **CLI is the operator**: All browser actions go through the CLI (testing the full pipeline)
 - **Playwright provides verification**: Independent browser state assertions via Playwright locators
 - **Local HTML fixtures**: No external dependencies — all test pages served locally
@@ -34,11 +35,11 @@ Key design decisions:
 
 E2E tests are fully isolated from a user's running daemon via two mechanisms:
 
-| Layer | Mechanism | Detail |
-|-------|-----------|--------|
-| **Socket / PID files** | `BROWSER_CLI_DIR` env var | Points to `/tmp/browser-cli-e2e/` instead of `~/.browser-cli/` |
-| **WS port (daemon)** | `start --port 19222` | Daemon binds to a non-default port |
-| **WS port (extension)** | `VITE_WS_PORT=19222` at build time | Baked into extension via Vite `import.meta.env` |
+| Layer                   | Mechanism                          | Detail                                                         |
+| ----------------------- | ---------------------------------- | -------------------------------------------------------------- |
+| **Socket / PID files**  | `BROWSER_CLI_DIR` env var          | Points to `/tmp/browser-cli-e2e/` instead of `~/.browser-cli/` |
+| **WS port (daemon)**    | `start --port 19222`               | Daemon binds to a non-default port                             |
+| **WS port (extension)** | `VITE_WS_PORT=19222` at build time | Baked into extension via Vite `import.meta.env`                |
 
 All E2E constants (`E2E_WS_PORT`, `E2E_DIR`) are defined in `test/e2e-pw/helpers/constants.ts` and imported by global-setup, fixtures, and test files.
 
@@ -200,22 +201,22 @@ test.describe('navigate command', () => {
 
 ### Available Fixtures
 
-| Fixture | Scope | Description |
-|---------|-------|-------------|
-| `bcli` | test | CLI wrapper: `bcli('navigate', url)` returns `{ stdout, stderr, exitCode, success }` |
-| `navigateAndWait` | test | Navigate via CLI + wait for page load: `await navigateAndWait(PAGES.LOGIN)` |
-| `activePage` | worker | Playwright Page with extension loaded |
-| `extensionContext` | worker | Persistent browser context with extension |
-| `baseURL` | test | `http://localhost:4173` (local fixture server) |
+| Fixture            | Scope  | Description                                                                          |
+| ------------------ | ------ | ------------------------------------------------------------------------------------ |
+| `bcli`             | test   | CLI wrapper: `bcli('navigate', url)` returns `{ stdout, stderr, exitCode, success }` |
+| `navigateAndWait`  | test   | Navigate via CLI + wait for page load: `await navigateAndWait(PAGES.LOGIN)`          |
+| `activePage`       | worker | Playwright Page with extension loaded                                                |
+| `extensionContext` | worker | Persistent browser context with extension                                            |
+| `baseURL`          | test   | `http://localhost:4173` (local fixture server)                                       |
 
 All CLI calls include `BROWSER_CLI_DIR` in the environment, so they connect to the isolated E2E daemon automatically.
 
 ### Custom Matchers
 
 ```typescript
-expect(result).toBcliSuccess();           // exitCode === 0
-expect(result).toBcliFailure();           // exitCode !== 0
-expect(result).toContainOutput('text');   // stdout or stderr includes text
+expect(result).toBcliSuccess(); // exitCode === 0
+expect(result).toBcliFailure(); // exitCode !== 0
+expect(result).toContainOutput('text'); // stdout or stderr includes text
 ```
 
 ### Dual Verification Pattern
@@ -238,7 +239,7 @@ test('fill sets input value', async ({ bcli, navigateAndWait, activePage }) => {
 
 ### Lifecycle Tests
 
-Lifecycle tests (`cross/44-lifecycle-commands.spec.ts`) test `start`/`stop`/`status`/`close` commands. They start and stop their own daemon instances using the same `BROWSER_CLI_DIR` and `E2E_WS_PORT`. Since tests run sequentially (`workers: 1`) and lifecycle tests are in the last file (44-*), they run after all other tests that depend on a running daemon.
+Lifecycle tests (`cross/44-lifecycle-commands.spec.ts`) test `start`/`stop`/`status`/`close` commands. They start and stop their own daemon instances using the same `BROWSER_CLI_DIR` and `E2E_WS_PORT`. Since tests run sequentially (`workers: 1`) and lifecycle tests are in the last file (44-\*), they run after all other tests that depend on a running daemon.
 
 ## CI/CD Integration
 
@@ -269,6 +270,7 @@ e2e:
 ```
 
 Key CI features:
+
 - `xvfb-run` provides virtual display (extension requires headed mode)
 - `npx playwright install chromium --with-deps` installs browser + OS deps
 - Auto-retry on first failure (`retries: 1` in CI)
@@ -280,6 +282,7 @@ Key CI features:
 ### "Extension not connected" Timeout
 
 The extension must connect to the daemon within 30s. If this fails:
+
 1. Ensure the extension is built: `pnpm --filter @browser-cli/extension build`
 2. Check the extension output exists: `ls apps/extension/.output/chrome-mv3/`
 3. Check daemon socket: `ls /tmp/browser-cli-e2e/daemon.sock`
@@ -307,9 +310,9 @@ If port 19222 conflicts with another service, change `E2E_WS_PORT` in `test/e2e-
 
 ### Build/Reload Checklist
 
-| Changed Package | Rebuild Command | Action |
-|----------------|----------------|--------|
-| `apps/cli/` | `pnpm --filter @browser-cli/cli build` | Daemon auto-restarts in globalSetup |
-| `apps/extension/` | `pnpm --filter @browser-cli/extension build` | globalSetup rebuilds with `VITE_WS_PORT` |
-| `packages/shared/` | Rebuild **both** CLI and extension | Full rebuild required |
-| Test files only | No rebuild needed | Just re-run tests |
+| Changed Package    | Rebuild Command                              | Action                                   |
+| ------------------ | -------------------------------------------- | ---------------------------------------- |
+| `apps/cli/`        | `pnpm --filter @browser-cli/cli build`       | Daemon auto-restarts in globalSetup      |
+| `apps/extension/`  | `pnpm --filter @browser-cli/extension build` | globalSetup rebuilds with `VITE_WS_PORT` |
+| `packages/shared/` | Rebuild **both** CLI and extension           | Full rebuild required                    |
+| Test files only    | No rebuild needed                            | Just re-run tests                        |

@@ -300,7 +300,10 @@ test.describe('stale ref handling', () => {
 // ---- Refs with Different Snapshot Flags ----
 
 test.describe('snapshot flags and refs', () => {
-  test('snapshot -i produces refs for interactive elements only', async ({ bcli, navigateAndWait }) => {
+  test('snapshot -i produces refs for interactive elements only', async ({
+    bcli,
+    navigateAndWait,
+  }) => {
     await navigateAndWait(PAGES.LOGIN);
 
     const r = bcli('snapshot', '-i');

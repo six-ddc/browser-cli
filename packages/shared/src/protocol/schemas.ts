@@ -3,6 +3,7 @@
  */
 
 import { z } from 'zod';
+import { ErrorCode } from './errors.js';
 
 // ─── Element Ref ─────────────────────────────────────────────────────
 
@@ -11,7 +12,7 @@ export const elementRefSchema = z.string().regex(/^@e\d+$/);
 // ─── Error ───────────────────────────────────────────────────────────
 
 export const protocolErrorSchema = z.object({
-  code: z.string(),
+  code: z.enum(ErrorCode),
   message: z.string(),
   hint: z.string().optional(),
   details: z.unknown().optional(),
@@ -20,10 +21,12 @@ export const protocolErrorSchema = z.object({
 // ─── Action Params ───────────────────────────────────────────────────
 
 // Position selector schema (reusable)
-const positionSchema = z.object({
-  type: z.enum(['first', 'last', 'nth']),
-  index: z.number().optional(),
-}).optional();
+const positionSchema = z
+  .object({
+    type: z.enum(['first', 'last', 'nth']),
+    index: z.number().optional(),
+  })
+  .optional();
 
 // Navigation
 export const navigateParamsSchema = z.object({ url: z.string() });
@@ -54,7 +57,11 @@ export const typeParamsSchema = z.object({
   delay: z.number().optional(),
   position: positionSchema,
 });
-export const pressParamsSchema = z.object({ selector: z.string().optional(), key: z.string() });
+export const pressParamsSchema = z.object({
+  selector: z.string().optional(),
+  key: z.string(),
+  position: positionSchema,
+});
 export const clearParamsSchema = z.object({
   selector: z.string(),
   position: positionSchema,
@@ -130,10 +137,12 @@ export const dragParamsSchema = z.object({
 export const keydownParamsSchema = z.object({
   key: z.string(),
   selector: z.string().optional(),
+  position: positionSchema,
 });
 export const keyupParamsSchema = z.object({
   key: z.string(),
   selector: z.string().optional(),
+  position: positionSchema,
 });
 
 // Mouse
@@ -228,6 +237,22 @@ export const highlightParamsSchema = z.object({
   duration: z.number().optional(),
 });
 
+// Network
+export const routeParamsSchema = z.object({
+  pattern: z.string(),
+  action: z.enum(['block', 'redirect']),
+  redirectUrl: z.string().optional(),
+});
+export const unrouteParamsSchema = z.object({ routeId: z.number() });
+export const getRequestsParamsSchema = z.object({
+  pattern: z.string().optional(),
+  tabId: z.number().optional(),
+  blockedOnly: z.boolean().optional(),
+  limit: z.number().optional(),
+});
+export const getRoutesParamsSchema = emptyParamsSchema;
+export const clearRequestsParamsSchema = emptyParamsSchema;
+
 // Frame management
 export const switchFrameParamsSchema = z.object({
   selector: z.string().optional(),
@@ -272,17 +297,21 @@ export const setHeadersParamsSchema = z.object({
 // State Management
 export const stateExportParamsSchema = z.object({});
 export const stateImportParamsSchema = z.object({
-  cookies: z.array(z.object({
-    url: z.string(),
-    name: z.string(),
-    value: z.string(),
-    domain: z.string().optional(),
-    path: z.string().optional(),
-    secure: z.boolean().optional(),
-    httpOnly: z.boolean().optional(),
-    sameSite: z.enum(['no_restriction', 'lax', 'strict', 'unspecified']).optional(),
-    expirationDate: z.number().optional(),
-  })).optional(),
+  cookies: z
+    .array(
+      z.object({
+        url: z.string(),
+        name: z.string(),
+        value: z.string(),
+        domain: z.string().optional(),
+        path: z.string().optional(),
+        secure: z.boolean().optional(),
+        httpOnly: z.boolean().optional(),
+        sameSite: z.enum(['no_restriction', 'lax', 'strict', 'unspecified']).optional(),
+        expirationDate: z.number().optional(),
+      }),
+    )
+    .optional(),
   localStorage: z.record(z.string(), z.string()).optional(),
   sessionStorage: z.record(z.string(), z.string()).optional(),
 });
@@ -349,11 +378,11 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('switchFrame'), params: switchFrameParamsSchema }),
   z.object({ action: z.literal('listFrames'), params: emptyParamsSchema }),
   z.object({ action: z.literal('getCurrentFrame'), params: emptyParamsSchema }),
-  z.object({ action: z.literal('route'), params: z.object({ pattern: z.string(), action: z.enum(['block', 'redirect']), redirectUrl: z.string().optional() }) }),
-  z.object({ action: z.literal('unroute'), params: z.object({ routeId: z.number() }) }),
-  z.object({ action: z.literal('getRequests'), params: z.object({ pattern: z.string().optional(), tabId: z.number().optional(), blockedOnly: z.boolean().optional(), limit: z.number().optional() }) }),
-  z.object({ action: z.literal('getRoutes'), params: emptyParamsSchema }),
-  z.object({ action: z.literal('clearRequests'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('route'), params: routeParamsSchema }),
+  z.object({ action: z.literal('unroute'), params: unrouteParamsSchema }),
+  z.object({ action: z.literal('getRequests'), params: getRequestsParamsSchema }),
+  z.object({ action: z.literal('getRoutes'), params: getRoutesParamsSchema }),
+  z.object({ action: z.literal('clearRequests'), params: clearRequestsParamsSchema }),
   z.object({ action: z.literal('windowNew'), params: windowNewParamsSchema }),
   z.object({ action: z.literal('windowList'), params: emptyParamsSchema }),
   z.object({ action: z.literal('windowClose'), params: windowCloseParamsSchema }),

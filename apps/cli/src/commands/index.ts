@@ -1,14 +1,9 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 
 // Lifecycle
 import { startCommand, stopCommand, closeCommand, statusCommand } from './lifecycle.js';
 // Navigation
-import {
-  navigateCommand,
-  backCommand,
-  forwardCommand,
-  reloadCommand,
-} from './navigate.js';
+import { navigateCommand, backCommand, forwardCommand, reloadCommand } from './navigate.js';
 // Interaction
 import {
   clickCommand,

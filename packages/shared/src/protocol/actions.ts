@@ -1,164 +1,108 @@
 /**
- * All action types, their parameter interfaces, and result interfaces.
+ * All action types, their parameter types (derived from Zod schemas), and result interfaces.
  * Actions are the commands that flow from CLI → Daemon → Extension.
  */
 
+import type { z } from 'zod';
+import type * as schemas from './schemas.js';
+
 // ─── Navigation ──────────────────────────────────────────────────────
 
-export interface NavigateParams {
-  url: string;
-}
+export type NavigateParams = z.infer<typeof schemas.navigateParamsSchema>;
 export interface NavigateResult {
   url: string;
   title: string;
 }
 
-export type GoBackParams = Record<string, never>;
+export type GoBackParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface GoBackResult {
   url: string;
   title: string;
 }
 
-export type GoForwardParams = Record<string, never>;
+export type GoForwardParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface GoForwardResult {
   url: string;
   title: string;
 }
 
-export type ReloadParams = Record<string, never>;
+export type ReloadParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface ReloadResult {
   url: string;
   title: string;
 }
 
-export type GetUrlParams = Record<string, never>;
+export type GetUrlParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface GetUrlResult {
   url: string;
 }
 
-export type GetTitleParams = Record<string, never>;
+export type GetTitleParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface GetTitleResult {
   title: string;
 }
 
 // ─── Interaction ─────────────────────────────────────────────────────
 
-export interface ClickParams {
-  selector: string;
-  /** Click button: left, right, middle */
-  button?: 'left' | 'right' | 'middle';
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type ClickParams = z.infer<typeof schemas.clickParamsSchema>;
 export interface ClickResult {
   clicked: true;
 }
 
-export interface DblClickParams {
-  selector: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type DblClickParams = z.infer<typeof schemas.dblclickParamsSchema>;
 export interface DblClickResult {
   clicked: true;
 }
 
-export interface HoverParams {
-  selector: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type HoverParams = z.infer<typeof schemas.hoverParamsSchema>;
 export interface HoverResult {
   hovered: true;
 }
 
-export interface FillParams {
-  selector: string;
-  value: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type FillParams = z.infer<typeof schemas.fillParamsSchema>;
 export interface FillResult {
   filled: true;
 }
 
-export interface TypeParams {
-  selector: string;
-  text: string;
-  /** Delay between keystrokes in ms */
-  delay?: number;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type TypeParams = z.infer<typeof schemas.typeParamsSchema>;
 export interface TypeResult {
   typed: true;
 }
 
-export interface PressParams {
-  /** Selector of element to press key on (defaults to active element) */
-  selector?: string;
-  key: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type PressParams = z.infer<typeof schemas.pressParamsSchema>;
 export interface PressResult {
   pressed: true;
 }
 
-export interface ClearParams {
-  selector: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type ClearParams = z.infer<typeof schemas.clearParamsSchema>;
 export interface ClearResult {
   cleared: true;
 }
 
-export interface FocusParams {
-  selector: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type FocusParams = z.infer<typeof schemas.focusParamsSchema>;
 export interface FocusResult {
   focused: true;
 }
 
 // ─── Form ────────────────────────────────────────────────────────────
 
-export interface CheckParams {
-  selector: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type CheckParams = z.infer<typeof schemas.checkParamsSchema>;
 export interface CheckResult {
   checked: true;
 }
 
-export interface UncheckParams {
-  selector: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type UncheckParams = z.infer<typeof schemas.uncheckParamsSchema>;
 export interface UncheckResult {
   unchecked: true;
 }
 
-export interface SelectParams {
-  selector: string;
-  value: string;
-  /** Position selector for filtering multiple matches */
-  position?: { type: 'first' | 'last' | 'nth'; index?: number };
-}
+export type SelectParams = z.infer<typeof schemas.selectParamsSchema>;
 export interface SelectResult {
   selected: true;
   value: string;
 }
 
-export interface UploadParams {
-  selector: string;
-  files: string | string[];
-  clear?: boolean;
-}
+export type UploadParams = z.infer<typeof schemas.uploadParamsSchema>;
 export interface UploadResult {
   uploaded: true;
   fileCount: number;
@@ -166,89 +110,59 @@ export interface UploadResult {
 
 // ─── Scroll ──────────────────────────────────────────────────────────
 
-export interface ScrollParams {
-  /** Direction: up, down, left, right */
-  direction: 'up' | 'down' | 'left' | 'right';
-  /** Scroll amount in pixels */
-  amount?: number;
-  /** Selector of element to scroll (defaults to page) */
-  selector?: string;
-}
+export type ScrollParams = z.infer<typeof schemas.scrollParamsSchema>;
 export interface ScrollResult {
   scrolled: true;
 }
 
-export interface ScrollIntoViewParams {
-  selector: string;
-}
+export type ScrollIntoViewParams = z.infer<typeof schemas.scrollIntoViewParamsSchema>;
 export interface ScrollIntoViewResult {
   scrolled: true;
 }
 
 // ─── Data Queries ────────────────────────────────────────────────────
 
-export interface GetTextParams {
-  selector: string;
-}
+export type GetTextParams = z.infer<typeof schemas.getTextParamsSchema>;
 export interface GetTextResult {
   text: string;
 }
 
-export interface GetHtmlParams {
-  selector: string;
-  /** Return outerHTML instead of innerHTML */
-  outer?: boolean;
-}
+export type GetHtmlParams = z.infer<typeof schemas.getHtmlParamsSchema>;
 export interface GetHtmlResult {
   html: string;
 }
 
-export interface GetValueParams {
-  selector: string;
-}
+export type GetValueParams = z.infer<typeof schemas.getValueParamsSchema>;
 export interface GetValueResult {
   value: string;
 }
 
-export interface GetAttributeParams {
-  selector: string;
-  attribute: string;
-}
+export type GetAttributeParams = z.infer<typeof schemas.getAttributeParamsSchema>;
 export interface GetAttributeResult {
   value: string | null;
 }
 
-export interface IsVisibleParams {
-  selector: string;
-}
+export type IsVisibleParams = z.infer<typeof schemas.isVisibleParamsSchema>;
 export interface IsVisibleResult {
   visible: boolean;
 }
 
-export interface IsEnabledParams {
-  selector: string;
-}
+export type IsEnabledParams = z.infer<typeof schemas.isEnabledParamsSchema>;
 export interface IsEnabledResult {
   enabled: boolean;
 }
 
-export interface IsCheckedParams {
-  selector: string;
-}
+export type IsCheckedParams = z.infer<typeof schemas.isCheckedParamsSchema>;
 export interface IsCheckedResult {
   checked: boolean;
 }
 
-export interface CountParams {
-  selector: string;
-}
+export type CountParams = z.infer<typeof schemas.countParamsSchema>;
 export interface CountResult {
   count: number;
 }
 
-export interface BoundingBoxParams {
-  selector: string;
-}
+export type BoundingBoxParams = z.infer<typeof schemas.boundingBoxParamsSchema>;
 export interface BoundingBoxResult {
   x: number;
   y: number;
@@ -258,18 +172,7 @@ export interface BoundingBoxResult {
 
 // ─── Snapshot ────────────────────────────────────────────────────────
 
-export interface SnapshotParams {
-  /** Only include interactive elements */
-  interactive?: boolean;
-  /** Compact output (fewer whitespace) */
-  compact?: boolean;
-  /** Include cursor-interactive elements (cursor:pointer) */
-  cursor?: boolean;
-  /** Max depth of tree traversal */
-  depth?: number;
-  /** Scope snapshot to a specific selector (CSS, @ref, or semantic locator) */
-  selector?: string;
-}
+export type SnapshotParams = z.infer<typeof schemas.snapshotParamsSchema>;
 export interface SnapshotResult {
   snapshot: string;
   refCount: number;
@@ -277,14 +180,7 @@ export interface SnapshotResult {
 
 // ─── Screenshot ──────────────────────────────────────────────────────
 
-export interface ScreenshotParams {
-  /** CSS selector for element screenshot (full page if omitted) */
-  selector?: string;
-  /** Image format */
-  format?: 'png' | 'jpeg';
-  /** JPEG quality (0-100) */
-  quality?: number;
-}
+export type ScreenshotParams = z.infer<typeof schemas.screenshotParamsSchema>;
 export interface ScreenshotResult {
   /** Base64-encoded image data */
   data: string;
@@ -298,120 +194,67 @@ export interface ScreenshotResult {
 
 // ─── Drag and Drop ───────────────────────────────────────────────────
 
-export interface DragParams {
-  /** Source element selector */
-  source: string;
-  /** Target element selector */
-  target: string;
-}
+export type DragParams = z.infer<typeof schemas.dragParamsSchema>;
 export interface DragResult {
   dragged: true;
 }
 
 // ─── Key Down/Up ────────────────────────────────────────────────────
 
-export interface KeyDownParams {
-  /** Key to press down */
-  key: string;
-  /** Selector of element (defaults to active element) */
-  selector?: string;
-}
+export type KeyDownParams = z.infer<typeof schemas.keydownParamsSchema>;
 export interface KeyDownResult {
   pressed: true;
 }
 
-export interface KeyUpParams {
-  /** Key to release */
-  key: string;
-  /** Selector of element (defaults to active element) */
-  selector?: string;
-}
+export type KeyUpParams = z.infer<typeof schemas.keyupParamsSchema>;
 export interface KeyUpResult {
   released: true;
 }
 
 // ─── Mouse Control ──────────────────────────────────────────────────
 
-export interface MouseMoveParams {
-  x: number;
-  y: number;
-}
+export type MouseMoveParams = z.infer<typeof schemas.mouseMoveParamsSchema>;
 export interface MouseMoveResult {
   moved: true;
 }
 
-export interface MouseDownParams {
-  button?: 'left' | 'right' | 'middle';
-}
+export type MouseDownParams = z.infer<typeof schemas.mouseDownParamsSchema>;
 export interface MouseDownResult {
   pressed: true;
 }
 
-export interface MouseUpParams {
-  button?: 'left' | 'right' | 'middle';
-}
+export type MouseUpParams = z.infer<typeof schemas.mouseUpParamsSchema>;
 export interface MouseUpResult {
   released: true;
 }
 
-export interface MouseWheelParams {
-  /** Vertical scroll delta (positive = down) */
-  deltaY: number;
-  /** Horizontal scroll delta (positive = right) */
-  deltaX?: number;
-}
+export type MouseWheelParams = z.infer<typeof schemas.mouseWheelParamsSchema>;
 export interface MouseWheelResult {
   scrolled: true;
 }
 
 // ─── Wait ────────────────────────────────────────────────────────────
 
-export interface WaitParams {
-  /** CSS selector to wait for (optional if duration is provided) */
-  selector?: string;
-  /** Duration to wait in ms (for time-based delays) */
-  duration?: number;
-  /** Timeout in ms (only used with selector) */
-  timeout?: number;
-  /** Wait until visible (default true, only used with selector) */
-  visible?: boolean;
-  /** Wait for text content to appear on the page */
-  text?: string;
-  /** Wait for document load state: load, domcontentloaded, networkidle */
-  load?: 'load' | 'domcontentloaded' | 'networkidle';
-  /** Wait for a JavaScript function/expression to return truthy (evaluated in MAIN world) */
-  fn?: string;
-}
+export type WaitParams = z.infer<typeof schemas.waitParamsSchema>;
 export interface WaitResult {
   found: true;
 }
 
-export interface WaitForUrlParams {
-  pattern: string;
-  /** Timeout in ms */
-  timeout?: number;
-}
+export type WaitForUrlParams = z.infer<typeof schemas.waitForUrlParamsSchema>;
 export interface WaitForUrlResult {
   url: string;
 }
 
 // ─── Evaluate ────────────────────────────────────────────────────────
 
-export interface EvaluateParams {
-  expression: string;
-}
+export type EvaluateParams = z.infer<typeof schemas.evaluateParamsSchema>;
 export interface EvaluateResult {
   value: unknown;
 }
 
 // ─── Console ─────────────────────────────────────────────────────────
 
-export interface GetConsoleParams {
-  /** Filter by level */
-  level?: 'log' | 'warn' | 'error' | 'info' | 'debug';
-  /** Only return entries since last call */
-  clear?: boolean;
-}
+export type GetConsoleParams = z.infer<typeof schemas.getConsoleParamsSchema>;
 export interface GetConsoleResult {
   entries: ConsoleEntry[];
 }
@@ -422,22 +265,20 @@ export interface ConsoleEntry {
   timestamp: number;
 }
 
-export type GetErrorsParams = Record<string, never>;
+export type GetErrorsParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface GetErrorsResult {
   errors: ConsoleEntry[];
 }
 
 // ─── Tab Management ──────────────────────────────────────────────────
 
-export interface TabNewParams {
-  url?: string;
-}
+export type TabNewParams = z.infer<typeof schemas.tabNewParamsSchema>;
 export interface TabNewResult {
   tabId: number;
   url: string;
 }
 
-export type TabListParams = Record<string, never>;
+export type TabListParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface TabListResult {
   tabs: TabInfo[];
 }
@@ -449,29 +290,21 @@ export interface TabInfo {
   active: boolean;
 }
 
-export interface TabSwitchParams {
-  tabId: number;
-}
+export type TabSwitchParams = z.infer<typeof schemas.tabSwitchParamsSchema>;
 export interface TabSwitchResult {
   tabId: number;
   url: string;
   title: string;
 }
 
-export interface TabCloseParams {
-  tabId?: number;
-}
+export type TabCloseParams = z.infer<typeof schemas.tabCloseParamsSchema>;
 export interface TabCloseResult {
   closed: true;
 }
 
 // ─── Cookies ─────────────────────────────────────────────────────────
 
-export interface CookiesGetParams {
-  name?: string;
-  url?: string;
-  domain?: string;
-}
+export type CookiesGetParams = z.infer<typeof schemas.cookiesGetParamsSchema>;
 export interface CookiesGetResult {
   cookies: CookieInfo[];
 }
@@ -487,94 +320,55 @@ export interface CookieInfo {
   expirationDate?: number;
 }
 
-export interface CookiesSetParams {
-  url: string;
-  name: string;
-  value: string;
-  domain?: string;
-  path?: string;
-  secure?: boolean;
-  httpOnly?: boolean;
-  sameSite?: 'no_restriction' | 'lax' | 'strict';
-  expirationDate?: number;
-}
+export type CookiesSetParams = z.infer<typeof schemas.cookiesSetParamsSchema>;
 export interface CookiesSetResult {
   set: true;
 }
 
-export interface CookiesClearParams {
-  url?: string;
-  domain?: string;
-}
+export type CookiesClearParams = z.infer<typeof schemas.cookiesClearParamsSchema>;
 export interface CookiesClearResult {
   cleared: number;
 }
 
 // ─── Storage ─────────────────────────────────────────────────────────
 
-export interface StorageGetParams {
-  key?: string;
-  area?: 'local' | 'session';
-}
+export type StorageGetParams = z.infer<typeof schemas.storageGetParamsSchema>;
 export interface StorageGetResult {
   entries: Record<string, string>;
 }
 
-export interface StorageSetParams {
-  key: string;
-  value: string;
-  area?: 'local' | 'session';
-}
+export type StorageSetParams = z.infer<typeof schemas.storageSetParamsSchema>;
 export interface StorageSetResult {
   set: true;
 }
 
-export interface StorageClearParams {
-  area?: 'local' | 'session';
-}
+export type StorageClearParams = z.infer<typeof schemas.storageClearParamsSchema>;
 export interface StorageClearResult {
   cleared: true;
 }
 
 // ─── Dialog ──────────────────────────────────────────────────────────
 
-export interface DialogAcceptParams {
-  text?: string;
-}
+export type DialogAcceptParams = z.infer<typeof schemas.dialogAcceptParamsSchema>;
 export interface DialogAcceptResult {
   accepted: true;
 }
 
-export type DialogDismissParams = Record<string, never>;
+export type DialogDismissParams = z.infer<typeof schemas.dialogDismissParamsSchema>;
 export interface DialogDismissResult {
   dismissed: true;
 }
 
 // ─── Highlight ───────────────────────────────────────────────────────
 
-export interface HighlightParams {
-  selector: string;
-  color?: string;
-  duration?: number;
-}
+export type HighlightParams = z.infer<typeof schemas.highlightParamsSchema>;
 export interface HighlightResult {
   highlighted: true;
 }
 
 // ─── Frame Management ────────────────────────────────────────────────
 
-export interface SwitchFrameParams {
-  /** CSS selector to find the iframe */
-  selector?: string;
-  /** Frame name attribute */
-  name?: string;
-  /** Frame URL (partial match) */
-  url?: string;
-  /** Frame index (0-based) */
-  index?: number;
-  /** Switch to main/top frame */
-  main?: boolean;
-}
+export type SwitchFrameParams = z.infer<typeof schemas.switchFrameParamsSchema>;
 export interface SwitchFrameResult {
   frameIndex: number;
   frame: {
@@ -586,7 +380,7 @@ export interface SwitchFrameResult {
   };
 }
 
-export type ListFramesParams = Record<string, never>;
+export type ListFramesParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface ListFramesResult {
   currentFrame: number;
   frames: Array<{
@@ -598,7 +392,7 @@ export interface ListFramesResult {
   }>;
 }
 
-export type GetCurrentFrameParams = Record<string, never>;
+export type GetCurrentFrameParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface GetCurrentFrameResult {
   frameIndex: number;
   frame: {
@@ -612,34 +406,19 @@ export interface GetCurrentFrameResult {
 
 // ─── Network ─────────────────────────────────────────────────────────
 
-export interface RouteParams {
-  pattern: string;
-  action: 'block' | 'redirect';
-  redirectUrl?: string;
-}
+export type RouteParams = z.infer<typeof schemas.routeParamsSchema>;
 export interface RouteResult {
   routeId: number;
   pattern: string;
   action: 'block' | 'redirect';
 }
 
-export interface UnrouteParams {
-  routeId: number;
-}
+export type UnrouteParams = z.infer<typeof schemas.unrouteParamsSchema>;
 export interface UnrouteResult {
   removed: true;
 }
 
-export interface GetRequestsParams {
-  /** Filter by URL pattern */
-  pattern?: string;
-  /** Filter by tab ID */
-  tabId?: number;
-  /** Only blocked requests */
-  blockedOnly?: boolean;
-  /** Limit number of results */
-  limit?: number;
-}
+export type GetRequestsParams = z.infer<typeof schemas.getRequestsParamsSchema>;
 export interface GetRequestsResult {
   requests: Array<{
     id: string;
@@ -654,7 +433,7 @@ export interface GetRequestsResult {
   total: number;
 }
 
-export type GetRoutesParams = Record<string, never>;
+export type GetRoutesParams = z.infer<typeof schemas.getRoutesParamsSchema>;
 export interface GetRoutesResult {
   routes: Array<{
     id: number;
@@ -665,23 +444,21 @@ export interface GetRoutesResult {
   }>;
 }
 
-export type ClearRequestsParams = Record<string, never>;
+export type ClearRequestsParams = z.infer<typeof schemas.clearRequestsParamsSchema>;
 export interface ClearRequestsResult {
   cleared: number;
 }
 
 // ─── Window Management ──────────────────────────────────────────────
 
-export interface WindowNewParams {
-  url?: string;
-}
+export type WindowNewParams = z.infer<typeof schemas.windowNewParamsSchema>;
 export interface WindowNewResult {
   windowId: number;
   tabId: number;
   url: string;
 }
 
-export type WindowListParams = Record<string, never>;
+export type WindowListParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface WindowListResult {
   windows: WindowInfo[];
 }
@@ -693,44 +470,31 @@ export interface WindowInfo {
   tabs: number;
 }
 
-export interface WindowCloseParams {
-  windowId?: number;
-}
+export type WindowCloseParams = z.infer<typeof schemas.windowCloseParamsSchema>;
 export interface WindowCloseResult {
   closed: true;
 }
 
 // ─── Browser Config ─────────────────────────────────────────────────
 
-export interface SetViewportParams {
-  width: number;
-  height: number;
-}
+export type SetViewportParams = z.infer<typeof schemas.setViewportParamsSchema>;
 export interface SetViewportResult {
   set: true;
   width: number;
   height: number;
 }
 
-export interface SetGeoParams {
-  latitude: number;
-  longitude: number;
-  accuracy?: number;
-}
+export type SetGeoParams = z.infer<typeof schemas.setGeoParamsSchema>;
 export interface SetGeoResult {
   set: true;
 }
 
-export interface SetMediaParams {
-  colorScheme: 'dark' | 'light';
-}
+export type SetMediaParams = z.infer<typeof schemas.setMediaParamsSchema>;
 export interface SetMediaResult {
   set: true;
 }
 
-export interface SetHeadersParams {
-  headers: Record<string, string>;
-}
+export type SetHeadersParams = z.infer<typeof schemas.setHeadersParamsSchema>;
 export interface SetHeadersResult {
   set: true;
   ruleCount: number;
@@ -738,7 +502,7 @@ export interface SetHeadersResult {
 
 // ─── State Management ───────────────────────────────────────────────
 
-export type StateExportParams = Record<string, never>;
+export type StateExportParams = z.infer<typeof schemas.stateExportParamsSchema>;
 export interface StateExportResult {
   url: string;
   cookies: CookieInfo[];
@@ -746,27 +510,13 @@ export interface StateExportResult {
   sessionStorage: Record<string, string>;
 }
 
-export interface StateImportParams {
-  cookies?: Array<{
-    url: string;
-    name: string;
-    value: string;
-    domain?: string;
-    path?: string;
-    secure?: boolean;
-    httpOnly?: boolean;
-    sameSite?: 'no_restriction' | 'lax' | 'strict' | 'unspecified';
-    expirationDate?: number;
-  }>;
-  localStorage?: Record<string, string>;
-  sessionStorage?: Record<string, string>;
-}
+export type StateImportParams = z.infer<typeof schemas.stateImportParamsSchema>;
 export interface StateImportResult {
   imported: { cookies: number; localStorage: number; sessionStorage: number };
 }
 
 // ─── Markdown ───────────────────────────────────────────────────────
-export type MarkdownParams = Record<string, never>;
+export type MarkdownParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface MarkdownResult {
   title: string;
   markdown: string;

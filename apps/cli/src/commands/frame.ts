@@ -17,7 +17,13 @@ const frameCmd = new Command('frame')
         params: { main: true },
       });
       if (result) {
-        const frameInfo = result.frame as { index: number; name: string | null; src: string; isMainFrame: boolean; isSameOrigin: boolean };
+        const frameInfo = result.frame as {
+          index: number;
+          name: string | null;
+          src: string;
+          isMainFrame: boolean;
+          isSameOrigin: boolean;
+        };
         console.log('Switched to main frame');
         console.log(`URL: ${frameInfo.src}`);
       }
@@ -31,7 +37,13 @@ const frameCmd = new Command('frame')
     });
 
     if (result) {
-      const frameInfo = result.frame as { index: number; name: string | null; src: string; isMainFrame: boolean; isSameOrigin: boolean };
+      const frameInfo = result.frame as {
+        index: number;
+        name: string | null;
+        src: string;
+        isMainFrame: boolean;
+        isSameOrigin: boolean;
+      };
       console.log(`Switched to frame #${frameInfo.index}`);
       if (frameInfo.name) console.log(`Name: ${frameInfo.name}`);
       console.log(`URL: ${frameInfo.src}`);
@@ -51,7 +63,13 @@ frameCmd
     if (result) {
       const { currentFrame, frames } = result as {
         currentFrame: number;
-        frames: Array<{ index: number; name: string | null; src: string; isMainFrame: boolean; isSameOrigin: boolean }>;
+        frames: Array<{
+          index: number;
+          name: string | null;
+          src: string;
+          isMainFrame: boolean;
+          isSameOrigin: boolean;
+        }>;
       };
 
       console.log(`Found ${frames.length} frame(s):\n`);
@@ -80,7 +98,13 @@ frameCmd
     if (result) {
       const { frameIndex, frame } = result as {
         frameIndex: number;
-        frame: { index: number; name: string | null; src: string; isMainFrame: boolean; isSameOrigin: boolean };
+        frame: {
+          index: number;
+          name: string | null;
+          src: string;
+          isMainFrame: boolean;
+          isSameOrigin: boolean;
+        };
       };
 
       console.log(`Current frame: #${frameIndex}`);

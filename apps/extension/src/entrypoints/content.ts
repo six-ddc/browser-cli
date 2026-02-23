@@ -1,5 +1,6 @@
 import type { Command } from '@browser-cli/shared';
 import { ErrorCode, createError, schemas } from '@browser-cli/shared';
+import { classifyError } from '../lib/error-classifier';
 import { initFrameBridge } from '../content-lib/frame-bridge';
 
 export default defineContentScript({
@@ -10,46 +11,45 @@ export default defineContentScript({
     initFrameBridge();
 
     // Listen for commands from background script
-    browser.runtime.onMessage.addListener((
-      message: { type: string; id: string; command: Command },
-      _sender: Browser.runtime.MessageSender,
-      sendResponse: (response: unknown) => void,
-    ) => {
-      if (message.type !== 'browser-cli-command') return false;
+    browser.runtime.onMessage.addListener(
+      (
+        message: { type: string; id: string; command: Command },
+        _sender: Browser.runtime.MessageSender,
+        sendResponse: (response: unknown) => void,
+      ) => {
+        if (message.type !== 'browser-cli-command') return false;
 
-      // Validate the command against the schema
-      const parseResult = schemas.commandSchema.safeParse(message.command);
-      if (!parseResult.success) {
-        sendResponse({
-          success: false,
-          error: createError(
-            ErrorCode.INVALID_PARAMS,
-            `Invalid command: ${parseResult.error.message}`,
-            'Check the command action and params match the expected schema',
-          ),
-        });
-        return true;
-      }
-
-      const command = parseResult.data as Command;
-
-      handleContentCommand(command)
-        .then((result) => {
-          sendResponse({ success: true, data: result });
-        })
-        .catch((err) => {
+        // Validate the command against the schema
+        const parseResult = schemas.commandSchema.safeParse(message.command);
+        if (!parseResult.success) {
           sendResponse({
             success: false,
             error: createError(
-              ErrorCode.CONTENT_SCRIPT_ERROR,
-              (err as Error).message || 'Unknown error',
+              ErrorCode.INVALID_PARAMS,
+              `Invalid command: ${parseResult.error.message}`,
+              'Check the command action and params match the expected schema',
             ),
           });
-        });
+          return true;
+        }
 
-      // Return true to indicate async response
-      return true;
-    });
+        const command = parseResult.data as Command;
+
+        handleContentCommand(command)
+          .then((result) => {
+            sendResponse({ success: true, data: result });
+          })
+          .catch((err: unknown) => {
+            sendResponse({
+              success: false,
+              error: classifyError(err, ErrorCode.CONTENT_SCRIPT_ERROR),
+            });
+          });
+
+        // Return true to indicate async response
+        return true;
+      },
+    );
   },
 });
 
@@ -59,7 +59,12 @@ async function handleContentCommand(command: Command): Promise<unknown> {
   const frameIndex = getCurrentFrameIndex();
 
   // If we're targeting an iframe, route the command there
-  if (frameIndex > 0 && command.action !== 'switchFrame' && command.action !== 'listFrames' && command.action !== 'getCurrentFrame') {
+  if (
+    frameIndex > 0 &&
+    command.action !== 'switchFrame' &&
+    command.action !== 'listFrames' &&
+    command.action !== 'getCurrentFrame'
+  ) {
     const iframe = getCurrentIFrame();
     if (!iframe) {
       throw new Error(`Frame index ${frameIndex} is no longer available`);

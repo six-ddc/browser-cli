@@ -1,21 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>The Internet - Nested Frames</title>
-  <style>
-    body { margin: 0; font-family: Arial, sans-serif; }
-    frameset { border: none; }
-  </style>
-</head>
-<body>
-  <div style="display: flex; flex-direction: column; height: 100vh;">
-    <div style="display: flex; flex: 1;">
-      <iframe name="frame-left" src="frame-left.html" style="flex: 1; border: 1px solid #ccc;"></iframe>
-      <iframe name="frame-middle" src="frame-middle.html" style="flex: 1; border: 1px solid #ccc;"></iframe>
-      <iframe name="frame-right" src="frame-right.html" style="flex: 1; border: 1px solid #ccc;"></iframe>
+  <head>
+    <meta charset="UTF-8" />
+    <title>The Internet - Nested Frames</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+      frameset {
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="display: flex; flex-direction: column; height: 100vh">
+      <div style="display: flex; flex: 1">
+        <iframe
+          name="frame-left"
+          src="frame-left.html"
+          style="flex: 1; border: 1px solid #ccc"
+        ></iframe>
+        <iframe
+          name="frame-middle"
+          src="frame-middle.html"
+          style="flex: 1; border: 1px solid #ccc"
+        ></iframe>
+        <iframe
+          name="frame-right"
+          src="frame-right.html"
+          style="flex: 1; border: 1px solid #ccc"
+        ></iframe>
+      </div>
+      <iframe
+        name="frame-bottom"
+        src="frame-bottom.html"
+        style="height: 100px; border: 1px solid #ccc"
+      ></iframe>
     </div>
-    <iframe name="frame-bottom" src="frame-bottom.html" style="height: 100px; border: 1px solid #ccc;"></iframe>
-  </div>
-</body>
+  </body>
 </html>

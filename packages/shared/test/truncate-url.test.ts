@@ -28,14 +28,14 @@ describe('truncateUrl', () => {
     expect(result).toBe(`https://example.com?foo=bar&baz=qux&lon${E}`);
   });
 
-  it('uses default maxQueryLength of 20', () => {
-    // query "?a=12345678901234567" = 20 chars → exact, no truncation
-    const exact = 'https://x.com?a=12345678901234567';
+  it('uses default maxQueryLength of 50', () => {
+    // query "?a=" + 47 chars = 50 chars → exact, no truncation
+    const exact = 'https://x.com?a=' + '1'.repeat(47);
     expect(truncateUrl(exact)).toBe(exact);
 
-    // query "?a=123456789012345678" = 21 chars → truncated, keep first 20
-    const long = 'https://x.com?a=123456789012345678';
-    expect(truncateUrl(long)).toBe(`https://x.com?a=12345678901234567${E}`);
+    // query "?a=" + 48 chars = 51 chars → truncated, keep first 50
+    const long = 'https://x.com?a=' + '1'.repeat(48);
+    expect(truncateUrl(long)).toBe(`https://x.com?${'a=' + '1'.repeat(47)}${E}`);
   });
 
   it('preserves hash fragment when truncating query', () => {

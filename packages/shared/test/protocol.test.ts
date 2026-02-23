@@ -100,7 +100,9 @@ describe('schemas - command', () => {
 
   it('validates tab commands', () => {
     expect(commandSchema.parse({ action: 'tabList', params: {} })).toBeTruthy();
-    expect(commandSchema.parse({ action: 'tabNew', params: { url: 'https://x.com' } })).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'tabNew', params: { url: 'https://x.com' } }),
+    ).toBeTruthy();
     expect(commandSchema.parse({ action: 'tabSwitch', params: { tabId: 1 } })).toBeTruthy();
     expect(commandSchema.parse({ action: 'tabClose', params: {} })).toBeTruthy();
   });
@@ -157,7 +159,9 @@ describe('schemas - command', () => {
   });
 
   it('rejects mouseDown with invalid button', () => {
-    expect(() => commandSchema.parse({ action: 'mouseDown', params: { button: 'extra' } })).toThrow();
+    expect(() =>
+      commandSchema.parse({ action: 'mouseDown', params: { button: 'extra' } }),
+    ).toThrow();
   });
 
   it('validates mouseUp with optional button', () => {
@@ -187,7 +191,9 @@ describe('schemas - command', () => {
 
   it('validates wait with load state', () => {
     expect(commandSchema.parse({ action: 'wait', params: { load: 'load' } })).toBeTruthy();
-    expect(commandSchema.parse({ action: 'wait', params: { load: 'domcontentloaded' } })).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'wait', params: { load: 'domcontentloaded' } }),
+    ).toBeTruthy();
     expect(commandSchema.parse({ action: 'wait', params: { load: 'networkidle' } })).toBeTruthy();
   });
 
@@ -213,7 +219,9 @@ describe('schemas - command', () => {
   // ─── Window management ────────────────────────────────────────────
   it('validates window commands', () => {
     expect(commandSchema.parse({ action: 'windowNew', params: {} })).toBeTruthy();
-    expect(commandSchema.parse({ action: 'windowNew', params: { url: 'https://x.com' } })).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'windowNew', params: { url: 'https://x.com' } }),
+    ).toBeTruthy();
     expect(commandSchema.parse({ action: 'windowList', params: {} })).toBeTruthy();
     expect(commandSchema.parse({ action: 'windowClose', params: {} })).toBeTruthy();
     expect(commandSchema.parse({ action: 'windowClose', params: { windowId: 42 } })).toBeTruthy();
@@ -227,7 +235,9 @@ describe('schemas - command', () => {
 
   it('rejects setViewport without dimensions', () => {
     expect(() => commandSchema.parse({ action: 'setViewport', params: { width: 1920 } })).toThrow();
-    expect(() => commandSchema.parse({ action: 'setViewport', params: { height: 1080 } })).toThrow();
+    expect(() =>
+      commandSchema.parse({ action: 'setViewport', params: { height: 1080 } }),
+    ).toThrow();
   });
 
   it('validates setGeo command', () => {
@@ -245,16 +255,25 @@ describe('schemas - command', () => {
   });
 
   it('validates setMedia command', () => {
-    expect(commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'dark' } })).toBeTruthy();
-    expect(commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'light' } })).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'dark' } }),
+    ).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'light' } }),
+    ).toBeTruthy();
   });
 
   it('rejects setMedia with invalid colorScheme', () => {
-    expect(() => commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'auto' } })).toThrow();
+    expect(() =>
+      commandSchema.parse({ action: 'setMedia', params: { colorScheme: 'auto' } }),
+    ).toThrow();
   });
 
   it('validates setHeaders command', () => {
-    const cmd = { action: 'setHeaders', params: { headers: { 'X-Custom': 'value', 'Authorization': 'Bearer token' } } };
+    const cmd = {
+      action: 'setHeaders',
+      params: { headers: { 'X-Custom': 'value', Authorization: 'Bearer token' } },
+    };
     expect(commandSchema.parse(cmd)).toEqual(cmd);
   });
 
@@ -269,7 +288,9 @@ describe('schemas - command', () => {
 
   // ─── Frame commands ───────────────────────────────────────────────
   it('validates frame commands', () => {
-    expect(commandSchema.parse({ action: 'switchFrame', params: { selector: 'iframe' } })).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'switchFrame', params: { selector: 'iframe' } }),
+    ).toBeTruthy();
     expect(commandSchema.parse({ action: 'switchFrame', params: { main: true } })).toBeTruthy();
     expect(commandSchema.parse({ action: 'listFrames', params: {} })).toBeTruthy();
     expect(commandSchema.parse({ action: 'getCurrentFrame', params: {} })).toBeTruthy();
@@ -277,8 +298,15 @@ describe('schemas - command', () => {
 
   // ─── Network commands ─────────────────────────────────────────────
   it('validates network commands', () => {
-    expect(commandSchema.parse({ action: 'route', params: { pattern: '*.png', action: 'block' } })).toBeTruthy();
-    expect(commandSchema.parse({ action: 'route', params: { pattern: '*/api/*', action: 'redirect', redirectUrl: 'https://mock.com' } })).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'route', params: { pattern: '*.png', action: 'block' } }),
+    ).toBeTruthy();
+    expect(
+      commandSchema.parse({
+        action: 'route',
+        params: { pattern: '*/api/*', action: 'redirect', redirectUrl: 'https://mock.com' },
+      }),
+    ).toBeTruthy();
     expect(commandSchema.parse({ action: 'unroute', params: { routeId: 1 } })).toBeTruthy();
     expect(commandSchema.parse({ action: 'getRequests', params: {} })).toBeTruthy();
     expect(commandSchema.parse({ action: 'getRoutes', params: {} })).toBeTruthy();
@@ -287,8 +315,18 @@ describe('schemas - command', () => {
 
   // ─── Upload command ───────────────────────────────────────────────
   it('validates upload command', () => {
-    expect(commandSchema.parse({ action: 'upload', params: { selector: '#file', files: 'data:text/plain;base64,aGVsbG8=' } })).toBeTruthy();
-    expect(commandSchema.parse({ action: 'upload', params: { selector: '#file', files: ['file1.txt', 'file2.txt'] } })).toBeTruthy();
+    expect(
+      commandSchema.parse({
+        action: 'upload',
+        params: { selector: '#file', files: 'data:text/plain;base64,aGVsbG8=' },
+      }),
+    ).toBeTruthy();
+    expect(
+      commandSchema.parse({
+        action: 'upload',
+        params: { selector: '#file', files: ['file1.txt', 'file2.txt'] },
+      }),
+    ).toBeTruthy();
   });
 
   // ─── Existing validations ─────────────────────────────────────────
