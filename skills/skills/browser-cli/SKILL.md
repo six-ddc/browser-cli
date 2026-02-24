@@ -7,7 +7,7 @@ description: >
   Use when the user wants to automate browser tasks, scrape web pages, fill forms,
   test web applications, take screenshots, or control a browser from the command line.
 allowed-tools: Bash(browser-cli:*)
-argument-hint: '[command] [args...]'
+argument-hint: '<describe your browser automation task>'
 ---
 
 # Browser-CLI Skill
@@ -461,6 +461,22 @@ browser-cli tab new https://example.com       # Open in new tab
 browser-cli tab                               # List all tabs
 browser-cli tab 123                           # Switch to tab
 browser-cli tab close                         # Close active tab
+```
+
+## Known Limitations
+
+**`hover` does not trigger CSS `:hover`** — browser-cli runs inside an extension, so `hover` and `mouse move` use JS `dispatchEvent` to synthesize mouse events. These fire JS event listeners (`mouseenter`, `mouseover`, etc.) but **do not activate the CSS `:hover` pseudo-class** — only real OS-level mouse input does. This means hover menus/dropdowns that rely on CSS `:hover` for `display` toggling will not appear.
+
+**Workaround**: use `eval` to directly manipulate the hidden element's style or trigger the action:
+
+```bash
+browser-cli eval --stdin <<'EOF'
+(() => {
+  const dropdown = document.querySelector("<dropdown-selector>");
+  dropdown.style.display = "block";  // force-show the CSS-hidden menu
+  dropdown.querySelector("<menu-item>")?.click();
+})()
+EOF
 ```
 
 ## Error Handling
