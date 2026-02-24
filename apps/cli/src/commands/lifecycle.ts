@@ -8,11 +8,11 @@ import { getRootOpts } from './shared.js';
 export const startCommand = new Command('start')
   .description('Start the browser-cli daemon')
   .option('--port <port>', 'WebSocket server port', String(DEFAULT_WS_PORT))
-  .action((opts: { port: string }, cmd: Command) => {
+  .action(async (opts: { port: string }, cmd: Command) => {
     const rootOpts = getRootOpts(cmd);
     const wsPort = parseInt(opts.port, 10);
     try {
-      const pid = startDaemon(wsPort);
+      const pid = await startDaemon(wsPort);
       if (rootOpts.json) {
         console.log(JSON.stringify({ success: true, pid }));
       } else {

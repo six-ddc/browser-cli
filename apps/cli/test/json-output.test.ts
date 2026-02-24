@@ -243,7 +243,7 @@ describe('--json: lifecycle commands', () => {
   });
 
   it('start --json outputs structured JSON', async () => {
-    mockDaemon.startDaemon.mockReturnValue(99999);
+    mockDaemon.startDaemon.mockResolvedValue(99999);
 
     const { lines } = await runCli('--json', 'start');
 
