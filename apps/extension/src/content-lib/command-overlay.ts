@@ -4,24 +4,45 @@
  * Purely passive: only shows when background sends 'browser-cli-overlay-show'.
  * No init-time queries. Zero overhead for tabs not being automated.
  *
- * Uses a 3s linear fade-out via CSS transition. Re-activation snaps back to
- * full opacity and restarts the fade. No @keyframes — maximum compatibility.
+ * All styles live in adoptedStyleSheets to bypass strict CSP (e.g. Reddit).
+ * No inline styles are set — only CSS classes are toggled.
+ * Uses CSS animation for the fade-out (restartable via class re-add trick).
  */
 
 const OVERLAY_DURATION_MS = 3000;
 
 let host: HTMLElement | null = null;
-let visible = false;
+let shadow: ShadowRoot | null = null;
+let sheet: CSSStyleSheet | null = null;
 let hideTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function ensureHost(): void {
   if (host) return;
 
   host = document.createElement('browser-cli-overlay');
-  const shadow = host.attachShadow({ mode: 'closed' });
+  shadow = host.attachShadow({ mode: 'closed' });
 
-  const style = document.createElement('style');
-  style.textContent = `
+  sheet = new CSSStyleSheet();
+  updateSheet(OVERLAY_DURATION_MS);
+  shadow.adoptedStyleSheets = [sheet];
+
+  const border = document.createElement('div');
+  border.className = 'border';
+
+  const badge = document.createElement('div');
+  badge.className = 'badge';
+  badge.textContent = 'Browser-CLI';
+
+  shadow.append(border, badge);
+  document.documentElement.appendChild(host);
+}
+
+function updateSheet(durationMs: number): void {
+  sheet!.replaceSync(`
+    @keyframes browser-cli-fade {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
     :host {
       position: fixed;
       inset: 0;
@@ -31,6 +52,7 @@ function ensureHost(): void {
     }
     :host(.visible) {
       display: block;
+      animation: browser-cli-fade ${durationMs}ms linear forwards;
     }
     .border {
       position: absolute;
@@ -49,23 +71,12 @@ function ensureHost(): void {
       border-radius: 4px;
       letter-spacing: 0.03em;
     }
-  `;
-
-  const border = document.createElement('div');
-  border.className = 'border';
-
-  const badge = document.createElement('div');
-  badge.className = 'badge';
-  badge.textContent = 'Browser-CLI';
-
-  shadow.append(style, border, badge);
-  document.documentElement.appendChild(host);
+  `);
 }
 
 /**
- * Show overlay and start a linear fade-out over `durationMs`.
- * If called again while already visible, snaps back to full opacity
- * and restarts the fade from scratch.
+ * Show overlay and start a fade-out over `durationMs`.
+ * If called again while already visible, restarts the animation.
  */
 export function showFor(durationMs: number): void {
   ensureHost();
@@ -75,22 +86,16 @@ export function showFor(durationMs: number): void {
     hideTimeout = null;
   }
 
-  // Snap to full opacity (no transition) then start fade
-  host!.style.transition = 'none';
-  host!.style.opacity = '1';
-  host!.classList.add('visible');
-  // Force reflow so the snap takes effect before we set the transition
+  // Update animation duration if needed
+  updateSheet(durationMs);
+
+  // Restart animation: remove class, force reflow, re-add class
+  host!.classList.remove('visible');
   void host!.offsetWidth;
+  host!.classList.add('visible');
 
-  // Start linear fade-out over the full duration
-  host!.style.transition = `opacity ${durationMs}ms linear`;
-  host!.style.opacity = '0';
-  visible = true;
-
-  // Remove from layout after fade completes
   hideTimeout = setTimeout(() => {
     hideTimeout = null;
-    visible = false;
     host?.classList.remove('visible');
   }, durationMs);
 }
