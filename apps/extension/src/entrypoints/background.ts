@@ -364,6 +364,30 @@ browser.runtime.onInstalled.addListener(() => {
         console.warn('[browser-cli] Failed to configure userScripts world:', err),
       );
   }
+
+  // Re-inject content scripts into all existing tabs after extension reload/update
+  browser.tabs
+    .query({})
+    .then((tabs) => {
+      for (const tab of tabs) {
+        if (tab.id != null && tab.url && /^https?:\/\//.test(tab.url)) {
+          browser.scripting
+            .executeScript({
+              target: { tabId: tab.id, allFrames: true },
+              files: ['content-scripts/content.js'],
+            })
+            .catch(() => {
+              // Silently ignore tabs that can't be injected
+            });
+        }
+      }
+      console.log(
+        `[browser-cli] Re-injected content scripts into ${tabs.filter((t) => t.url && /^https?:\/\//.test(t.url)).length} tabs`,
+      );
+    })
+    .catch((err: unknown) => {
+      console.warn('[browser-cli] Failed to re-inject content scripts:', err);
+    });
 });
 
 // Handle reconnection alarms from WsClient
