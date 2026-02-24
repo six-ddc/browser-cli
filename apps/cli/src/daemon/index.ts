@@ -46,6 +46,9 @@ async function main() {
   await wsServer.start(wsPort);
   await socketServer.start(socketPath);
 
+  // Signal readiness to parent via IPC (if launched with IPC channel)
+  process.send?.({ ready: true });
+
   logger.success(`Daemon ready (PID=${process.pid})`);
 
   // Graceful shutdown
@@ -76,6 +79,10 @@ async function main() {
 }
 
 main().catch((err: unknown) => {
-  logger.error('Daemon failed to start:', err instanceof Error ? err.message : String(err));
+  const message = err instanceof Error ? err.message : String(err);
+  // Signal error to parent via IPC (if launched with IPC channel)
+  process.send?.({ error: message });
+  cleanupPidFile();
+  logger.error('Daemon failed to start:', message);
   process.exit(1);
 });

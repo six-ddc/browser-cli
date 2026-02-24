@@ -31,7 +31,7 @@ export async function sendCommand<A extends ActionType>(
 
   // Ensure daemon is running
   try {
-    ensureDaemon();
+    await ensureDaemon();
   } catch (err) {
     logger.error(`Failed to start daemon: ${(err as Error).message}`);
     process.exit(1);

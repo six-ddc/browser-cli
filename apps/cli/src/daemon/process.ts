@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import {
   readFileSync,
   writeFileSync,
@@ -81,8 +81,37 @@ export function isDaemonRunning(): boolean {
   return getDaemonPid() !== null;
 }
 
+/** Wait for daemon child to signal readiness or failure via IPC */
+function waitForDaemonReady(child: ChildProcess, timeout: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Daemon startup timed out'));
+    }, timeout);
+
+    child.on('message', (msg: unknown) => {
+      clearTimeout(timer);
+      const m = msg as Record<string, unknown>;
+      if (m?.ready) {
+        resolve();
+      } else if (m?.error) {
+        reject(new Error(String(m.error)));
+      }
+    });
+
+    child.on('exit', (code) => {
+      clearTimeout(timer);
+      reject(new Error(`Daemon exited during startup (code ${code})`));
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(new Error(`Failed to spawn daemon: ${err.message}`));
+    });
+  });
+}
+
 /** Start the daemon as a detached child process */
-export function startDaemon(wsPort?: number): number {
+export async function startDaemon(wsPort?: number): Promise<number> {
   const existing = getDaemonPid();
   if (existing) {
     logger.info(`Daemon already running (PID ${existing})`);
@@ -98,18 +127,31 @@ export function startDaemon(wsPort?: number): number {
 
   const child = spawn(process.execPath, [daemonEntry, ...args], {
     detached: true,
-    stdio: 'ignore',
+    stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     env: { ...process.env },
   });
-
-  child.unref();
 
   if (!child.pid) {
     throw new Error('Failed to start daemon process');
   }
 
-  // Don't write PID here — the daemon child writes its own PID at startup
-  // (see daemon/index.ts) to avoid race between parent and child writes.
+  // Wait for daemon to signal readiness via IPC before reporting success
+  try {
+    await waitForDaemonReady(child, 5000);
+  } catch (err) {
+    try {
+      child.kill();
+    } catch {
+      // Process may have already exited
+    }
+    cleanupPidFile();
+    throw err;
+  }
+
+  // Daemon is ready — disconnect IPC and detach so parent can exit
+  child.disconnect();
+  child.unref();
+
   return child.pid;
 }
 
@@ -148,7 +190,7 @@ export async function stopDaemon(): Promise<boolean> {
 }
 
 /** Ensure the daemon is running, starting it if necessary */
-export function ensureDaemon(wsPort?: number): number {
+export async function ensureDaemon(wsPort?: number): Promise<number> {
   const existing = getDaemonPid();
   if (existing) return existing;
   return startDaemon(wsPort);
