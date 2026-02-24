@@ -2,6 +2,7 @@ import type { Command } from '@browser-cli/shared';
 import { ErrorCode, createError, schemas } from '@browser-cli/shared';
 import { classifyError } from '../lib/error-classifier';
 import { initFrameBridge } from '../content-lib/frame-bridge';
+import { initOverlay } from '../content-lib/command-overlay';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -9,6 +10,9 @@ export default defineContentScript({
   main() {
     // Initialize frame bridge for iframe support
     initFrameBridge();
+
+    // Initialize command overlay (auto-shows if tab was recently operated on)
+    initOverlay();
 
     // Listen for commands from background script
     browser.runtime.onMessage.addListener(

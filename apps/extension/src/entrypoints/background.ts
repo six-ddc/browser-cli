@@ -10,6 +10,27 @@ let wsClient: WsClient | null = null;
 let networkManager: NetworkManager | null = null;
 let initializing = false;
 
+/** Overlay duration in ms — must match content-lib/command-overlay.ts */
+const OVERLAY_DURATION_MS = 3000;
+
+/** Tracks the last command execution time per tab for overlay display */
+const tabCommandTimestamps = new Map<number, number>();
+
+/** Send overlay show message to a tab (fire-and-forget) */
+function sendOverlayShow(tabId: number, remainingMs: number): void {
+  browser.tabs
+    .sendMessage(tabId, { type: 'browser-cli-overlay-show', remainingMs }, { frameId: 0 })
+    .catch(() => {
+      /* content script may not be ready */
+    });
+}
+
+/** Record a command execution and notify the content script to show overlay */
+function touchTab(tabId: number): void {
+  tabCommandTimestamps.set(tabId, Date.now());
+  sendOverlayShow(tabId, OVERLAY_DURATION_MS);
+}
+
 /** Commands handled by the background service worker (not content scripts) */
 const BG_ACTIONS = new Set([
   'navigate',
@@ -130,6 +151,9 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
   try {
     const targetTabId = await resolveTargetTab(msg.tabId);
 
+    // Record command timestamp and notify overlay
+    touchTab(targetTabId);
+
     if (BG_ACTIONS.has(command.action)) {
       console.log(`[browser-cli] Routing to background handler: ${command.action}`);
       const { handleBackgroundCommand } = await import('../lib/command-router');
@@ -224,6 +248,19 @@ if (typeof self !== 'undefined' && typeof self.addEventListener === 'function') 
 // Clean up tab state when tabs are closed
 browser.tabs.onRemoved.addListener((tabId) => {
   frameManager.clearTab(tabId);
+  tabCommandTimestamps.delete(tabId);
+});
+
+// Re-show overlay on navigation completion if tab was recently operated on
+// Uses tabs.onUpdated (already have 'tabs' permission) instead of webNavigation
+browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status !== 'complete') return;
+  const ts = tabCommandTimestamps.get(tabId);
+  if (!ts) return;
+  const remaining = OVERLAY_DURATION_MS - (Date.now() - ts);
+  if (remaining > 0) {
+    sendOverlayShow(tabId, remaining);
+  }
 });
 
 // Listen for port changes from popup
