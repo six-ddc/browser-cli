@@ -273,7 +273,7 @@ browser-cli wait 3000
 
 ## Notes
 
-- **`eval` works without flags**: Browser-CLI auto-handles Gmail's Trusted Types policy. No `--user-script` needed.
+- **`eval` works without flags**: Browser-CLI auto-handles Gmail's Trusted Types policy and CSP fallbacks.
 - **Stable selectors preferred**: This guide uses `data-*` attributes, `role`, `span[email]`, and `[title]` wherever possible. Only `div.a3s` (email body in detail view) relies on an obfuscated class name — monitor for breakage.
 - **Compose dialog not in snapshot**: The Gmail compose window does not appear in the accessibility tree snapshot.
 - **Authentication required**: Gmail requires a logged-in Google account. Redirects to accounts.google.com if not logged in.

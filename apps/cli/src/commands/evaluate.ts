@@ -18,11 +18,10 @@ export const evalCommand = new Command('eval')
   .argument('[expression]', 'JavaScript expression')
   .option('-b, --base64', 'Decode expression from base64')
   .option('--stdin', 'Read expression from stdin')
-  .option('-u, --user-script', 'Use chrome.userScripts API (bypasses CSP, requires Developer Mode)')
   .action(
     async (
       expression: string | undefined,
-      opts: { base64?: boolean; stdin?: boolean; userScript?: boolean },
+      opts: { base64?: boolean; stdin?: boolean },
       cmd: Command,
     ) => {
       if (opts.stdin) {
@@ -42,7 +41,6 @@ export const evalCommand = new Command('eval')
         action: 'evaluate',
         params: {
           expression,
-          ...(opts.userScript && { userScript: true }),
         },
       });
       if (result) {

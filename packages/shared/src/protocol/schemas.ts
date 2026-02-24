@@ -179,7 +179,6 @@ export const waitForUrlParamsSchema = z.object({
 // Evaluate
 export const evaluateParamsSchema = z.object({
   expression: z.string(),
-  userScript: z.boolean().optional(),
 });
 
 // Console
