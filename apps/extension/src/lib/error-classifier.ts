@@ -63,9 +63,7 @@ const ERROR_PATTERNS: ErrorPattern[] = [
     message:
       "eval() is blocked by this page's Content Security Policy (CSP). " +
       'Sites like Gmail, Google Drive, and GitHub enforce strict CSP that prevents JavaScript evaluation.',
-    hint:
-      "Retry with 'eval --user-script' to bypass CSP via chrome.userScripts API (requires Developer Mode in chrome://extensions). " +
-      "Or use 'snapshot -ic' to read interactive elements, 'snapshot -c' for full page content, or 'find' to locate and interact with elements.",
+    hint: "Use 'snapshot -ic' to read interactive elements, 'snapshot -c' for full page content, or 'find' to locate and interact with elements.",
   },
 ];
 

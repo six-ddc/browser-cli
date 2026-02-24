@@ -176,6 +176,42 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
   }
 }
 
+// ─── Firefox: relax CSP headers so MAIN-world eval() works ──────────
+// Chrome exempts extension-injected code from page CSP; Firefox does not.
+// Use webRequest.onHeadersReceived (MV2 blocking) to inject 'unsafe-eval'
+// into script-src and strip require-trusted-types-for before the page loads.
+// NOTE: Service-Worker-cached responses bypass webRequest — the ISOLATED
+// world fallback in command-router.ts covers that case.
+if (import.meta.env.FIREFOX) {
+  try {
+    browser.webRequest.onHeadersReceived.addListener(
+      (details) => {
+        const headers = details.responseHeaders?.map((h) => {
+          if (h.name.toLowerCase() === 'content-security-policy' && h.value) {
+            let csp = h.value;
+            if (!csp.includes("'unsafe-eval'")) {
+              if (/script-src\s/.test(csp)) {
+                csp = csp.replace(/script-src\s+/, "script-src 'unsafe-eval' ");
+              } else if (/default-src\s/.test(csp)) {
+                // default-src is the fallback for script-src per CSP spec
+                csp = csp.replace(/default-src\s+/, "default-src 'unsafe-eval' ");
+              }
+            }
+            csp = csp.replace(/;\s*require-trusted-types-for\s+[^;]*/g, '');
+            return { ...h, value: csp };
+          }
+          return h;
+        });
+        return { responseHeaders: headers };
+      },
+      { urls: ['<all_urls>'], types: ['main_frame', 'sub_frame'] },
+      ['blocking', 'responseHeaders'],
+    );
+  } catch {
+    // WXT build-time fake-browser does not implement webRequest.onHeadersReceived
+  }
+}
+
 // ─── Module-scope event listeners (survive SW restart) ───────────────
 
 // Catch unhandled promise rejections in the service worker
@@ -245,39 +281,9 @@ browser.runtime.onMessage.addListener(
         sendResponse({ result: null, error: 'Unauthorized sender' });
         return true;
       }
-      if (import.meta.env.FIREFOX) {
-        // Firefox: content script already uses <script> injection in evaluate.ts,
-        // so this path shouldn't normally be hit. Forward to content script as fallback.
-        browser.tabs
-          .sendMessage(
-            sender.tab.id,
-            {
-              type: 'browser-cli-command',
-              id: `bg-eval-main-${Date.now()}`,
-              command: { action: 'evaluate', params: { expression: message.expression } },
-            },
-            { frameId: 0 },
-          )
-          .then(
-            (response: {
-              success: boolean;
-              data?: { value: unknown };
-              error?: { message?: string };
-            }) => {
-              sendResponse({
-                result: response.success ? response.data?.value : null,
-                error: response.success ? undefined : response.error?.message,
-              });
-            },
-          )
-          .catch((err: unknown) => {
-            sendResponse({
-              result: null,
-              error: `eval failed: ${err instanceof Error ? err.message : String(err)}`,
-            });
-          });
-      } else {
-        // Chrome: evaluate in MAIN world directly
+      // Evaluate in MAIN world via scripting.executeScript
+      // (Chrome: always works; Firefox: works after webRequest CSP strip)
+      {
         browser.scripting
           .executeScript({
             target: { tabId: sender.tab.id },

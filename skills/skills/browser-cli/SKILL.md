@@ -278,12 +278,9 @@ browser-cli screenshot [options]
 browser-cli eval '<expression>'
 browser-cli eval -b/--base64 '<base64-encoded-expression>'  # decode from base64
 echo '<expression>' | browser-cli eval --stdin       # read from stdin
-browser-cli eval -u/--user-script '<expression>'     # bypass CSP via userScripts API
 ```
 
-Evaluates JavaScript in the page context and returns the result.
-
-**CSP-strict pages** (Gmail, GitHub, etc.) block `eval()` in the default MAIN world. Use `--user-script` (`-u`) to run via the `chrome.userScripts` API, which bypasses CSP. Requires Developer Mode enabled in `chrome://extensions`.
+Evaluates JavaScript in the page context and returns the result. CSP-strict pages (Gmail, GitHub, etc.) are handled automatically with platform-specific fallbacks.
 
 ### Console & Errors
 

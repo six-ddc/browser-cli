@@ -67,3 +67,16 @@ export function createError(
     ...(details !== undefined ? { details } : {}),
   };
 }
+
+/** Type guard: is `err` already a structured ProtocolError (plain object, not Error instance)? */
+export function isProtocolError(err: unknown): err is ProtocolError {
+  return (
+    err !== null &&
+    typeof err === 'object' &&
+    !(err instanceof Error) &&
+    'code' in err &&
+    'message' in err &&
+    typeof (err as ProtocolError).code === 'string' &&
+    typeof (err as ProtocolError).message === 'string'
+  );
+}

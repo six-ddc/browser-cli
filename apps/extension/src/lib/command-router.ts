@@ -5,7 +5,7 @@
  */
 
 import type { RequestMessage, ResponseMessage, Command } from '@browser-cli/shared';
-import { ErrorCode, createError } from '@browser-cli/shared';
+import { ErrorCode, createError, isProtocolError } from '@browser-cli/shared';
 import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
 
@@ -43,12 +43,11 @@ export async function handleBackgroundCommand(
     const data = await routeCommand(command, targetTabId, networkManager);
     return { id, type: 'response', success: true, data };
   } catch (err) {
-    const fallbackCode = getFallbackErrorCode(command.action);
     return {
       id,
       type: 'response',
       success: false,
-      error: classifyError(err, fallbackCode),
+      error: isProtocolError(err) ? err : classifyError(err, getFallbackErrorCode(command.action)),
     };
   }
 }
@@ -258,74 +257,24 @@ async function routeCommand(
     }
 
     // ─── Evaluate ──────────────────────────────────────────────
+    // Tiered eval with automatic CSP fallback. See docs/EVAL_CSP.md.
+    //
+    //   Both ─── 1. MAIN world eval (page globals visible)
+    //   Chrome ► 2. chrome.userScripts (USER_SCRIPT world, CSP-exempt)
+    //   Firefox► 2. ISOLATED world eval (extension CSP, DOM only)
+    //   Both ─── 3. Error with actionable hint
+    //
     case 'evaluate': {
-      const { expression, userScript } = command.params;
+      const { expression } = command.params;
 
-      if (import.meta.env.FIREFOX) {
-        // Firefox: delegate to content script's <script> injection approach
-        const response = await sendToContentScript(
-          targetTabId,
-          {
-            type: 'browser-cli-command',
-            id: `bg-evaluate-${Date.now()}`,
-            command: { action: 'evaluate', params: { expression } },
-          },
-          { frameId: 0 },
-        );
-        if (!response.success) {
-          throw new Error(response.error?.message || 'evaluate failed');
-        }
-        return response.data;
-      }
-
-      // Chrome --user-script mode: use chrome.userScripts API to bypass CSP
-      if (userScript) {
-        if (!chrome.userScripts?.execute) {
-          // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-          throw createError(
-            ErrorCode.EVAL_ERROR,
-            'chrome.userScripts API is not available. Developer Mode (or "Allow User Scripts" on Chrome 138+) must be enabled in chrome://extensions.',
-            'Enable Developer Mode in chrome://extensions, then reload the extension.',
-          );
-        }
-        try {
-          const usResults = await chrome.userScripts.execute({
-            target: { tabId: targetTabId },
-            js: [{ code: expression }],
-          });
-          const usResult = usResults[0] as { result?: unknown; error?: string } | undefined;
-          if (usResult?.error) {
-            // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-            throw createError(
-              ErrorCode.EVAL_ERROR,
-              `userScripts eval failed: ${usResult.error}`,
-              'Check your expression for syntax or runtime errors.',
-            );
-          }
-          return { value: usResult?.result };
-        } catch (usErr) {
-          // Re-throw ProtocolErrors as-is (from createError above)
-          if (usErr && typeof usErr === 'object' && 'code' in usErr) throw usErr;
-          // Wrap unexpected errors with userScripts-specific hint
-          // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-          throw createError(
-            ErrorCode.EVAL_ERROR,
-            `userScripts execution failed: ${usErr instanceof Error ? usErr.message : String(usErr)}`,
-            'Ensure "Allow User Scripts" (or Developer Mode) is enabled in chrome://extensions and the extension has been reloaded.',
-          );
-        }
-      }
-
-      // Chrome default: execute in MAIN world with structured result envelope
-      // so we can distinguish "expression evaluated to null" from "CSP blocked eval()"
-      const results = await browser.scripting.executeScript({
+      // ── Step 1: MAIN world eval ────────────────────────────
+      const mainWorldResult = await browser.scripting.executeScript({
         target: { tabId: targetTabId },
         world: 'MAIN',
         func: (expr: string) => {
           try {
-            // On pages with Trusted Types (e.g. Gmail), eval() requires a TrustedScript.
-            // Create a policy to wrap the expression, falling back to plain eval.
             let __r: unknown;
+            // Handle Trusted Types (e.g. Gmail)
             const tt = (globalThis as Record<string, unknown>).trustedTypes as
               | {
                   createPolicy: (
@@ -350,23 +299,71 @@ async function routeCommand(
         args: [expression],
       });
 
-      const raw = results[0]?.result as
+      const raw = mainWorldResult[0]?.result as
         | { __ok: true; value: unknown }
         | { __ok: false; error: string }
         | undefined;
 
-      if (!raw) {
-        // executeScript returned undefined — likely blocked entirely
-        throw new Error('eval() returned no result. The page may block script execution via CSP.');
-      }
-
-      if (raw.__ok) {
+      if (raw?.__ok) {
         return { value: raw.value };
       }
 
-      // Throw raw error message — error-classifier will detect CSP errors
-      // and add appropriate hints
-      throw new Error(raw.error || 'evaluate failed');
+      const evalError = raw?.error ?? 'eval() returned no result';
+      const isCSP =
+        evalError.includes('CSP') ||
+        evalError.includes('Content Security Policy') ||
+        evalError.includes('unsafe-eval') ||
+        evalError.includes('Refused to evaluate');
+
+      if (!isCSP) {
+        throw new Error(evalError);
+      }
+
+      // ── Step 2: CSP fallback (platform-specific) ───────────
+
+      if (!import.meta.env.FIREFOX) {
+        // Chrome: userScripts API (USER_SCRIPT world, CSP-exempt)
+        if (chrome.userScripts?.execute) {
+          const usResults = await chrome.userScripts.execute({
+            target: { tabId: targetTabId },
+            js: [{ code: expression }],
+          });
+          const usResult = usResults[0] as
+            | { result?: unknown; error?: { message?: string } | string }
+            | undefined;
+          if (usResult?.error) {
+            const errDetail =
+              typeof usResult.error === 'string'
+                ? usResult.error
+                : (usResult.error.message ?? JSON.stringify(usResult.error));
+            throw new Error(`userScripts eval failed: ${errDetail}`);
+          }
+          return { value: usResult?.result };
+        }
+        // userScripts not available
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
+        throw createError(
+          ErrorCode.EVAL_ERROR,
+          "eval() is blocked by this page's Content Security Policy (CSP).",
+          "Enable Developer Mode (or 'Allow User Scripts' on Chrome 138+) in chrome://extensions to auto-bypass CSP. " +
+            "Or use 'snapshot -ic' / 'find' to interact with elements without eval.",
+        );
+      } else {
+        // Firefox: ISOLATED world eval (extension CSP, always works)
+        const response = await sendToContentScript(
+          targetTabId,
+          {
+            type: 'browser-cli-command',
+            id: `bg-evaluate-${Date.now()}`,
+            command: { action: 'evaluate', params: { expression } },
+          },
+          { frameId: 0 },
+        );
+        if (!response.success) {
+          throw new Error(response.error?.message || 'evaluate failed');
+        }
+        return response.data;
+      }
     }
 
     // ─── Network ───────────────────────────────────────────────
