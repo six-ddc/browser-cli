@@ -250,6 +250,7 @@ EOF
 | 元素               | 选择器                                      |
 | ------------------ | ------------------------------------------- |
 | 容器               | `#noteContainer` / `.note-container`        |
+| 可滚动区域         | `.note-scroller`                            |
 | 标题               | `#detail-title`                             |
 | 正文（含标签文字） | `#detail-desc .note-text`                   |
 | 标题+正文+日期     | `.note-content`                             |
@@ -319,6 +320,17 @@ browser-cli screenshot --selector '.note-slider' --path slide-2.png
 ```
 
 > **注意**: Swiper 的 loop 模式会在首尾各复制 slide，导致 `.swiper-slide` 总数大于实际图片数。用 `data-swiper-slide-index` 去重可得到真实图片数量。单图帖子没有 `.note-slider` 和箭头。
+
+**滚动加载更多评论**:
+
+> **重要**: 帖子详情页是覆盖层（overlay），页面级 `scroll down` 无效。必须指定 `--selector '.note-scroller'` 在详情页内部滚动，才能触发评论的懒加载。
+
+```bash
+browser-cli scroll down --amount 2000 --selector '.note-scroller'
+browser-cli wait 1500
+```
+
+每次滚动约加载 10 条评论。重复滚动直到评论数不再增长。
 
 **提取评论**:
 
@@ -511,10 +523,51 @@ browser-cli eval --stdin <<'EOF'
 EOF
 ```
 
+### 删除自己的评论
+
+每条评论有一个 `.delete-dropdown` 区域（三个点图标），但其下拉菜单（`.dropdown-container.delete-dropdown` > `.dropdown-items`）默认 `display: none`，且只在 CSS hover 时显示。browser-cli 的 `hover` 命令无法可靠触发 Vue 的 hover 状态，因此**必须用 eval 手动展示 dropdown 并点击删除**。
+
+> **关键区分**: 自己的评论 dropdown 文本为 `"删除评论"`，他人的为 `"举报评论"`。利用此差异定位自己的评论。
+
+```bash
+browser-cli eval --stdin <<'EOF'
+(() => {
+  const ddContainers = [...document.querySelectorAll(".dropdown-container.delete-dropdown")];
+  const mine = ddContainers.filter(c => c.innerHTML.includes("删除评论"));
+  if (mine.length > 0) {
+    mine[0].querySelector(".dropdown-items").style.display = "block";
+    mine[0].querySelector(".menu-item")?.click();
+    return "delete dialog opened, remaining: " + (mine.length - 1);
+  }
+  return "no deletable comments";
+})()
+EOF
+```
+
+弹出确认弹窗后，点击确定按钮（`div.foot-btn.strong`，不是 `<button>`）：
+
+```bash
+browser-cli wait 500
+browser-cli click '.foot-btn.strong'
+```
+
+循环执行上述两步直到所有评论删除完毕。
+
+**关键选择器**:
+
+| 元素         | 选择器                                | 说明                                     |
+| ------------ | ------------------------------------- | ---------------------------------------- |
+| 三个点图标   | `.comment-menu .delete-dropdown`      | SVG 元素，CSS hover 才可见               |
+| 下拉菜单容器 | `.dropdown-container.delete-dropdown` | 默认 `display: none`，需 JS 强制展示     |
+| 菜单项       | `.dropdown-items .menu-item`          | 文本为"删除评论"或"举报评论"             |
+| 确认删除按钮 | `.foot-btn.strong`                    | 是 `<div>` 不是 `<button>`，`click` 可用 |
+| 取消删除按钮 | `.foot-btn`（不含 `.strong`）         | 弹窗中的"取消"                           |
+
 ## 注意事项
 
 - **搜索页点击**: 从搜索页点击帖子会跳转新页面（`/explore/<id>?xsec_token=...`），用 `browser-cli back` 返回搜索结果
 - **xsec_token**: 直接访问 `/explore/<id>` 不带 token 会 404。必须从搜索页点击进入（链接自动带 token），或从 `a.cover` 的 href 中获取完整 URL
+- **详情页滚动**: 帖子详情页是覆盖层（overlay），`scroll down` 不会滚动详情内容。必须使用 `scroll down --selector '.note-scroller'` 在详情页内部滚动，否则评论无法懒加载
 - **虚拟滚动**: 推荐页和搜索页均使用虚拟滚动（DOM 回收），DOM 中仅保留约 15–24 个卡片。批量采集时必须边滚边收集（用 `window` 全局变量累积），不能滚完再提取
 - **动态渲染**: 页面使用 CSR，必须 `wait` 等待元素出现后再提取
 - **登录墙**: 未登录时会自动弹出登录弹窗，详见上方「登录检测」章节。用 `browser-cli click '.login-container .close-button'` 关闭弹窗后可继续操作

@@ -2,70 +2,38 @@
 
 > X (formerly Twitter) — social media platform for short-form posts, news, and discussions.
 
-## Login Detection
+## Login Required
 
-**Check login status before operations that require authentication** (search, explore, compose, likes, followers list). Public profiles and individual tweets are accessible without login.
+**Most X.com features require login.** Search, Explore, timeline interactions, followers list, and compose are all unavailable when logged out. A bottom bar also blocks the UI.
+
+**Always check login state before any operation. If not logged in, stop and ask the user to log in manually.**
 
 **Detect login state**:
 
 ```bash
 browser-cli eval --stdin <<'EOF'
 JSON.stringify((() => {
-  const bottomBar = !!document.querySelector('[data-testid="BottomBar"]');
-  const sidebarSignup = !!document.querySelector('[data-testid="sidebarColumn"] [data-testid="google_sign_in_container"]');
   const tweetButton = !!document.querySelector('[data-testid="SideNav_NewTweet_Button"]');
   const accountSwitcher = !!document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]');
-  return {
-    loggedIn: !bottomBar && (!!tweetButton || !!accountSwitcher),
-    bottomBar,
-    sidebarSignup,
-  };
+  return { loggedIn: tweetButton || accountSwitcher };
 })())
 EOF
 ```
 
 **Key selectors**:
 
-| State      | Selector                                                                 | Description                                |
-| ---------- | ------------------------------------------------------------------------ | ------------------------------------------ |
-| Logged out | `[data-testid="BottomBar"]`                                              | Bottom bar with "Log in" / "Sign up" links |
-| Logged out | `[data-testid="sidebarColumn"] [data-testid="google_sign_in_container"]` | Sidebar signup prompt                      |
-| Logged in  | `[data-testid="SideNav_NewTweet_Button"]`                                | Compose tweet button in left sidebar       |
-| Logged in  | `[data-testid="SideNav_AccountSwitcher_Button"]`                         | Account switcher at bottom of left sidebar |
-| Login flow | `[data-testid="app-bar-close"]`                                          | Close button on login modal                |
+| State     | Selector                                         | Description                                |
+| --------- | ------------------------------------------------ | ------------------------------------------ |
+| Logged in | `[data-testid="SideNav_NewTweet_Button"]`        | Compose tweet button in left sidebar       |
+| Logged in | `[data-testid="SideNav_AccountSwitcher_Button"]` | Account switcher at bottom of left sidebar |
 
-**Login flow** (when browser is at `/i/flow/login`):
+> Note: `[data-testid="BottomBar"]` exists as an empty div even when logged in. Do NOT use it for login detection.
 
-```bash
-browser-cli fill 'input[name="text"]' '<username or email>'
-browser-cli click 'div[role="button"]:has-text("Next")'
-browser-cli wait 'input[name="password"]' --timeout 5000
-browser-cli fill 'input[name="password"]' '<password>'
-browser-cli click '[data-testid="LoginForm_Login_Button"]'
-browser-cli wait '[data-testid="SideNav_NewTweet_Button"]' --timeout 10000
-```
+**If `loggedIn: false`** — stop all subsequent operations and tell the user:
 
-**Recommended flow**: If login is needed, prompt the user to log in manually in the browser, then `browser-cli reload`.
+> X.com is not logged in. Please log in manually in the browser, then tell me to continue.
 
-### Accessible Without Login
-
-| Page            | URL Pattern                   |
-| --------------- | ----------------------------- |
-| Profile         | `x.com/<handle>`              |
-| Tweet detail    | `x.com/<handle>/status/<id>`  |
-| Profile Replies | `x.com/<handle>/with_replies` |
-| Highlights      | `x.com/<handle>/highlights`   |
-
-### Requires Login (redirects to `/i/flow/login`)
-
-| Page      | URL Pattern                |
-| --------- | -------------------------- |
-| Search    | `x.com/search?q=...`       |
-| Explore   | `x.com/explore`            |
-| Hashtags  | `x.com/hashtag/<tag>`      |
-| Followers | `x.com/<handle>/followers` |
-| Likes     | `x.com/<handle>/likes`     |
-| Home feed | `x.com/home`               |
+After the user logs in, run `browser-cli reload` and re-check login state before proceeding.
 
 ## Profile Page
 
@@ -162,7 +130,7 @@ JSON.stringify([...document.querySelectorAll('[data-testid="tweet"]')].map((el, 
     replies: parseCount(el.querySelector('[data-testid="reply"]')?.getAttribute('aria-label')),
     retweets: parseCount(el.querySelector('[data-testid="retweet"]')?.getAttribute('aria-label')),
     likes: parseCount(el.querySelector('[data-testid="like"]')?.getAttribute('aria-label')),
-    hasPhoto: !!el.querySelector('[data-testid="tweetPhoto"]'),
+    photos: [...el.querySelectorAll('[data-testid="tweetPhoto"] img')].map(img => img.src.replace(/name=\w+/, 'name=large')),
     hasVideo: !!el.querySelector('[data-testid="videoPlayer"]'),
     hasCard: !!el.querySelector('[data-testid="card.wrapper"]'),
   };
@@ -208,11 +176,62 @@ const parseCount = (label) => {
 
 Visible abbreviated text (e.g., "1K", "7.6K") is in `[data-testid="app-text-transition-container"]` inside each button, but `aria-label` has the exact count.
 
-**Infinite scroll pagination**:
+**Infinite scroll — virtual scroll warning**:
+
+X.com uses virtual scrolling — older tweets are **removed from the DOM** as you scroll down.
+A simple `querySelectorAll` after scrolling will miss earlier tweets.
+
+**For collecting N tweets, use the global collector pattern:**
+
+Step 1 — Inject collector and collect initial batch:
+
+```bash
+browser-cli eval --stdin <<'EOF'
+window.__tweetCollector = new Map();
+function __collectTweets() {
+  document.querySelectorAll('article[data-testid="tweet"]').forEach(el => {
+    const url = el.querySelector('a[href*="/status/"]')?.href || "";
+    if (!url || window.__tweetCollector.has(url)) return;
+    const ctx = el.querySelector('[data-testid="socialContext"]')?.innerText || "";
+    const userNameEl = el.querySelector('[data-testid="User-Name"]');
+    const links = userNameEl ? [...userNameEl.querySelectorAll('a')] : [];
+    const photos = [...el.querySelectorAll('[data-testid="tweetPhoto"] img')].map(img => img.src.replace(/name=\w+/, 'name=large'));
+    window.__tweetCollector.set(url, {
+      displayName: links[0]?.innerText || "",
+      handle: links[1]?.innerText || "",
+      text: el.querySelector('[data-testid="tweetText"]')?.innerText?.substring(0, 280) || "",
+      time: el.querySelector('time')?.getAttribute('datetime') || "",
+      url,
+      socialContext: ctx,
+      photos,
+      hasVideo: !!el.querySelector('[data-testid="videoPlayer"]'),
+    });
+  });
+  return window.__tweetCollector.size;
+}
+__collectTweets();
+EOF
+```
+
+Step 2 — Scroll and collect in a loop until you have enough:
 
 ```bash
 browser-cli scroll down --amount 2000
 browser-cli wait 1500
+browser-cli eval '__collectTweets()'   # returns total collected count
+# Repeat until count >= N
+```
+
+Step 3 — Read results:
+
+```bash
+browser-cli eval 'JSON.stringify([...window.__tweetCollector.values()])'
+```
+
+Step 4 — Cleanup:
+
+```bash
+browser-cli eval 'delete window.__tweetCollector; delete window.__collectTweets;'
 ```
 
 ## Tweet Detail Page
@@ -250,7 +269,7 @@ JSON.stringify((() => {
     retweets: parseCount(tweet.querySelector('[data-testid="retweet"]')?.getAttribute('aria-label')),
     likes: parseCount(tweet.querySelector('[data-testid="like"]')?.getAttribute('aria-label')),
     bookmarks: parseCount(tweet.querySelector('[data-testid="bookmark"]')?.getAttribute('aria-label')),
-    hasPhoto: !!tweet.querySelector('[data-testid="tweetPhoto"]'),
+    photos: [...tweet.querySelectorAll('[data-testid="tweetPhoto"] img')].map(img => img.src.replace(/name=\w+/, 'name=large')),
     hasVideo: !!tweet.querySelector('[data-testid="videoPlayer"]'),
     hasCard: !!tweet.querySelector('[data-testid="card.wrapper"]'),
   };
@@ -260,39 +279,82 @@ EOF
 
 **Differences from timeline**:
 
-| Aspect      | Timeline                  | Detail page                                                    |
-| ----------- | ------------------------- | -------------------------------------------------------------- |
-| Time format | Relative ("Feb 20", "2h") | Full ("8:56 AM · Apr 28, 2022")                                |
-| Bookmark    | No count in `aria-label`  | Count shown ("21538 Bookmarks. Bookmark")                      |
-| Engagement  | Abbreviated text          | Full metric bar with counts                                    |
-| Replies     | Not shown                 | `[data-testid="logged_out_read_replies_pivot"]` for logged-out |
+| Aspect      | Timeline                  | Detail page                               |
+| ----------- | ------------------------- | ----------------------------------------- |
+| Time format | Relative ("Feb 20", "2h") | Full ("8:56 AM · Apr 28, 2022")           |
+| Bookmark    | No count in `aria-label`  | Count shown ("21538 Bookmarks. Bookmark") |
+| Engagement  | Abbreviated text          | Full metric bar with counts               |
+| Replies     | Not shown                 | Reply tweets appear below the focal tweet |
 
-**Replies (logged out)**:
+**Replies**: Reply tweets appear as additional `[data-testid="tweet"]` elements below the focal tweet. Use the same extraction script as Timeline. Replies also use virtual scrolling — use the global collector pattern (see Timeline section) when collecting multiple replies.
 
-When logged out, replies are hidden behind a login prompt:
+## Screenshot & Image Extraction
+
+### Screenshot a tweet
 
 ```bash
-browser-cli eval '!!document.querySelector("[data-testid=logged_out_read_replies_pivot]")'
-# Returns: true (when logged out — replies not visible)
-# Text: "Read 1K replies"
+# Entire tweet (text + media + engagement bar)
+browser-cli screenshot --selector 'article[data-testid="tweet"]' --path tweet.png
+
+# Only the photo/media area
+browser-cli screenshot --selector 'article[data-testid="tweet"] [data-testid="tweetPhoto"]' --path tweet-photo.png
+
+# Full page screenshot
+browser-cli screenshot --path page.png
 ```
 
-**Replies (logged in)**: Reply tweets appear as additional `[data-testid="tweet"]` elements below the focal tweet. Use the same extraction script as timeline.
+### Extract image URLs
 
-## Search (Requires Login)
+```bash
+browser-cli eval --stdin <<'EOF'
+JSON.stringify((() => {
+  const tweet = document.querySelector('article[data-testid="tweet"]');
+  const photos = [...(tweet?.querySelectorAll('[data-testid="tweetPhoto"] img') || [])];
+  return photos.map((img, i) => ({
+    index: i + 1,
+    src: img.src,
+    largeSrc: img.src.replace(/name=\w+/, 'name=large'),
+  }));
+})())
+EOF
+```
+
+Image URL format: `https://pbs.twimg.com/media/<id>?format=jpg&name=<size>`
+
+| Size param | Resolution |
+| ---------- | ---------- |
+| `small`    | 680px      |
+| `medium`   | 1200px     |
+| `large`    | Original   |
+
+### Check media type
+
+```bash
+browser-cli eval --stdin <<'EOF'
+JSON.stringify((() => {
+  const tweet = document.querySelector('article[data-testid="tweet"]');
+  return {
+    hasPhoto: !!tweet?.querySelector('[data-testid="tweetPhoto"]'),
+    hasVideo: !!tweet?.querySelector('[data-testid="videoPlayer"]'),
+    hasCard: !!tweet?.querySelector('[data-testid="card.wrapper"]'),
+    photoCount: tweet?.querySelectorAll('[data-testid="tweetPhoto"] img').length || 0,
+  };
+})())
+EOF
+```
+
+## Search
 
 **URL pattern**: `/search?q=<query>&src=typed_query&f=<tab>`
 
-Search redirects to `/i/flow/login` when not logged in.
-
-**Navigate to search** (logged in):
+**Navigate to search**:
 
 ```bash
 browser-cli navigate 'https://x.com/search?q=<query>&src=typed_query'
 browser-cli wait '[data-testid="tweet"]' --timeout 5000
 ```
 
-**Search via input** (logged in):
+**Search via input**:
 
 ```bash
 browser-cli click '[data-testid="SearchBox_Search_Input"]'
@@ -313,27 +375,68 @@ browser-cli wait '[data-testid="tweet"]' --timeout 5000
 
 **Extract search results**: Same tweet extraction script as Timeline section.
 
-## Tweet Interactions (Requires Login)
+## Text Input (Draft.js)
+
+X.com uses Draft.js `contentEditable` divs for all text inputs (compose, reply, quote).
+**`browser-cli fill` and `browser-cli type` do NOT work** — they only support native `<input>`/`<textarea>`.
+
+Use `browser-cli eval` to simulate a paste or insertText event:
+
+```bash
+# Method: InputEvent beforeinput (recommended)
+browser-cli eval --stdin <<'EOF'
+(() => {
+  const el = document.querySelector('<textarea-selector>');
+  el.focus();
+  el.dispatchEvent(new InputEvent('beforeinput', {
+    inputType: 'insertText',
+    data: '<text>',
+    bubbles: true,
+    cancelable: true,
+  }));
+})()
+EOF
+```
+
+After input, verify the submit button is enabled:
+
+```bash
+browser-cli eval 'document.querySelector("<button-selector>")?.getAttribute("aria-disabled")'
+# null = enabled, "true" = disabled (text is empty or exceeds limit)
+```
+
+## Tweet Interactions
+
+All interactions require navigating to the tweet first:
+
+```bash
+browser-cli navigate 'https://x.com/<handle>/status/<tweetId>'
+browser-cli wait 'article[data-testid="tweet"]' --timeout 5000
+```
 
 ### Like / Unlike
 
 ```bash
-browser-cli click '[data-testid="like"]'       # Like (when not liked)
-browser-cli click '[data-testid="unlike"]'      # Unlike (when already liked)
-```
-
-**Detect like state**:
-
-```bash
+# Check state first
 browser-cli eval --stdin <<'EOF'
 JSON.stringify((() => {
-  const tweet = document.querySelector('[data-testid="tweet"]');
+  const tweet = document.querySelector('article[data-testid="tweet"]');
   return {
     liked: !!tweet?.querySelector('[data-testid="unlike"]'),
     notLiked: !!tweet?.querySelector('[data-testid="like"]'),
   };
 })())
 EOF
+
+# Like (if not already liked)
+browser-cli click 'article[data-testid="tweet"] [data-testid="like"]'
+browser-cli wait 1000
+
+# Verify — unlike button should now be visible
+browser-cli eval '!!document.querySelector("article[data-testid=\"tweet\"] [data-testid=\"unlike\"]")'
+
+# Unlike (if already liked)
+browser-cli click 'article[data-testid="tweet"] [data-testid="unlike"]'
 ```
 
 | State     | Selector                 |
@@ -341,46 +444,147 @@ EOF
 | Not liked | `[data-testid="like"]`   |
 | Liked     | `[data-testid="unlike"]` |
 
-### Repost / Unrepost
+### Repost
 
 ```bash
-browser-cli click '[data-testid="retweet"]'     # Open repost menu
-# Menu appears with "Repost" and "Quote" options
+# Check state first
+browser-cli eval --stdin <<'EOF'
+JSON.stringify({
+  reposted: !!document.querySelector('article[data-testid="tweet"] [data-testid="unretweet"]'),
+  notReposted: !!document.querySelector('article[data-testid="tweet"] [data-testid="retweet"]'),
+})
+EOF
+
+# Repost (if not already reposted)
+browser-cli click 'article[data-testid="tweet"] [data-testid="retweet"]'
+browser-cli wait '[data-testid="retweetConfirm"]' --timeout 3000
+browser-cli click '[data-testid="retweetConfirm"]'
+browser-cli wait 1500
+
+# Verify — unretweet button should now be visible
+browser-cli eval '!!document.querySelector("article[data-testid=\"tweet\"] [data-testid=\"unretweet\"]")'
+
+# Undo repost
+browser-cli click 'article[data-testid="tweet"] [data-testid="unretweet"]'
+browser-cli wait '[data-testid="unretweetConfirm"]' --timeout 3000
+browser-cli click '[data-testid="unretweetConfirm"]'
 ```
 
-| State        | Selector                    |
-| ------------ | --------------------------- |
-| Not reposted | `[data-testid="retweet"]`   |
-| Reposted     | `[data-testid="unretweet"]` |
+| State        | Selector                    | Menu confirm                       |
+| ------------ | --------------------------- | ---------------------------------- |
+| Not reposted | `[data-testid="retweet"]`   | `[data-testid="retweetConfirm"]`   |
+| Reposted     | `[data-testid="unretweet"]` | `[data-testid="unretweetConfirm"]` |
+
+### Quote Tweet
+
+```bash
+# Open retweet menu → click Quote
+browser-cli click 'article[data-testid="tweet"] [data-testid="retweet"]'
+browser-cli wait '[role="menuitem"]' --timeout 3000
+browser-cli click '[role="menuitem"]:last-child'   # "Quote" is the second menu item
+browser-cli wait '[role="dialog"][aria-modal="true"]' --timeout 3000
+
+# Input comment via eval (see "Text Input" section)
+browser-cli eval --stdin <<'EOF'
+(() => {
+  const el = document.querySelector('[role="dialog"] [data-testid="tweetTextarea_0"]');
+  el.focus();
+  el.dispatchEvent(new InputEvent('beforeinput', {
+    inputType: 'insertText', data: '<comment>', bubbles: true, cancelable: true,
+  }));
+})()
+EOF
+
+# Submit
+browser-cli click '[role="dialog"] [data-testid="tweetButton"]'
+browser-cli wait 2000
+```
+
+### Reply
+
+```bash
+# Click reply button → opens dialog
+browser-cli click 'article[data-testid="tweet"] [data-testid="reply"]'
+browser-cli wait '[role="dialog"][aria-modal="true"]' --timeout 3000
+
+# Input reply via eval (see "Text Input" section)
+browser-cli eval --stdin <<'EOF'
+(() => {
+  const el = document.querySelector('[role="dialog"] [data-testid="tweetTextarea_0"]');
+  el.focus();
+  el.dispatchEvent(new InputEvent('beforeinput', {
+    inputType: 'insertText', data: '<reply text>', bubbles: true, cancelable: true,
+  }));
+})()
+EOF
+
+# Submit
+browser-cli click '[role="dialog"] [data-testid="tweetButton"]'
+browser-cli wait 2000
+```
 
 ### Bookmark
 
 ```bash
-browser-cli click '[data-testid="bookmark"]'    # Bookmark
-browser-cli click '[data-testid="removeBookmark"]'  # Remove bookmark
+browser-cli click 'article[data-testid="tweet"] [data-testid="bookmark"]'         # Bookmark
+browser-cli click 'article[data-testid="tweet"] [data-testid="removeBookmark"]'    # Remove bookmark
 ```
 
-### Reply (Compose)
+### Dialog selectors (reply / quote)
 
-On tweet detail page (logged in):
+| Element       | Selector                                          |
+| ------------- | ------------------------------------------------- |
+| Dialog        | `[role="dialog"][aria-modal="true"]`              |
+| Text input    | `[role="dialog"] [data-testid="tweetTextarea_0"]` |
+| Submit button | `[role="dialog"] [data-testid="tweetButton"]`     |
+
+## Compose Tweet
+
+**From Home page** (inline compose):
 
 ```bash
-browser-cli click '[data-testid="tweetTextarea_0"]'
-browser-cli fill '[data-testid="tweetTextarea_0"]' '<reply text>'
-browser-cli click '[data-testid="tweetButton"]'
+browser-cli navigate 'https://x.com/home'
+browser-cli wait '[data-testid="tweetTextarea_0"]' --timeout 5000
+
+# Input text via eval (see "Text Input" section)
+browser-cli eval --stdin <<'EOF'
+(() => {
+  const el = document.querySelector('[data-testid="tweetTextarea_0"]');
+  el.focus();
+  el.dispatchEvent(new InputEvent('beforeinput', {
+    inputType: 'insertText', data: '<tweet text>', bubbles: true, cancelable: true,
+  }));
+})()
+EOF
+
+browser-cli click '[data-testid="tweetButtonInline"]'
 browser-cli wait 2000
 ```
 
-## Compose Tweet (Requires Login)
+**From anywhere** (modal compose):
 
 ```bash
 browser-cli click '[data-testid="SideNav_NewTweet_Button"]'
-browser-cli wait '[data-testid="tweetTextarea_0"]' --timeout 3000
-browser-cli fill '[data-testid="tweetTextarea_0"]' '<tweet text>'
-browser-cli click '[data-testid="tweetButton"]'
+browser-cli wait '[role="dialog"] [data-testid="tweetTextarea_0"]' --timeout 3000
+
+# Input text via eval (see "Text Input" section)
+browser-cli eval --stdin <<'EOF'
+(() => {
+  const el = document.querySelector('[role="dialog"] [data-testid="tweetTextarea_0"]');
+  el.focus();
+  el.dispatchEvent(new InputEvent('beforeinput', {
+    inputType: 'insertText', data: '<tweet text>', bubbles: true, cancelable: true,
+  }));
+})()
+EOF
+
+browser-cli click '[role="dialog"] [data-testid="tweetButton"]'
+browser-cli wait 2000
 ```
 
-## Explore / Trending (Requires Login)
+> Note: Home page uses `tweetButtonInline`; modal compose (SideNav button, reply, quote) uses `tweetButton`.
+
+## Explore / Trending
 
 **URL**: `/explore`
 
@@ -389,7 +593,7 @@ browser-cli navigate 'https://x.com/explore'
 browser-cli wait '[data-testid="trend"]' --timeout 5000
 ```
 
-**Extract trending topics** (logged in):
+**Extract trending topics**:
 
 ```bash
 browser-cli eval --stdin <<'EOF'
@@ -415,18 +619,17 @@ EOF
 
 ## Notes
 
-- **Search requires login**: `/search`, `/explore`, `/hashtag/<tag>` all redirect to `/i/flow/login`. Use URL-based navigation (`x.com/search?q=...`) after logging in
-- **Replies hidden for logged out**: Tweet detail pages show `[data-testid="logged_out_read_replies_pivot"]` ("Read 1K replies") instead of actual replies. User must log in to see replies
+- **Draft.js text input**: All compose fields (`tweetTextarea_0`) are `contentEditable` divs (Draft.js), NOT native inputs. `browser-cli fill`/`type` will fail. Must use `eval` with `InputEvent('beforeinput', { inputType: 'insertText' })` — see "Text Input" section
 - **`data-testid` stability**: Twitter/X uses `data-testid` attributes extensively and they are more stable than CSS classes (which are auto-generated hashes). Always prefer `data-testid` selectors
 - **Engagement counts**: Use `aria-label` for exact counts (e.g., "7656 Likes. Like"), not the visible abbreviated text ("7.6K"). Zero counts have no number prefix — just "Reply", "Repost", "Like"
 - **Bookmark count**: Only shown on tweet detail pages. In timeline, `aria-label` is just "Bookmark" with no count
 - **Like/unlike state**: The `data-testid` toggles between `like`/`unlike` and `retweet`/`unretweet` based on state. Use presence of `unlike` to detect liked state
 - **Social context**: `[data-testid="socialContext"]` shows "Pinned" for pinned tweets and "X reposted" for retweets
+- **Media-only tweets**: Some tweets have no text — only images or video. `[data-testid="tweetText"]` will not exist. Always use `?.innerText || ""` and check `hasPhoto`/`hasVideo` to distinguish media-only tweets from empty results
 - **Image URLs**: Tweet images are `<img>` inside `[data-testid="tweetPhoto"]`, with `src` like `https://pbs.twimg.com/media/<id>?format=jpg&name=small`
 - **Card previews**: Link previews use `[data-testid="card.wrapper"]` with `[data-testid="card.layoutLarge.media"]` inside
 - **SPA navigation**: X is a full SPA. Use `browser-cli navigate` for initial navigation, then `browser-cli wait` for dynamic content
 - **Rate limiting**: Twitter may throttle requests. Add `browser-cli wait 1000` between rapid successive operations
-- **Bottom bar (logged out)**: The `[data-testid="BottomBar"]` occupies screen space. It cannot be dismissed without logging in
 - **Follow button**: The follow button's `data-testid` includes the user's numeric ID (e.g., `44196397-follow`). Use `[data-testid$="-follow"]` to match any user's follow button
-- **Virtual scroll**: Timeline uses virtual scrolling similar to other social platforms. For batch collection, use the edge-scroll-and-collect pattern (inject a global collector, scroll repeatedly, read results)
+- **Virtual scroll**: Timeline uses virtual scrolling — older tweets are removed from DOM as you scroll. Always use the global collector pattern (see "Infinite scroll" in Timeline section) when collecting multiple tweets
 - **Domain**: Both `twitter.com` and `x.com` work; `twitter.com` redirects to `x.com`
