@@ -391,6 +391,7 @@ commands. Check for a matching guide before using generic extraction.
 | --------------- | --------------------------------------------------------------- |
 | google.com      | [sites/google.com.md](references/sites/google.com.md)           |
 | mail.google.com | [sites/mail.google.com.md](references/sites/mail.google.com.md) |
+| x.com           | [sites/x.com.md](references/sites/x.com.md)                     |
 | xiaohongshu.com | [sites/xiaohongshu.com.md](references/sites/xiaohongshu.com.md) |
 
 When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
