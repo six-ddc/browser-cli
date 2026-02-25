@@ -67,6 +67,22 @@ Most browser automation tools (Playwright, Puppeteer, Selenium) rely on CDP or W
 
 **Containers** — Firefox container management
 
+## Site-Specific Guides — Pre-built Automation for Popular Sites
+
+Browser-CLI ships with **site-specific guides** that contain tested CSS selectors, extraction scripts, and interaction patterns for popular websites. When an AI agent automates a known site, it can skip trial-and-error DOM exploration and use the pre-built scripts directly — **saving tokens and dramatically improving accuracy**.
+
+| Site                                                                                | What's Covered                                           |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [google.com](skills/browser-cli/references/sites/google.com.md)                     | Search results extraction, pagination, "People also ask" |
+| [mail.google.com](skills/browser-cli/references/sites/mail.google.com.md)           | Gmail inbox, email reading, compose, labels              |
+| [x.com](skills/browser-cli/references/sites/x.com.md)                               | Timeline, tweets, search, profiles                       |
+| [reddit.com](skills/browser-cli/references/sites/reddit.com.md)                     | Feeds, posts, threaded comments, subreddit search        |
+| [news.ycombinator.com](skills/browser-cli/references/sites/news.ycombinator.com.md) | Front page, comments, search                             |
+| [xiaohongshu.com](skills/browser-cli/references/sites/xiaohongshu.com.md)           | Search, note detail, comments                            |
+| [weixin.sogou.com](skills/browser-cli/references/sites/weixin.sogou.com.md)         | WeChat article search                                    |
+
+Each guide includes ready-to-use `browser-cli eval` scripts, key selectors, pagination/scroll patterns, and site-specific gotchas (auth requirements, shadow DOM, SPA caveats). Community contributions welcome — use the [site-guide skill](skills/site-guide/SKILL.md) to interactively explore a site's live DOM and generate a tested guide, or see the [contributing guide](skills/browser-cli/references/sites/CONTRIBUTING.md) for manual authoring.
+
 ## Quick Start
 
 ### Prerequisites
