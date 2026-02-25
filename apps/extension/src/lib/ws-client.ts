@@ -30,6 +30,7 @@ const INITIAL_BACKOFF_MS = 1_000;
 const ALARM_THRESHOLD_MS = 60_000;
 const HEARTBEAT_TIMEOUT_MS = 45_000;
 const MAX_PENDING_EVENTS = 50;
+const HEARTBEAT_ALARM_NAME = 'browser-cli-heartbeat';
 
 export class WsClient {
   private ws: WebSocket | null = null;
@@ -111,6 +112,8 @@ export class WsClient {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    // Clear heartbeat alarm — no longer needed when disconnected
+    void browser.alarms.clear(HEARTBEAT_ALARM_NAME);
     if (this.ws) {
       // Remove handlers before closing to prevent stale callbacks
       this.ws.onopen = null;
@@ -199,6 +202,8 @@ export class WsClient {
         this.options.onConnect?.();
         this.options.onHandshake?.(msg);
         this.flushPendingEvents();
+        // Create periodic heartbeat alarm so checkHeartbeat() survives SW suspension
+        void browser.alarms.create(HEARTBEAT_ALARM_NAME, { periodInMinutes: 1 });
         break;
       }
       case 'ping': {

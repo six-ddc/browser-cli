@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { APP_NAME } from '@browser-cli/shared';
-import { getState, setPort, CONFIGURED_WS_PORT } from '../../lib/state';
+import { getState, setState, setPort, CONFIGURED_WS_PORT } from '../../lib/state';
 import type { ConnectionState } from '../../lib/state';
 import './App.css';
 
@@ -38,6 +38,7 @@ const CheckIcon = () => (
 
 export default function App() {
   const [state, setStateLocal] = useState<ConnectionState>({
+    enabled: true,
     connected: false,
     sessionId: null,
     port: CONFIGURED_WS_PORT,
@@ -111,17 +112,25 @@ export default function App() {
     }
   };
 
-  const statusVariant = state.reconnecting
-    ? 'reconnecting'
-    : state.connected
-      ? 'connected'
-      : 'disconnected';
+  const handleToggle = () => {
+    void setState({ enabled: !state.enabled });
+  };
 
-  const statusLabel = state.reconnecting
-    ? 'Reconnecting...'
-    : state.connected
-      ? 'Connected'
-      : 'Disconnected';
+  const statusVariant = !state.enabled
+    ? 'disabled'
+    : state.reconnecting
+      ? 'reconnecting'
+      : state.connected
+        ? 'connected'
+        : 'disconnected';
+
+  const statusLabel = !state.enabled
+    ? 'Disabled'
+    : state.reconnecting
+      ? 'Reconnecting...'
+      : state.connected
+        ? 'Connected'
+        : 'Disconnected';
 
   return (
     <div className="popup">
@@ -129,6 +138,10 @@ export default function App() {
       <div className="header">
         <div className="header-icon">B</div>
         <span className="header-title">{APP_NAME}</span>
+        <label className="toggle-switch">
+          <input type="checkbox" checked={state.enabled} onChange={handleToggle} />
+          <span className="toggle-slider" />
+        </label>
       </div>
 
       {/* Status */}
@@ -156,8 +169,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Disconnected guide */}
-      {!state.connected && (
+      {/* Disconnected guide (hidden when intentionally disabled) */}
+      {state.enabled && !state.connected && (
         <div className="guide-card">
           <span className="guide-label">Start the daemon in your terminal</span>
           <div className="guide-code">

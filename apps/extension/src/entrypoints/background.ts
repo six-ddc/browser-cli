@@ -1,5 +1,5 @@
 import { WsClient } from '../lib/ws-client';
-import { getPort, setState } from '../lib/state';
+import { getPort, getEnabled, setState } from '../lib/state';
 import type { RequestMessage, ResponseMessage, ProtocolError } from '@browser-cli/shared';
 import { ErrorCode } from '@browser-cli/shared';
 import { classifyError } from '../lib/error-classifier';
@@ -70,9 +70,51 @@ async function resolveTargetTab(tabId?: number): Promise<number> {
   return activeTab.id;
 }
 
+/** Update extension badge to reflect current state */
+function updateBadge(mode: 'connected' | 'disconnected' | 'reconnecting' | 'disabled'): void {
+  switch (mode) {
+    case 'connected':
+      void browser.action.setBadgeText({ text: '' });
+      break;
+    case 'disconnected':
+    case 'reconnecting':
+      void browser.action.setBadgeText({ text: '...' });
+      void browser.action.setBadgeBackgroundColor({ color: '#F9AB00' }); // yellow
+      break;
+    case 'disabled':
+      void browser.action.setBadgeText({ text: 'OFF' });
+      void browser.action.setBadgeBackgroundColor({ color: '#9AA0A6' }); // gray
+      break;
+  }
+}
+
+/** Tear down WsClient and mark as disabled */
+function teardown(): void {
+  if (wsClient) {
+    wsClient.stop();
+    wsClient = null;
+  }
+  initializing = false;
+  void setState({
+    connected: false,
+    sessionId: null,
+    reconnecting: false,
+    nextRetryIn: null,
+  });
+  updateBadge('disabled');
+}
+
 /** Re-create WsClient + NetworkManager if the SW was restarted */
 async function ensureInitialized(): Promise<void> {
   if (wsClient || initializing) return;
+
+  // Check if extension is enabled before initializing
+  const enabled = await getEnabled();
+  if (!enabled) {
+    updateBadge('disabled');
+    return;
+  }
+
   initializing = true;
 
   try {
@@ -93,10 +135,12 @@ async function ensureInitialized(): Promise<void> {
           reconnecting: false,
           nextRetryIn: null,
         });
+        updateBadge('connected');
       },
       onDisconnect: () => {
         console.log('[browser-cli] Disconnected from daemon');
         void setState({ connected: false, lastDisconnected: Date.now(), sessionId: null });
+        updateBadge('disconnected');
       },
       onHandshake: (ack) => {
         console.log('[browser-cli] Handshake complete, session:', ack.sessionId);
@@ -105,6 +149,7 @@ async function ensureInitialized(): Promise<void> {
       onReconnecting: (nextRetryMs) => {
         console.log(`[browser-cli] Reconnecting in ${nextRetryMs}ms...`);
         void setState({ reconnecting: true, nextRetryIn: nextRetryMs });
+        updateBadge('reconnecting');
       },
     });
 
@@ -263,15 +308,29 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   }
 });
 
-// Listen for port changes from popup
+// Listen for port and enabled changes from popup
 browser.storage.onChanged.addListener((changes) => {
   const stateChange = changes['browserCliState'];
-  if (stateChange.newValue && stateChange.oldValue) {
+  if (stateChange?.newValue && stateChange.oldValue) {
     const newState = stateChange.newValue as Record<string, unknown>;
     const oldState = stateChange.oldValue as Record<string, unknown>;
+
+    // Handle enabled toggle
+    if (typeof newState.enabled === 'boolean' && newState.enabled !== oldState.enabled) {
+      if (newState.enabled) {
+        console.log('[browser-cli] Extension enabled via toggle');
+        ensureInitialized().catch((err: unknown) => {
+          console.error('[browser-cli] Failed to initialize after enable:', err);
+        });
+      } else {
+        console.log('[browser-cli] Extension disabled via toggle');
+        teardown();
+      }
+    }
+
+    // Handle port change
     const newPort = newState.port;
     const oldPort = oldState.port;
-
     if (typeof newPort === 'number' && typeof oldPort === 'number' && newPort !== oldPort) {
       ensureInitialized()
         .then(() => {
@@ -312,6 +371,15 @@ browser.runtime.onMessage.addListener(
           console.error('[browser-cli] Failed to initialize for state check:', err);
           sendResponse({ connected: false, sessionId: null });
         });
+    } else if (message.type === 'disconnect') {
+      // Explicit disconnect (used by toggle off)
+      if (wsClient) {
+        wsClient.stop();
+        wsClient = null;
+        initializing = false;
+      }
+      void setState({ connected: false, sessionId: null, reconnecting: false, nextRetryIn: null });
+      sendResponse({ success: true });
     } else if (message.type === 'browser-cli-eval-in-main' && sender.tab?.id) {
       // Validate sender is this extension
       if (sender.id !== browser.runtime.id) {

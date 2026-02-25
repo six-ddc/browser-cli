@@ -12,6 +12,7 @@ describe('isValidState', () => {
   it('accepts a valid full state with all fields', () => {
     expect(
       isValidState({
+        enabled: true,
         connected: true,
         sessionId: 'abc-123',
         port: 9222,
@@ -26,6 +27,7 @@ describe('isValidState', () => {
   it('accepts valid state with null optionals', () => {
     expect(
       isValidState({
+        enabled: true,
         connected: false,
         sessionId: null,
         port: 9222,
@@ -40,6 +42,7 @@ describe('isValidState', () => {
   it('accepts state with extra fields (no strict rejection)', () => {
     expect(
       isValidState({
+        enabled: true,
         connected: true,
         sessionId: 'abc',
         port: 9222,
@@ -48,6 +51,21 @@ describe('isValidState', () => {
         reconnecting: false,
         nextRetryIn: null,
         extraField: 'ignored',
+      }),
+    ).toBe(true);
+  });
+
+  it('accepts state with enabled=false', () => {
+    expect(
+      isValidState({
+        enabled: false,
+        connected: false,
+        sessionId: null,
+        port: 9222,
+        lastConnected: null,
+        lastDisconnected: null,
+        reconnecting: false,
+        nextRetryIn: null,
       }),
     ).toBe(true);
   });
@@ -80,9 +98,39 @@ describe('isValidState', () => {
 
   // ─── Wrong types ──────────────────────────────────────────────────
 
+  it('rejects when enabled is missing', () => {
+    expect(
+      isValidState({
+        connected: true,
+        sessionId: null,
+        port: 9222,
+        lastConnected: null,
+        lastDisconnected: null,
+        reconnecting: false,
+        nextRetryIn: null,
+      }),
+    ).toBe(false);
+  });
+
+  it('rejects when enabled is wrong type (string instead of boolean)', () => {
+    expect(
+      isValidState({
+        enabled: 'yes',
+        connected: true,
+        sessionId: null,
+        port: 9222,
+        lastConnected: null,
+        lastDisconnected: null,
+        reconnecting: false,
+        nextRetryIn: null,
+      }),
+    ).toBe(false);
+  });
+
   it('rejects when connected is wrong type (string instead of boolean)', () => {
     expect(
       isValidState({
+        enabled: true,
         connected: 'yes',
         sessionId: null,
         port: 9222,
@@ -97,6 +145,7 @@ describe('isValidState', () => {
   it('rejects when port is wrong type (string instead of number)', () => {
     expect(
       isValidState({
+        enabled: true,
         connected: true,
         sessionId: null,
         port: '9222',
@@ -111,6 +160,7 @@ describe('isValidState', () => {
   it('rejects when sessionId is wrong type (number instead of string|null)', () => {
     expect(
       isValidState({
+        enabled: true,
         connected: true,
         sessionId: 123,
         port: 9222,
@@ -125,6 +175,7 @@ describe('isValidState', () => {
   it('rejects when reconnecting is wrong type (string instead of boolean)', () => {
     expect(
       isValidState({
+        enabled: true,
         connected: true,
         sessionId: null,
         port: 9222,
