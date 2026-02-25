@@ -83,8 +83,8 @@ async function resolveTargetTab(tabId?: number): Promise<number> {
 }
 
 /** MV3 uses browser.action, MV2 (Firefox) uses browser.browserAction */
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- browser.action is undefined at runtime in Firefox MV2
 const actionApi =
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- browser.action is undefined at runtime in Firefox MV2
   browser.action ?? (browser as unknown as { browserAction: typeof browser.action }).browserAction;
 
 /** Update extension badge to reflect current state */
@@ -155,6 +155,9 @@ async function ensureInitialized(): Promise<void> {
 
   try {
     console.log('[browser-cli] Lazy re-initialization after SW wake');
+
+    // Firefox: register CSP blocking listener now that init is committed
+    ensureFirefoxCspListener();
 
     // Reset stale connection state from a previous instance (e.g. after extension reload)
     await setState({ connected: false, sessionId: null, reconnecting: false, nextRetryIn: null });
@@ -291,7 +294,12 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
 // into script-src and strip require-trusted-types-for before the page loads.
 // NOTE: Service-Worker-cached responses bypass webRequest — the ISOLATED
 // world fallback in command-router.ts covers that case.
-if (import.meta.env.FIREFOX) {
+// Registered lazily via ensureFirefoxCspListener() to avoid blocking
+// requests during rapid extension reload.
+let cspListenerRegistered = false;
+function ensureFirefoxCspListener(): void {
+  if (!import.meta.env.FIREFOX || cspListenerRegistered) return;
+  cspListenerRegistered = true;
   try {
     browser.webRequest.onHeadersReceived.addListener(
       (details) => {
