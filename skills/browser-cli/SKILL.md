@@ -14,6 +14,14 @@ argument-hint: '<describe your browser automation task>'
 
 Automate a real browser from the command line. Browser-CLI uses a Chrome/Firefox extension + daemon architecture — no Playwright or headless browser needed. It controls the user's actual browser with full access to extensions, login state, and cookies.
 
+## Install
+
+```bash
+npm install -g @browser-cli/cli@latest
+```
+
+The browser extension is also required — download from [GitHub Releases](https://github.com/six-ddc/browser-cli/releases) and load it into Chrome or Firefox.
+
 ## Setup
 
 Start the daemon before issuing commands:

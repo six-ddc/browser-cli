@@ -123,6 +123,20 @@ browser-cli stop
 
 For the full command reference — including all operations, selector types, semantic locators, and workflow examples — see **[skills/browser-cli/SKILL.md](skills/browser-cli/SKILL.md)**.
 
+### Install as Claude Code Skill
+
+Browser-CLI ships with a [skill definition](skills/browser-cli/SKILL.md) that lets AI agents use it as a tool. To install it in Claude Code:
+
+```bash
+# Add the marketplace
+/plugin marketplace add six-ddc/browser-cli
+
+# Install the skill
+/plugin install browser-cli@six-ddc/browser-cli
+```
+
+Once installed, agents can invoke `/browser-cli` directly in Claude Code conversations.
+
 ## Development
 
 ### Prerequisites
