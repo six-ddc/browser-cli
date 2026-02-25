@@ -9,7 +9,8 @@ Skill-powered browser automation CLI for AI agents — real browser extensions, 
 
 Most browser automation tools (Playwright, Puppeteer, Selenium) rely on CDP or WebDriver protocols — running a headless or debug-mode browser that doesn't behave like a real user's browser. Browser-CLI takes a different approach:
 
-- **Real browser, real extensions** — Runs inside your actual Chrome/Firefox via a lightweight extension. Same cookies, same sessions, same login state.
+- **Real browser, zero fingerprint** — Runs inside your actual Chrome/Firefox via a lightweight extension. No `navigator.webdriver`, no headless flags, no CDP traces — behaves exactly like a human user, minimizing the risk of triggering anti-bot detection.
+- **Same session, same identity** — Operates in your existing browser with all your cookies, login state, and extensions intact. No separate browser profile or cold start.
 - **Skill-first design** — Ships with a [skill definition](skills/browser-cli/SKILL.md) so AI agents (Claude Code, etc.) can call `/browser-cli` as a tool and automate tasks autonomously.
 - **No CDP, no WebDriver** — The extension communicates over WebSocket, with zero dependency on Chrome DevTools Protocol or browser drivers.
 - **Agent-friendly output** — Accessibility snapshots with element refs (`@e1`, `@e2`), semantic locators, structured errors with hints, and `--json` mode.
