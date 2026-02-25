@@ -25,6 +25,7 @@
     "test:e2e:data": "playwright test --config test/e2e-pw/playwright.config.ts data/",
     "test:e2e:state": "playwright test --config test/e2e-pw/playwright.config.ts state/",
     "test:e2e:cross": "playwright test --config test/e2e-pw/playwright.config.ts cross/",
+    "link:cli": "cd apps/cli && pnpm link --global",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"

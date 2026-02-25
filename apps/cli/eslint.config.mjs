@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['eslint.config.mjs', 'tsdown.config.ts', 'vitest.config.ts'],
+    files: ['eslint.config.mjs', 'vitest.config.ts', 'build.ts', 'build-binary.ts'],
     ...tseslint.configs.disableTypeChecked,
   },
   {

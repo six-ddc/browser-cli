@@ -16,8 +16,9 @@
     }
   },
   "scripts": {
-    "dev": "tsdown --watch",
-    "build": "tsdown",
+    "dev": "bun --watch ./build.ts",
+    "build": "bun run ./build.ts",
+    "build:binary": "bun run ./build-binary.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -36,7 +37,6 @@
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "eslint": "catalog:",
-    "tsdown": "^0.20.3",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"
