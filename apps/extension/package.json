@@ -27,10 +27,10 @@
     "@types/react-dom": "^19.0.0",
     "@wxt-dev/module-react": "^1.1.2",
     "eslint": "catalog:",
-    "jsdom": "^26.0.0",
+    "jsdom": "^28.1.0",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:",
-    "wxt": "^0.20.11"
+    "wxt": "^0.20.18"
   }
 }
