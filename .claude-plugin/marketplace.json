@@ -1,0 +1,21 @@
+{
+  "name": "browser-cli-marketplace",
+  "owner": {
+    "name": "six-ddc",
+    "email": ""
+  },
+  "plugins": [
+    {
+      "name": "browser-cli",
+      "source": "./",
+      "description": "Automate a real browser from the command line — navigate, interact, query, manage tabs/cookies/storage, intercept network requests, and capture snapshots/screenshots. Uses a Chrome/Firefox extension + daemon architecture (no Playwright required).",
+      "strict": false,
+      "keywords": ["browser", "automation", "cli", "chrome", "extension", "scraping"],
+      "skills": ["./skills/browser-cli"]
+    }
+  ],
+  "metadata": {
+    "description": "Browser-CLI Claude Code plugin — extension-based browser automation without Playwright",
+    "version": "0.1.0"
+  }
+}

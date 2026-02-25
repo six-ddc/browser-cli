@@ -152,7 +152,7 @@ browser-cli wait '<list-container>' --timeout 5000
 
 ## Step 6: Write the Guide
 
-**Location**: `skills/skills/browser-cli/references/sites/<domain>.md`
+**Location**: `skills/browser-cli/references/sites/<domain>.md`
 
 **Language**: Site's primary user language (Chinese sites → Chinese).
 
@@ -197,7 +197,7 @@ EOF
 
 ## Step 7: Register
 
-Add to the "Site-Specific Guides" table in `skills/skills/browser-cli/SKILL.md`:
+Add to the "Site-Specific Guides" table in `skills/browser-cli/SKILL.md`:
 
 ```markdown
 | <domain> | [sites/<domain>.md](references/sites/<domain>.md) |
