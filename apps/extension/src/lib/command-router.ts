@@ -65,6 +65,20 @@ export async function handleBackgroundCommand(
   }
 }
 
+const BLOCKED_SCHEMES = ['javascript', 'data', 'vbscript'];
+
+function assertSafeUrl(url: string): void {
+  const scheme = url.trim().split(':')[0].toLowerCase();
+  if (BLOCKED_SCHEMES.includes(scheme)) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught and classified upstream
+    throw createError(
+      ErrorCode.INVALID_URL,
+      `Blocked navigation to "${scheme}:" URL — this scheme is not allowed for security reasons`,
+      'Use http: or https: URLs instead',
+    );
+  }
+}
+
 async function routeCommand(
   command: Command,
   targetTabId: number,
@@ -74,16 +88,7 @@ async function routeCommand(
     // ─── Navigation ────────────────────────────────────────────
     case 'navigate': {
       const { url } = command.params;
-      // Block dangerous URL schemes
-      const scheme = url.split(':')[0].toLowerCase();
-      if (['javascript', 'data', 'vbscript'].includes(scheme)) {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught and classified upstream
-        throw createError(
-          ErrorCode.INVALID_URL,
-          `Blocked navigation to "${scheme}:" URL — this scheme is not allowed for security reasons`,
-          'Use http: or https: URLs instead',
-        );
-      }
+      assertSafeUrl(url);
       await browser.tabs.update(targetTabId, { url });
       // Wait for navigation to complete
       await waitForTabLoad(targetTabId);
@@ -128,6 +133,7 @@ async function routeCommand(
     // ─── Tabs ──────────────────────────────────────────────────
     case 'tabNew': {
       const { url, container } = command.params;
+      if (url) assertSafeUrl(url);
       let cookieStoreId: string | undefined;
       if (container) {
         if (!import.meta.env.FIREFOX) {
@@ -450,6 +456,7 @@ async function routeCommand(
     // ─── Window Management ─────────────────────────────────────
     case 'windowNew': {
       const { url } = command.params;
+      if (url) assertSafeUrl(url);
       const win = await browser.windows.create({ url: url || 'about:blank' });
       if (!win) throw new Error('Failed to create window');
       const tab = win.tabs?.[0];
