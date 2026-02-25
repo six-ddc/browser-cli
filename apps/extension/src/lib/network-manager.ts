@@ -4,7 +4,9 @@
  * Chrome (MV3): Uses declarativeNetRequest for blocking/redirecting,
  *   webRequest for observation only.
  * Firefox (MV2): Uses webRequest with blocking permission for both
- *   interception and observation.
+ *   interception and observation. Blocking mode is only enabled when
+ *   routes are active to avoid interfering with Firefox during
+ *   extension reload.
  */
 
 import type { NetworkRoute, NetworkRequest } from '@browser-cli/shared';
@@ -21,6 +23,8 @@ export class NetworkManager {
         details: Browser.webRequest.OnBeforeRequestDetails,
       ) => Browser.webRequest.BlockingResponse | undefined)
     | null = null;
+  /** Whether the listener is currently in blocking mode (Firefox only) */
+  private blockingMode = false;
 
   constructor() {
     this.initRequestTracking();
@@ -28,8 +32,8 @@ export class NetworkManager {
 
   /**
    * Initialize request tracking using webRequest API.
-   * Firefox: also handles blocking/redirecting via blocking callback.
-   * Chrome: observation only (blocking done via declarativeNetRequest).
+   * Always starts in non-blocking (observation) mode.
+   * Firefox switches to blocking when routes are added.
    */
   private initRequestTracking() {
     this.requestListener = (details) => {
@@ -74,11 +78,40 @@ export class NetworkManager {
       return undefined;
     };
 
+    // Start in non-blocking mode — just observe requests
     browser.webRequest.onBeforeRequest.addListener(
       this.requestListener,
       { urls: ['<all_urls>'] },
-      IS_FIREFOX ? ['blocking'] : [],
+      [],
     );
+  }
+
+  /**
+   * Firefox: switch to blocking mode so the listener can cancel/redirect.
+   * No-op on Chrome or if already in blocking mode.
+   */
+  private enableBlocking() {
+    if (!IS_FIREFOX || this.blockingMode || !this.requestListener) return;
+    browser.webRequest.onBeforeRequest.removeListener(this.requestListener);
+    browser.webRequest.onBeforeRequest.addListener(this.requestListener, { urls: ['<all_urls>'] }, [
+      'blocking',
+    ]);
+    this.blockingMode = true;
+  }
+
+  /**
+   * Firefox: switch back to non-blocking (observation) mode.
+   * No-op on Chrome or if already non-blocking.
+   */
+  private disableBlocking() {
+    if (!IS_FIREFOX || !this.blockingMode || !this.requestListener) return;
+    browser.webRequest.onBeforeRequest.removeListener(this.requestListener);
+    browser.webRequest.onBeforeRequest.addListener(
+      this.requestListener,
+      { urls: ['<all_urls>'] },
+      [],
+    );
+    this.blockingMode = false;
   }
 
   private trimRequests() {
@@ -144,7 +177,11 @@ export class NetworkManager {
         removeRuleIds: [],
       });
     }
-    // Firefox: routes are checked in the webRequest listener — no extra setup needed
+
+    // Firefox: enable blocking mode so the listener can intercept
+    if (this.routes.size === 0) {
+      this.enableBlocking();
+    }
 
     this.routes.set(routeId, route);
     return route;
@@ -165,9 +202,14 @@ export class NetworkManager {
         removeRuleIds: [ruleId],
       });
     }
-    // Firefox: removing from map is sufficient — listener checks this.routes
 
     this.routes.delete(routeId);
+
+    // Firefox: switch back to non-blocking when no routes remain
+    if (this.routes.size === 0) {
+      this.disableBlocking();
+    }
+
     return true;
   }
 
