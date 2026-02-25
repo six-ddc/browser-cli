@@ -1,6 +1,6 @@
 {
   "name": "@browser-cli/cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "description": "Skill-powered browser automation CLI for AI agents — real browser extensions, no CDP or Playwright",
   "author": "six-ddc",

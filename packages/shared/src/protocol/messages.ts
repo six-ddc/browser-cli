@@ -68,6 +68,8 @@ export interface HandshakeMessage {
   browser?: BrowserInfo;
   /** Persistent client ID for stable session assignment across reconnections */
   clientId?: string;
+  /** Auth token required when daemon listens on non-loopback host */
+  token?: string;
 }
 
 /** Daemon → Extension: handshake acknowledgement */

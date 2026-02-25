@@ -40,6 +40,8 @@ export interface WsServerOptions {
   sessionMap?: Map<string, string>;
   /** Called when the clientId→sessionId mapping changes (for persistence) */
   onSessionMapChange?: (map: Map<string, string>) => void;
+  /** Auth token required for non-loopback connections (null = no auth) */
+  authToken?: string | null;
 }
 
 export class WsServer {
@@ -52,10 +54,13 @@ export class WsServer {
   /** Maps persistent clientId → friendly sessionId */
   private clientSessionMap: Map<string, string>;
   private onSessionMapChange?: (map: Map<string, string>) => void;
+  /** Auth token for non-loopback mode (null = no auth required) */
+  private authToken: string | null;
 
   constructor(options: WsServerOptions = {}) {
     this.clientSessionMap = options.sessionMap ?? new Map<string, string>();
     this.onSessionMapChange = options.onSessionMapChange;
+    this.authToken = options.authToken ?? null;
   }
 
   get isConnected(): boolean {
@@ -94,12 +99,12 @@ export class WsServer {
     return null;
   }
 
-  start(port: number): Promise<void> {
+  start(port: number, host = '127.0.0.1'): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.wss = new WebSocketServer({ port, host: '127.0.0.1' });
+      this.wss = new WebSocketServer({ port, host });
 
       this.wss.on('listening', () => {
-        logger.info(`WebSocket server listening on ws://127.0.0.1:${port}`);
+        logger.info(`WebSocket server listening on ws://${host}:${port}`);
         this.startHeartbeat();
         resolve();
       });
@@ -184,6 +189,16 @@ export class WsServer {
   }
 
   private handleHandshake(ws: WebSocket, msg: HandshakeMessage) {
+    // Validate auth token if required (non-loopback mode)
+    if (this.authToken && msg.token !== this.authToken) {
+      logger.warn(`Extension rejected: invalid or missing auth token (id=${msg.extensionId})`);
+      ws.close(
+        4401,
+        'Invalid or missing auth token. Set the correct token in the extension popup.',
+      );
+      return;
+    }
+
     if (msg.protocolVersion !== PROTOCOL_VERSION) {
       logger.warn(
         `Protocol version mismatch: extension=${msg.protocolVersion}, daemon=${PROTOCOL_VERSION}`,

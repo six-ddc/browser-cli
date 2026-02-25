@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdirSync } from 'node:fs';
-import { APP_DIR_NAME, DEFAULT_WS_PORT } from '@browser-cli/shared';
+import { APP_DIR_NAME, DEFAULT_WS_HOST, DEFAULT_WS_PORT } from '@browser-cli/shared';
 
 /** Get the app directory (~/.browser-cli/ or $BROWSER_CLI_DIR) */
 export function getAppDir(): string {
@@ -21,6 +21,16 @@ export function getSocketPath(): string {
     return '\\\\.\\pipe\\browser-cli-daemon';
   }
   return join(getAppDir(), 'daemon.sock');
+}
+
+/** Get auth token file path */
+export function getAuthTokenPath(): string {
+  return join(getAppDir(), 'auth-token');
+}
+
+/** Get the WS host */
+export function getWsHost(): string {
+  return DEFAULT_WS_HOST;
 }
 
 /** Get the WS port */

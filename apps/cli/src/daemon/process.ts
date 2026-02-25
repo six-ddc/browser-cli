@@ -81,8 +81,15 @@ export function isDaemonRunning(): boolean {
   return getDaemonPid() !== null;
 }
 
+/** Info returned from daemon via IPC on startup */
+export interface DaemonStartupInfo {
+  wsHost?: string;
+  wsPort?: number;
+  authToken?: string | null;
+}
+
 /** Wait for daemon child to signal readiness or failure via IPC */
-function waitForDaemonReady(child: ChildProcess, timeout: number): Promise<void> {
+function waitForDaemonReady(child: ChildProcess, timeout: number): Promise<DaemonStartupInfo> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error('Daemon startup timed out'));
@@ -92,7 +99,11 @@ function waitForDaemonReady(child: ChildProcess, timeout: number): Promise<void>
       clearTimeout(timer);
       const m = msg as Record<string, unknown>;
       if (m.ready) {
-        resolve();
+        resolve({
+          wsHost: typeof m.wsHost === 'string' ? m.wsHost : undefined,
+          wsPort: typeof m.wsPort === 'number' ? m.wsPort : undefined,
+          authToken: typeof m.authToken === 'string' ? m.authToken : null,
+        });
       } else if (m.error) {
         reject(new Error(typeof m.error === 'string' ? m.error : JSON.stringify(m.error)));
       }
@@ -110,12 +121,17 @@ function waitForDaemonReady(child: ChildProcess, timeout: number): Promise<void>
   });
 }
 
+export interface StartDaemonResult {
+  pid: number;
+  info: DaemonStartupInfo;
+}
+
 /** Start the daemon as a detached child process */
-export async function startDaemon(wsPort?: number): Promise<number> {
+export async function startDaemon(wsPort?: number, wsHost?: string): Promise<StartDaemonResult> {
   const existing = getDaemonPid();
   if (existing) {
     logger.info(`Daemon already running (PID ${existing})`);
-    return existing;
+    return { pid: existing, info: {} };
   }
 
   // Find the daemon entry point
@@ -124,6 +140,7 @@ export async function startDaemon(wsPort?: number): Promise<number> {
 
   const args = ['--daemon'];
   if (wsPort) args.push('--port', String(wsPort));
+  if (wsHost) args.push('--host', wsHost);
 
   // Normal JS build: daemon file exists on disk → spawn node + script
   // Compiled binary: daemon file not on disk → spawn self with --daemon flag
@@ -140,8 +157,9 @@ export async function startDaemon(wsPort?: number): Promise<number> {
   }
 
   // Wait for daemon to signal readiness via IPC before reporting success
+  let info: DaemonStartupInfo;
   try {
-    await waitForDaemonReady(child, 5000);
+    info = await waitForDaemonReady(child, 5000);
   } catch (err) {
     try {
       child.kill();
@@ -156,7 +174,7 @@ export async function startDaemon(wsPort?: number): Promise<number> {
   child.disconnect();
   child.unref();
 
-  return child.pid;
+  return { pid: child.pid, info };
 }
 
 /** Stop the daemon, waiting for process exit */
@@ -194,8 +212,8 @@ export async function stopDaemon(): Promise<boolean> {
 }
 
 /** Ensure the daemon is running, starting it if necessary */
-export async function ensureDaemon(wsPort?: number): Promise<number> {
+export async function ensureDaemon(wsPort?: number, wsHost?: string): Promise<StartDaemonResult> {
   const existing = getDaemonPid();
-  if (existing) return existing;
-  return startDaemon(wsPort);
+  if (existing) return { pid: existing, info: {} };
+  return startDaemon(wsPort, wsHost);
 }

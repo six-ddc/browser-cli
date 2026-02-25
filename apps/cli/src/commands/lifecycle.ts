@@ -1,22 +1,29 @@
 import { Command } from 'commander';
-import { DEFAULT_WS_PORT } from '@browser-cli/shared';
+import { DEFAULT_WS_PORT, DEFAULT_WS_HOST } from '@browser-cli/shared';
 import { startDaemon, stopDaemon, getDaemonPid } from '../daemon/process.js';
-import { getSocketPath, getWsPort } from '../util/paths.js';
+import { getSocketPath, getWsPort, getWsHost } from '../util/paths.js';
 import { logger } from '../util/logger.js';
 import { getRootOpts } from './shared.js';
 
 export const startCommand = new Command('start')
   .description('Start the browser-cli daemon')
   .option('--port <port>', 'WebSocket server port', String(DEFAULT_WS_PORT))
-  .action(async (opts: { port: string }, cmd: Command) => {
+  .option('--host <host>', 'WebSocket server host', DEFAULT_WS_HOST)
+  .action(async (opts: { port: string; host: string }, cmd: Command) => {
     const rootOpts = getRootOpts(cmd);
     const wsPort = parseInt(opts.port, 10);
+    const wsHost = opts.host;
     try {
-      const pid = await startDaemon(wsPort);
+      const { pid, info } = await startDaemon(wsPort, wsHost);
       if (rootOpts.json) {
-        console.log(JSON.stringify({ success: true, pid }));
+        console.log(JSON.stringify({ success: true, pid, ...info }));
       } else {
         logger.success(`Daemon started (PID ${pid})`);
+        if (info.authToken) {
+          logger.warn(`Non-loopback host — auth token required for extension connections`);
+          logger.info(`Auth token: ${info.authToken}`);
+          logger.info(`Token saved to ~/.browser-cli/auth-token`);
+        }
       }
     } catch (err) {
       if (rootOpts.json) {
@@ -81,16 +88,14 @@ export const statusCommand = new Command('status')
       daemon: true,
       pid,
       socket: getSocketPath(),
-      wsPort: getWsPort(),
     };
 
     if (!rootOpts.json) {
       console.log(`Daemon: running (PID ${pid})`);
       console.log(`Socket: ${getSocketPath()}`);
-      console.log(`WebSocket port: ${getWsPort()}`);
     }
 
-    // Query daemon for extension connection status
+    // Query daemon for live status (host, port, connections, uptime)
     try {
       const { SocketClient } = await import('../client/socket-client.js');
       const client = new SocketClient();
@@ -113,10 +118,17 @@ export const statusCommand = new Command('status')
             browser?: { name: string; version: string; userAgent: string };
           }>;
           uptime: number;
+          wsHost?: string;
+          wsPort?: number;
         };
         status.extension = data;
 
+        if (data.wsHost) status.wsHost = data.wsHost;
+        if (data.wsPort) status.wsPort = data.wsPort;
+
         if (!rootOpts.json) {
+          if (data.wsHost) console.log(`WebSocket host: ${data.wsHost}`);
+          if (data.wsPort) console.log(`WebSocket port: ${data.wsPort}`);
           if (data.connections.length === 0) {
             console.log('Extension: not connected');
           } else {
@@ -135,7 +147,12 @@ export const statusCommand = new Command('status')
       client.disconnect();
     } catch {
       status.socketConnectable = false;
-      if (!rootOpts.json) console.log('Socket: not connectable');
+      if (!rootOpts.json) {
+        // Fallback to static values when daemon is not connectable
+        console.log(`WebSocket host: ${getWsHost()}`);
+        console.log(`WebSocket port: ${getWsPort()}`);
+        console.log('Socket: not connectable');
+      }
     }
 
     if (rootOpts.json) {

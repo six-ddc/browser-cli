@@ -499,6 +499,7 @@ export const handshakeMessageSchema = z.object({
   extensionId: z.string(),
   browser: browserInfoSchema.optional(),
   clientId: z.string().optional(),
+  token: z.string().optional(),
 });
 
 export const handshakeAckMessageSchema = z.object({

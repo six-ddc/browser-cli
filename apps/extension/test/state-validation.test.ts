@@ -15,11 +15,13 @@ describe('isValidState', () => {
         enabled: true,
         connected: true,
         sessionId: 'abc-123',
+        host: '127.0.0.1',
         port: 9222,
         lastConnected: 1700000000000,
         lastDisconnected: 1699999999000,
         reconnecting: false,
         nextRetryIn: 5000,
+        authFailed: false,
       }),
     ).toBe(true);
   });
@@ -30,11 +32,13 @@ describe('isValidState', () => {
         enabled: true,
         connected: false,
         sessionId: null,
+        host: '127.0.0.1',
         port: 9222,
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
         nextRetryIn: null,
+        authFailed: false,
       }),
     ).toBe(true);
   });
@@ -45,11 +49,13 @@ describe('isValidState', () => {
         enabled: true,
         connected: true,
         sessionId: 'abc',
+        host: '127.0.0.1',
         port: 9222,
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
         nextRetryIn: null,
+        authFailed: false,
         extraField: 'ignored',
       }),
     ).toBe(true);
@@ -61,11 +67,13 @@ describe('isValidState', () => {
         enabled: false,
         connected: false,
         sessionId: null,
+        host: '127.0.0.1',
         port: 9222,
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
         nextRetryIn: null,
+        authFailed: false,
       }),
     ).toBe(true);
   });

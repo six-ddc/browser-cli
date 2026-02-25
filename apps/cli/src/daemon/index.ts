@@ -5,11 +5,12 @@
  */
 
 import { parseArgs } from 'node:util';
-import { DEFAULT_WS_PORT } from '@browser-cli/shared';
+import { DEFAULT_WS_PORT, DEFAULT_WS_HOST } from '@browser-cli/shared';
 import { WsServer } from './ws-server.js';
 import { SocketServer } from './socket-server.js';
 import { Bridge } from './bridge.js';
 import { writeDaemonPid, cleanupPidFile } from './process.js';
+import { isNonLoopback, generateAuthToken, writeAuthToken, cleanupAuthToken } from './auth.js';
 import { getSocketPath, getAppDir } from '../util/paths.js';
 import { logger } from '../util/logger.js';
 import { loadSessionMap, saveSessionMap } from './session-store.js';
@@ -19,14 +20,29 @@ async function main() {
     options: {
       daemon: { type: 'boolean', default: false },
       port: { type: 'string', default: String(DEFAULT_WS_PORT) },
+      host: { type: 'string', default: DEFAULT_WS_HOST },
     },
     strict: false,
   });
 
   const wsPort = parseInt(String(values.port), 10);
+  const wsHost = String(values.host);
   const socketPath = getSocketPath();
 
-  logger.info(`Starting daemon (wsPort=${wsPort})`);
+  logger.info(`Starting daemon (wsHost=${wsHost}, wsPort=${wsPort})`);
+
+  // Generate auth token for non-loopback hosts
+  let authToken: string | null = null;
+  if (isNonLoopback(wsHost)) {
+    authToken = generateAuthToken();
+    writeAuthToken(authToken);
+    logger.warn(`Non-loopback host detected — auth token required for extension connections`);
+    logger.info(`Auth token: ${authToken}`);
+    logger.info(`Token saved to ~/.browser-cli/auth-token`);
+  } else {
+    // Clean up stale token file when running in loopback mode
+    cleanupAuthToken();
+  }
 
   // Write PID
   writeDaemonPid(process.pid);
@@ -42,6 +58,7 @@ async function main() {
     onSessionMapChange: (map) => {
       saveSessionMap(appDir, map);
     },
+    authToken,
   });
   const bridge = new Bridge(wsServer);
   const socketServer = new SocketServer(
@@ -50,15 +67,17 @@ async function main() {
       connections: wsServer.allConnections,
       uptime: Math.floor(process.uptime()),
       pid: process.pid,
+      wsHost,
+      wsPort,
     }),
   );
 
   // Start both servers
-  await wsServer.start(wsPort);
+  await wsServer.start(wsPort, wsHost);
   await socketServer.start(socketPath);
 
   // Signal readiness to parent via IPC (if launched with IPC channel)
-  process.send?.({ ready: true });
+  process.send?.({ ready: true, wsHost, wsPort, authToken });
 
   logger.success(`Daemon ready (PID=${process.pid})`);
 
@@ -68,6 +87,7 @@ async function main() {
     await socketServer.stop();
     await wsServer.stop();
     cleanupPidFile();
+    cleanupAuthToken();
     process.exit(0);
   };
 

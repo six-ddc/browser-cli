@@ -43,7 +43,7 @@ export default defineConfig({
     }),
     content_security_policy: {
       extension_pages:
-        "default-src 'self'; script-src 'self'; object-src 'self'; frame-src 'self'; connect-src ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:*",
+        "default-src 'self'; script-src 'self'; object-src 'self'; frame-src 'self'; connect-src ws://*:* http://*:*",
     },
   }),
 });

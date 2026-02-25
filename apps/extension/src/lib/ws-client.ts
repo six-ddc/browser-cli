@@ -4,7 +4,7 @@
  */
 
 import { PROTOCOL_VERSION, schemas } from '@browser-cli/shared';
-import { CONFIGURED_WS_PORT } from './state';
+import { CONFIGURED_WS_HOST, CONFIGURED_WS_PORT } from './state';
 import type {
   WsMessage,
   RequestMessage,
@@ -16,13 +16,18 @@ import type {
 export type MessageHandler = (msg: RequestMessage) => Promise<ResponseMessage>;
 
 export interface WsClientOptions {
+  host?: string;
   port?: number;
   /** Persistent client ID for stable session assignment across reconnections */
   clientId?: string;
+  /** Auth token for non-loopback daemon connections */
+  token?: string;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onHandshake?: (ack: HandshakeAckMessage) => void;
   onReconnecting?: (nextRetryMs: number) => void;
+  /** Called when daemon rejects connection due to invalid/missing auth token */
+  onAuthFailed?: () => void;
   messageHandler?: MessageHandler;
 }
 
@@ -36,7 +41,9 @@ const HEARTBEAT_ALARM_NAME = 'browser-cli-heartbeat';
 
 export class WsClient {
   private ws: WebSocket | null = null;
+  private host: string;
   private port: number;
+  private token: string;
   private backoff = INITIAL_BACKOFF_MS;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connected = false;
@@ -51,7 +58,9 @@ export class WsClient {
   private pendingEvents: string[] = [];
 
   constructor(options: WsClientOptions = {}) {
+    this.host = options.host ?? CONFIGURED_WS_HOST;
     this.port = options.port ?? CONFIGURED_WS_PORT;
+    this.token = options.token ?? '';
     this.options = options;
   }
 
@@ -79,6 +88,25 @@ export class WsClient {
   stop(): void {
     this.stopped = true;
     this.cleanup();
+  }
+
+  updateHost(host: string): void {
+    this.host = host;
+    this.cleanup();
+    this.stopped = false;
+    this.backoff = INITIAL_BACKOFF_MS;
+    this.connect();
+  }
+
+  updateToken(token: string): void {
+    this.token = token;
+    // Reconnect to re-authenticate with new token
+    if (this.connected || this.isReconnecting) {
+      this.cleanup();
+      this.stopped = false;
+      this.backoff = INITIAL_BACKOFF_MS;
+      this.connect();
+    }
   }
 
   updatePort(port: number): void {
@@ -133,10 +161,10 @@ export class WsClient {
     if (this.stopped) return;
 
     const gen = ++this.generation;
-    console.log(`[browser-cli] Connecting to ws://127.0.0.1:${this.port}...`);
+    console.log(`[browser-cli] Connecting to ws://${this.host}:${this.port}...`);
 
     try {
-      this.ws = new WebSocket(`ws://127.0.0.1:${this.port}`);
+      this.ws = new WebSocket(`ws://${this.host}:${this.port}`);
     } catch (err) {
       console.error('[browser-cli] Failed to create WebSocket:', err);
       this.scheduleReconnect();
@@ -153,6 +181,7 @@ export class WsClient {
         extensionId: browser.runtime.id,
         browser: parseBrowserInfo(navigator.userAgent),
         ...(this.options.clientId ? { clientId: this.options.clientId } : {}),
+        ...(this.token ? { token: this.token } : {}),
       };
       this.ws?.send(JSON.stringify(handshake));
     };
@@ -187,6 +216,13 @@ export class WsClient {
       this.sessionId = null;
       if (wasConnected) {
         this.options.onDisconnect?.();
+      }
+      // Auth failure — don't auto-reconnect, notify caller
+      if (event.code === 4401) {
+        console.warn('[browser-cli] Auth failed — not reconnecting. Set a valid token.');
+        this.stopped = true;
+        this.options.onAuthFailed?.();
+        return;
       }
       this.scheduleReconnect();
     };

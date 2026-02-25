@@ -41,6 +41,7 @@ vi.mock('../src/daemon/process.js', () => mockDaemon);
 
 vi.mock('../src/util/paths.js', () => ({
   getSocketPath: vi.fn(() => '/tmp/test.sock'),
+  getWsHost: vi.fn(() => '127.0.0.1'),
   getWsPort: vi.fn(() => 9222),
   getPidPath: vi.fn(() => '/tmp/test.pid'),
 }));
@@ -218,7 +219,14 @@ describe('--json: lifecycle commands', () => {
     mockSocketClient.sendCommand.mockResolvedValue({
       id: 's1',
       success: true,
-      data: { connected: true, extensionId: 'ext-abc', sessionId: 'sess-1', uptime: 300 },
+      data: {
+        connected: true,
+        extensionId: 'ext-abc',
+        sessionId: 'sess-1',
+        uptime: 300,
+        wsHost: '127.0.0.1',
+        wsPort: 9222,
+      },
     });
 
     const { lines } = await runCli('--json', 'status');
@@ -243,7 +251,7 @@ describe('--json: lifecycle commands', () => {
   });
 
   it('start --json outputs structured JSON', async () => {
-    mockDaemon.startDaemon.mockResolvedValue(99999);
+    mockDaemon.startDaemon.mockResolvedValue({ pid: 99999, info: {} });
 
     const { lines } = await runCli('--json', 'start');
 
