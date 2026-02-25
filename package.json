@@ -2,7 +2,7 @@
   "name": "@browser-cli/root",
   "private": true,
   "type": "module",
-  "description": "Extension-based browser automation CLI — control Chrome from the terminal without Playwright",
+  "description": "Agentic browser automation CLI with skill support — control Chrome via extension",
   "author": "six-ddc",
   "license": "MIT",
   "repository": {

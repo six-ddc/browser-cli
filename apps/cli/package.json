@@ -1,11 +1,37 @@
 {
   "name": "@browser-cli/cli",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
   "type": "module",
-  "description": "Browser-CLI command-line interface and daemon",
+  "description": "Agentic browser automation CLI with skill support — control Chrome via extension",
   "author": "six-ddc",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/six-ddc/browser-cli.git",
+    "directory": "apps/cli"
+  },
+  "homepage": "https://github.com/six-ddc/browser-cli",
+  "bugs": {
+    "url": "https://github.com/six-ddc/browser-cli/issues"
+  },
+  "keywords": [
+    "browser",
+    "cli",
+    "chrome",
+    "automation",
+    "extension",
+    "browser-automation",
+    "agentic",
+    "ai-agent",
+    "skill",
+    "mcp"
+  ],
+  "files": [
+    "bin",
+    "dist",
+    "!dist/**/*.map",
+    "README.md"
+  ],
   "bin": {
     "browser-cli": "./bin/cli.js"
   },
@@ -24,21 +50,19 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
-  "dependencies": {
-    "@browser-cli/shared": "workspace:*",
-    "commander": "^14.0.0",
-    "defuddle": "^0.7.0",
-    "jsdom": "^26.1.0",
-    "ws": "^8.19.0"
-  },
   "devDependencies": {
+    "@browser-cli/shared": "workspace:*",
     "@eslint/js": "catalog:",
-    "@types/jsdom": "^28.0.0",
+    "@types/jsdom": "^21.1.0",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
+    "commander": "^14.0.0",
+    "defuddle": "^0.7.0",
     "eslint": "catalog:",
+    "jsdom": "^24.0.0",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "ws": "^8.19.0"
   }
 }

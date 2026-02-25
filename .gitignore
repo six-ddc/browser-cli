@@ -5,6 +5,7 @@ node_modules/
 dist/
 .output/
 .wxt/
+apps/cli/README.md
 
 # Turbo
 .turbo/
