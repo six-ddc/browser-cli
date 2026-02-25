@@ -79,6 +79,13 @@ export async function sendCommand<A extends ActionType>(
       process.exit(1);
     }
 
+    // Surface capability warnings (e.g. tab groups on Firefox) as yellow ⚠ and skip success output
+    const warningMsg = (response.data as Record<string, unknown> | undefined)?.warning;
+    if (typeof warningMsg === 'string') {
+      logger.warn(warningMsg);
+      return null;
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- data may be undefined at runtime even on success
     return (response.data as ActionResultMap[A]) ?? ({} as ActionResultMap[A]);
   } finally {

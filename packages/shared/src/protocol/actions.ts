@@ -475,6 +475,89 @@ export interface WindowCloseResult {
   closed: true;
 }
 
+export type WindowFocusParams = z.infer<typeof schemas.windowFocusParamsSchema>;
+export interface WindowFocusResult {
+  windowId: number;
+  focused: true;
+}
+
+// ─── Tab Group Management ────────────────────────────────────────────
+
+export type TabGroupCreateParams = z.infer<typeof schemas.tabGroupCreateParamsSchema>;
+export interface TabGroupCreateResult {
+  groupId: number;
+  tabCount: number;
+}
+
+export type TabGroupUpdateParams = z.infer<typeof schemas.tabGroupUpdateParamsSchema>;
+export interface TabGroupUpdateResult {
+  groupId: number;
+  title: string | null;
+  color: string;
+}
+
+export type TabGroupListParams = z.infer<typeof schemas.tabGroupListParamsSchema>;
+export interface TabGroupListResult {
+  groups: TabGroupInfo[];
+}
+
+export interface TabGroupInfo {
+  id: number;
+  title: string | null;
+  color: string;
+  collapsed: boolean;
+  windowId: number;
+  tabCount: number;
+}
+
+export type TabUngroupParams = z.infer<typeof schemas.tabUngroupParamsSchema>;
+export interface TabUngroupResult {
+  ungrouped: number;
+}
+
+// ─── Bookmarks ───────────────────────────────────────────────────────
+
+export type BookmarkAddParams = z.infer<typeof schemas.bookmarkAddParamsSchema>;
+export interface BookmarkAddResult {
+  id: string;
+  url: string;
+  title: string;
+}
+
+export type BookmarkRemoveParams = z.infer<typeof schemas.bookmarkRemoveParamsSchema>;
+export interface BookmarkRemoveResult {
+  removed: true;
+}
+
+export type BookmarkListParams = z.infer<typeof schemas.bookmarkListParamsSchema>;
+export interface BookmarkListResult {
+  bookmarks: BookmarkInfo[];
+  total: number;
+}
+
+export interface BookmarkInfo {
+  id: string;
+  url: string;
+  title: string;
+  dateAdded?: number;
+}
+
+// ─── History ─────────────────────────────────────────────────────────
+
+export type HistorySearchParams = z.infer<typeof schemas.historySearchParamsSchema>;
+export interface HistorySearchResult {
+  entries: HistoryEntry[];
+  total: number;
+}
+
+export interface HistoryEntry {
+  id: string;
+  url: string;
+  title: string;
+  lastVisitTime?: number;
+  visitCount?: number;
+}
+
 // ─── Browser Config ─────────────────────────────────────────────────
 
 export type SetViewportParams = z.infer<typeof schemas.setViewportParamsSchema>;
@@ -621,6 +704,18 @@ export type ActionType =
   | 'windowNew'
   | 'windowList'
   | 'windowClose'
+  | 'windowFocus'
+  // Tab Groups
+  | 'tabGroupCreate'
+  | 'tabGroupUpdate'
+  | 'tabGroupList'
+  | 'tabUngroup'
+  // Bookmarks
+  | 'bookmarkAdd'
+  | 'bookmarkRemove'
+  | 'bookmarkList'
+  // History
+  | 'historySearch'
   // Browser Config
   | 'setViewport'
   | 'setGeo'
@@ -704,6 +799,15 @@ export type Command =
   | { action: 'windowNew'; params: WindowNewParams }
   | { action: 'windowList'; params: WindowListParams }
   | { action: 'windowClose'; params: WindowCloseParams }
+  | { action: 'windowFocus'; params: WindowFocusParams }
+  | { action: 'tabGroupCreate'; params: TabGroupCreateParams }
+  | { action: 'tabGroupUpdate'; params: TabGroupUpdateParams }
+  | { action: 'tabGroupList'; params: TabGroupListParams }
+  | { action: 'tabUngroup'; params: TabUngroupParams }
+  | { action: 'bookmarkAdd'; params: BookmarkAddParams }
+  | { action: 'bookmarkRemove'; params: BookmarkRemoveParams }
+  | { action: 'bookmarkList'; params: BookmarkListParams }
+  | { action: 'historySearch'; params: HistorySearchParams }
   | { action: 'setViewport'; params: SetViewportParams }
   | { action: 'setGeo'; params: SetGeoParams }
   | { action: 'setMedia'; params: SetMediaParams }
@@ -781,6 +885,15 @@ export interface ActionResultMap {
   windowNew: WindowNewResult;
   windowList: WindowListResult;
   windowClose: WindowCloseResult;
+  windowFocus: WindowFocusResult;
+  tabGroupCreate: TabGroupCreateResult;
+  tabGroupUpdate: TabGroupUpdateResult;
+  tabGroupList: TabGroupListResult;
+  tabUngroup: TabUngroupResult;
+  bookmarkAdd: BookmarkAddResult;
+  bookmarkRemove: BookmarkRemoveResult;
+  bookmarkList: BookmarkListResult;
+  historySearch: HistorySearchResult;
   setViewport: SetViewportResult;
   setGeo: SetGeoResult;
   setMedia: SetMediaResult;

@@ -329,6 +329,117 @@ describe('schemas - command', () => {
     ).toBeTruthy();
   });
 
+  // ─── Window focus ────────────────────────────────────────────────
+  it('validates windowFocus command', () => {
+    expect(commandSchema.parse({ action: 'windowFocus', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'windowFocus', params: { windowId: 42 } })).toBeTruthy();
+  });
+
+  // ─── Tab group commands ────────────────────────────────────────────
+  it('validates tabGroupCreate command', () => {
+    const cmd = { action: 'tabGroupCreate', params: { tabIds: [1, 2, 3] } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects tabGroupCreate without tabIds', () => {
+    expect(() => commandSchema.parse({ action: 'tabGroupCreate', params: {} })).toThrow();
+  });
+
+  it('validates tabGroupUpdate command', () => {
+    expect(
+      commandSchema.parse({
+        action: 'tabGroupUpdate',
+        params: { groupId: 5, title: 'Work', color: 'blue' },
+      }),
+    ).toBeTruthy();
+    expect(
+      commandSchema.parse({
+        action: 'tabGroupUpdate',
+        params: { groupId: 1, collapsed: true },
+      }),
+    ).toBeTruthy();
+    expect(commandSchema.parse({ action: 'tabGroupUpdate', params: { groupId: 1 } })).toBeTruthy();
+  });
+
+  it('rejects tabGroupUpdate without groupId', () => {
+    expect(() =>
+      commandSchema.parse({ action: 'tabGroupUpdate', params: { title: 'Work' } }),
+    ).toThrow();
+  });
+
+  it('rejects tabGroupUpdate with invalid color', () => {
+    expect(() =>
+      commandSchema.parse({
+        action: 'tabGroupUpdate',
+        params: { groupId: 1, color: 'neon' },
+      }),
+    ).toThrow();
+  });
+
+  it('validates tabGroupList command', () => {
+    expect(commandSchema.parse({ action: 'tabGroupList', params: {} })).toBeTruthy();
+  });
+
+  it('validates tabUngroup command', () => {
+    const cmd = { action: 'tabUngroup', params: { tabIds: [1, 2] } };
+    expect(commandSchema.parse(cmd)).toEqual(cmd);
+  });
+
+  it('rejects tabUngroup without tabIds', () => {
+    expect(() => commandSchema.parse({ action: 'tabUngroup', params: {} })).toThrow();
+  });
+
+  // ─── Bookmark commands ─────────────────────────────────────────────
+  it('validates bookmarkAdd command', () => {
+    expect(
+      commandSchema.parse({
+        action: 'bookmarkAdd',
+        params: { url: 'https://example.com', title: 'Example' },
+      }),
+    ).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'bookmarkAdd', params: { url: 'https://example.com' } }),
+    ).toBeTruthy();
+  });
+
+  it('rejects bookmarkAdd without url', () => {
+    expect(() =>
+      commandSchema.parse({ action: 'bookmarkAdd', params: { title: 'Example' } }),
+    ).toThrow();
+  });
+
+  it('validates bookmarkRemove command', () => {
+    expect(commandSchema.parse({ action: 'bookmarkRemove', params: { id: '42' } })).toBeTruthy();
+  });
+
+  it('rejects bookmarkRemove without id', () => {
+    expect(() => commandSchema.parse({ action: 'bookmarkRemove', params: {} })).toThrow();
+  });
+
+  it('validates bookmarkList command', () => {
+    expect(commandSchema.parse({ action: 'bookmarkList', params: {} })).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'bookmarkList', params: { query: 'github' } }),
+    ).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'bookmarkList', params: { query: 'test', limit: 10 } }),
+    ).toBeTruthy();
+  });
+
+  // ─── History commands ──────────────────────────────────────────────
+  it('validates historySearch command', () => {
+    expect(commandSchema.parse({ action: 'historySearch', params: {} })).toBeTruthy();
+    expect(
+      commandSchema.parse({ action: 'historySearch', params: { text: 'github' } }),
+    ).toBeTruthy();
+    expect(
+      commandSchema.parse({
+        action: 'historySearch',
+        params: { text: 'test', limit: 50, startTime: 1700000000000 },
+      }),
+    ).toBeTruthy();
+  });
+
   // ─── Existing validations ─────────────────────────────────────────
   it('rejects invalid command', () => {
     expect(() => commandSchema.parse({ action: 'unknown', params: {} })).toThrow();

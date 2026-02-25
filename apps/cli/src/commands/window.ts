@@ -48,4 +48,15 @@ windowCmd
     console.log('Window closed');
   });
 
+windowCmd
+  .command('focus [windowId]')
+  .description('Focus a window (defaults to current)')
+  .action(async (windowId: string | undefined, _opts: unknown, cmd: Command) => {
+    const result = await sendCommand(cmd, {
+      action: 'windowFocus',
+      params: { windowId: windowId ? parseInt(windowId, 10) : undefined },
+    });
+    if (result) console.log(`Window ${result.windowId} focused`);
+  });
+
 export { windowCmd as windowCommand };
