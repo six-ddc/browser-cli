@@ -4,7 +4,15 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "tsconfig.json", "package.json", "*.config.ts", "*.config.mjs"],
+      "inputs": [
+        "src/**",
+        "tsconfig.json",
+        "package.json",
+        "*.config.ts",
+        "*.config.mjs",
+        "build.ts",
+        "build-binary.ts"
+      ],
       "outputs": ["dist/**", ".output/**"]
     },
     "dev": {

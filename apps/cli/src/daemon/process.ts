@@ -125,7 +125,11 @@ export async function startDaemon(wsPort?: number): Promise<number> {
   const args = ['--daemon'];
   if (wsPort) args.push('--port', String(wsPort));
 
-  const child = spawn(process.execPath, [daemonEntry, ...args], {
+  // Normal JS build: daemon file exists on disk → spawn node + script
+  // Compiled binary: daemon file not on disk → spawn self with --daemon flag
+  const spawnArgs = existsSync(daemonEntry) ? [daemonEntry, ...args] : [...args];
+
+  const child = spawn(process.execPath, spawnArgs, {
     detached: true,
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     env: { ...process.env },

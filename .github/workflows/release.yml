@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  release:
+  build-extension:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,12 +32,74 @@ jobs:
       - name: Build extension zips
         run: pnpm --filter @browser-cli/extension build
 
-      - name: List output artifacts
-        run: ls apps/extension/.output/*.zip
+      - name: Upload extension artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-zips
+          path: apps/extension/.output/*.zip
+
+  build-cli-binaries:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - target: bun-linux-x64
+            outfile: browser-cli-linux-x64
+          - target: bun-linux-arm64
+            outfile: browser-cli-linux-arm64
+          - target: bun-darwin-x64
+            outfile: browser-cli-darwin-x64
+          - target: bun-darwin-arm64
+            outfile: browser-cli-darwin-arm64
+          - target: bun-windows-x64
+            outfile: browser-cli-windows-x64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build binary (${{ matrix.target }})
+        working-directory: apps/cli
+        run: bun run ./build-binary.ts --target ${{ matrix.target }} --outfile ./dist/${{ matrix.outfile }}
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.outfile }}
+          path: apps/cli/dist/${{ matrix.outfile }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-extension, build-cli-binaries]
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | sort
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: apps/extension/.output/*.zip
+          files: |
+            artifacts/extension-zips/*.zip
+            artifacts/browser-cli-*/*
           generate_release_notes: true
           fail_on_unmatched_files: true
