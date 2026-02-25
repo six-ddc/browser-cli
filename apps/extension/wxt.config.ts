@@ -2,6 +2,9 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   srcDir: 'src',
+  zip: {
+    name: 'browser-cli-extension',
+  },
   modules: ['@wxt-dev/module-react'],
   runner: {
     disabled: false,
