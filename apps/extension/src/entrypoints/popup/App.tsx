@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { APP_NAME } from '@browser-cli/shared';
-import { getState, setState, setPort, CONFIGURED_WS_PORT } from '../../lib/state';
+import {
+  getState,
+  setState,
+  setHost,
+  setPort,
+  setToken,
+  getToken,
+  CONFIGURED_WS_HOST,
+  CONFIGURED_WS_PORT,
+} from '../../lib/state';
 import type { ConnectionState } from '../../lib/state';
 import './App.css';
 
@@ -41,21 +50,42 @@ export default function App() {
     enabled: true,
     connected: false,
     sessionId: null,
+    host: CONFIGURED_WS_HOST,
     port: CONFIGURED_WS_PORT,
     lastConnected: null,
     lastDisconnected: null,
     reconnecting: false,
     nextRetryIn: null,
+    authFailed: false,
   });
+  const [hostInput, setHostInput] = useState(CONFIGURED_WS_HOST);
   const [portInput, setPortInput] = useState(String(CONFIGURED_WS_PORT));
+  const [tokenInput, setTokenInput] = useState('');
+  const [savedToken, setSavedToken] = useState('');
   const [copied, setCopied] = useState(false);
   const [sessionCopied, setSessionCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  /** Whether the current host is non-loopback (auto-show token field) */
+  const isNonLoopback = !['127.0.0.1', 'localhost', '::1'].includes(state.host);
+  const [showToken, setShowToken] = useState(false);
+
+  /** Track whether any settings have been modified */
+  const isDirty =
+    hostInput.trim() !== state.host ||
+    portInput.trim() !== String(state.port) ||
+    tokenInput.trim() !== savedToken;
 
   useEffect(() => {
     void getState().then((s) => {
       console.log('[browser-cli] Popup initial state:', s);
       setStateLocal(s);
+      setHostInput(s.host);
       setPortInput(String(s.port));
+    });
+    void getToken().then((t) => {
+      setTokenInput(t);
+      setSavedToken(t);
     });
 
     void browser.runtime
@@ -85,13 +115,22 @@ export default function App() {
     return () => browser.storage.onChanged.removeListener(listener);
   }, []);
 
-  const handlePortSave = () => {
-    const p = parseInt(portInput, 10);
-    if (!p || p <= 0 || p >= 65536) {
-      setPortInput(String(state.port));
-      return;
+  const handleSaveAll = () => {
+    const h = hostInput.trim();
+    if (h && h !== state.host) {
+      void setHost(h);
     }
-    void setPort(p);
+    const p = parseInt(portInput, 10);
+    if (p && p > 0 && p < 65536 && p !== state.port) {
+      void setPort(p);
+    }
+    const t = tokenInput.trim();
+    if (t !== savedToken) {
+      void setToken(t);
+      setSavedToken(t);
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const copyCommand = async () => {
@@ -118,19 +157,23 @@ export default function App() {
 
   const statusVariant = !state.enabled
     ? 'disabled'
-    : state.reconnecting
-      ? 'reconnecting'
-      : state.connected
-        ? 'connected'
-        : 'disconnected';
+    : state.authFailed
+      ? 'auth_failed'
+      : state.reconnecting
+        ? 'reconnecting'
+        : state.connected
+          ? 'connected'
+          : 'disconnected';
 
   const statusLabel = !state.enabled
     ? 'Disabled'
-    : state.reconnecting
-      ? 'Reconnecting...'
-      : state.connected
-        ? 'Connected'
-        : 'Disconnected';
+    : state.authFailed
+      ? 'Auth Failed'
+      : state.reconnecting
+        ? 'Reconnecting...'
+        : state.connected
+          ? 'Connected'
+          : 'Disconnected';
 
   return (
     <div className="popup">
@@ -138,14 +181,6 @@ export default function App() {
       <div className="header">
         <div className="header-icon">B</div>
         <span className="header-title">{APP_NAME}</span>
-        <label className="toggle-switch">
-          <input type="checkbox" checked={state.enabled} onChange={handleToggle} />
-          <span className="toggle-slider" />
-        </label>
-      </div>
-
-      {/* Status */}
-      <div className="status-bar">
         <div className={`status-chip status-chip--${statusVariant}`}>
           <div className={`status-dot status-dot--${statusVariant}`} />
           {statusLabel}
@@ -153,19 +188,26 @@ export default function App() {
         {state.reconnecting && state.nextRetryIn != null && (
           <span className="status-retry">Retry in {state.nextRetryIn}s</span>
         )}
+        <label className="toggle-switch">
+          <input type="checkbox" checked={state.enabled} onChange={handleToggle} />
+          <span className="toggle-slider" />
+        </label>
       </div>
 
       {/* Session ID */}
       {state.sessionId && (
-        <div
-          className="session-row"
-          onClick={() => void copySessionId()}
-          title="Click to copy session ID"
-        >
-          <span className="session-id">{state.sessionId}</span>
-          <button className={`copy-btn ${sessionCopied ? 'copy-btn--copied' : ''}`} tabIndex={-1}>
-            {sessionCopied ? <CheckIcon /> : <CopyIcon />}
-          </button>
+        <div className="settings">
+          <label className="settings-label">Session</label>
+          <div
+            className="session-row"
+            onClick={() => void copySessionId()}
+            title="Click to copy session ID"
+          >
+            <span className="session-id">{state.sessionId}</span>
+            <button className={`copy-btn ${sessionCopied ? 'copy-btn--copied' : ''}`} tabIndex={-1}>
+              {sessionCopied ? <CheckIcon /> : <CopyIcon />}
+            </button>
+          </div>
         </div>
       )}
 
@@ -198,25 +240,69 @@ export default function App() {
         </div>
       )}
 
-      <div className="divider" />
-
       {/* Settings */}
-      <div className="settings">
-        <label className="settings-label">WebSocket Port</label>
-        <div className="settings-row">
+      <details className="settings-details">
+        <summary className="settings-summary">Settings</summary>
+        <div className="settings">
+          <label className="settings-label">Daemon Host</label>
+          <input
+            type="text"
+            className="input-field"
+            value={hostInput}
+            onChange={(e) => setHostInput(e.target.value)}
+            placeholder="127.0.0.1"
+            onKeyDown={(e) => e.key === 'Enter' && isDirty && handleSaveAll()}
+          />
+          {isNonLoopback || showToken || state.authFailed ? (
+            <>
+              <label className="settings-label" style={{ marginTop: 4 }}>
+                Auth Token
+              </label>
+              <input
+                type="password"
+                className="input-field"
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                placeholder="Paste token from daemon log"
+                onKeyDown={(e) => e.key === 'Enter' && isDirty && handleSaveAll()}
+              />
+            </>
+          ) : (
+            <button
+              className="btn btn--tonal"
+              style={{ marginTop: 4, fontSize: 12 }}
+              onClick={() => setShowToken(true)}
+            >
+              Set auth token...
+            </button>
+          )}
+          <label className="settings-label" style={{ marginTop: 4 }}>
+            WebSocket Port
+          </label>
           <input
             type="text"
             className="input-field"
             value={portInput}
             onChange={(e) => setPortInput(e.target.value)}
             placeholder="9222"
-            onKeyDown={(e) => e.key === 'Enter' && handlePortSave()}
+            onKeyDown={(e) => e.key === 'Enter' && isDirty && handleSaveAll()}
           />
-          <button className="btn btn--primary" onClick={handlePortSave}>
-            Save
-          </button>
+          {(isDirty || saved) && (
+            <button
+              className={`btn btn--save-all ${saved ? 'btn--tonal-success' : 'btn--primary'}`}
+              onClick={handleSaveAll}
+            >
+              {saved ? (
+                <>
+                  <CheckIcon /> Saved
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </button>
+          )}
         </div>
-      </div>
+      </details>
 
       {/* Footer timestamps */}
       {(state.lastConnected || state.lastDisconnected) && (

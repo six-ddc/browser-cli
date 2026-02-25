@@ -26,8 +26,8 @@ vi.mock('../src/daemon/process.js', () => ({
     return true;
   },
   getDaemonPid: () => null,
-  startDaemon: () => Promise.resolve(12345),
-  ensureDaemon: () => Promise.resolve(),
+  startDaemon: () => Promise.resolve({ pid: 12345, info: {} }),
+  ensureDaemon: () => Promise.resolve({ pid: 12345, info: {} }),
 }));
 
 vi.mock('../src/commands/shared.js', () => ({

@@ -1,5 +1,5 @@
 import { WsClient } from '../lib/ws-client';
-import { getPort, getEnabled, setState } from '../lib/state';
+import { getHost, getPort, getToken, getEnabled, setState } from '../lib/state';
 import type { RequestMessage, ResponseMessage, ProtocolError } from '@browser-cli/shared';
 import { ErrorCode } from '@browser-cli/shared';
 import { classifyError } from '../lib/error-classifier';
@@ -88,7 +88,9 @@ const actionApi =
   browser.action ?? (browser as unknown as { browserAction: typeof browser.action }).browserAction;
 
 /** Update extension badge to reflect current state */
-function updateBadge(mode: 'connected' | 'disconnected' | 'reconnecting' | 'disabled'): void {
+function updateBadge(
+  mode: 'connected' | 'disconnected' | 'reconnecting' | 'disabled' | 'auth_failed',
+): void {
   switch (mode) {
     case 'connected':
       void actionApi.setBadgeText({ text: 'ON' });
@@ -99,6 +101,11 @@ function updateBadge(mode: 'connected' | 'disconnected' | 'reconnecting' | 'disa
     case 'reconnecting':
       void actionApi.setBadgeText({ text: '...' });
       void actionApi.setBadgeBackgroundColor({ color: '#F9AB00' }); // yellow
+      break;
+    case 'auth_failed':
+      void actionApi.setBadgeText({ text: 'KEY' });
+      void actionApi.setBadgeBackgroundColor({ color: '#EA4335' }); // red
+      void actionApi.setBadgeTextColor({ color: '#FFFFFF' }); // white
       break;
     case 'disabled':
       void actionApi.setBadgeText({ text: '' });
@@ -164,10 +171,17 @@ async function ensureInitialized(): Promise<void> {
 
     networkManager = new NetworkManager();
 
-    const [port, clientId] = await Promise.all([getPort(), getOrCreateClientId()]);
+    const [host, port, token, clientId] = await Promise.all([
+      getHost(),
+      getPort(),
+      getToken(),
+      getOrCreateClientId(),
+    ]);
 
     wsClient = new WsClient({
+      host,
       port,
+      token,
       clientId,
       messageHandler: handleCommand,
       onConnect: () => {
@@ -177,6 +191,7 @@ async function ensureInitialized(): Promise<void> {
           lastConnected: Date.now(),
           reconnecting: false,
           nextRetryIn: null,
+          authFailed: false,
         });
         updateBadge('connected');
       },
@@ -193,6 +208,17 @@ async function ensureInitialized(): Promise<void> {
         console.log(`[browser-cli] Reconnecting in ${nextRetryMs}ms...`);
         void setState({ reconnecting: true, nextRetryIn: nextRetryMs });
         updateBadge('reconnecting');
+      },
+      onAuthFailed: () => {
+        console.warn('[browser-cli] Auth failed — invalid or missing token');
+        void setState({
+          connected: false,
+          reconnecting: false,
+          nextRetryIn: null,
+          sessionId: null,
+          authFailed: true,
+        });
+        updateBadge('auth_failed');
       },
     });
 
@@ -361,8 +387,24 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   }
 });
 
-// Listen for port and enabled changes from popup
+// Listen for state, token, and enabled changes from popup
 browser.storage.onChanged.addListener((changes) => {
+  // Handle auth token change
+  const tokenChange = changes['browserCliAuthToken'];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- tokenChange may be undefined when other storage keys change
+  if (tokenChange && typeof tokenChange.newValue === 'string') {
+    ensureInitialized()
+      .then(() => {
+        if (wsClient) {
+          console.log('[browser-cli] Auth token changed — reconnecting');
+          wsClient.updateToken(tokenChange.newValue as string);
+        }
+      })
+      .catch((err: unknown) => {
+        console.error('[browser-cli] Failed to initialize after token change:', err);
+      });
+  }
+
   const stateChange = changes['browserCliState'];
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- changes may not contain our key when other storage keys change (e.g. browserCliClientId)
   if (!stateChange) return;
@@ -381,6 +423,22 @@ browser.storage.onChanged.addListener((changes) => {
         console.log('[browser-cli] Extension disabled via toggle');
         teardown();
       }
+    }
+
+    // Handle host change
+    const newHost = newState.host;
+    const oldHost = oldState.host;
+    if (typeof newHost === 'string' && typeof oldHost === 'string' && newHost !== oldHost) {
+      ensureInitialized()
+        .then(() => {
+          if (wsClient) {
+            console.log(`[browser-cli] Host changed: ${oldHost} → ${newHost}`);
+            wsClient.updateHost(newHost);
+          }
+        })
+        .catch((err: unknown) => {
+          console.error('[browser-cli] Failed to initialize after host change:', err);
+        });
     }
 
     // Handle port change

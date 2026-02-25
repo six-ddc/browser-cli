@@ -103,7 +103,7 @@ body {
   font-weight: 500;
   color: var(--cr-on-surface);
   letter-spacing: 0;
-  flex: 1;
+  margin-right: auto;
 }
 
 /* Toggle switch */
@@ -183,6 +183,11 @@ body {
   color: var(--cr-yellow-on-container);
 }
 
+.status-chip--auth_failed {
+  background: var(--cr-red-container);
+  color: var(--cr-red);
+}
+
 .status-chip--disabled {
   background: var(--cr-surface-variant);
   color: var(--cr-on-surface-tertiary);
@@ -206,6 +211,10 @@ body {
 .status-dot--reconnecting {
   background: var(--cr-yellow);
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-dot--auth_failed {
+  background: var(--cr-red);
 }
 
 .status-dot--disabled {
@@ -381,7 +390,64 @@ body {
   flex: 1;
 }
 
+.btn--disabled {
+  background: var(--cr-surface-variant);
+  color: var(--cr-on-surface-tertiary);
+  cursor: default;
+}
+
+.settings .btn--save-all {
+  margin-top: 4px;
+  width: 100%;
+  border-radius: var(--cr-radius-s);
+  height: 40px;
+  font-size: 14px;
+}
+
 /* Settings section */
+.settings-details {
+  border-top: 1px solid var(--cr-outline);
+}
+
+.settings-summary {
+  padding-top: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cr-on-surface-tertiary);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+
+.settings-summary:hover {
+  color: var(--cr-on-surface-secondary);
+}
+
+.settings-summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-summary::after {
+  content: '';
+  margin-left: auto;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform 0.2s;
+}
+
+.settings-details[open] > .settings-summary::after {
+  transform: rotate(180deg);
+}
+
+.settings-details[open] > .settings {
+  margin-top: 12px;
+}
+
 .settings {
   display: flex;
   flex-direction: column;
@@ -402,8 +468,7 @@ body {
 
 .input-field {
   flex: 1;
-  height: 36px;
-  padding: 0 12px;
+  padding: 10px 12px;
   font-family: var(--cr-font-mono);
   font-size: 14px;
   color: var(--cr-on-surface);

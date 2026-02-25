@@ -1,3 +1,6 @@
+/** Default WebSocket host for daemon ↔ extension communication */
+export const DEFAULT_WS_HOST = '127.0.0.1';
+
 /** Default WebSocket port for daemon ↔ extension communication */
 export const DEFAULT_WS_PORT = 9222;
 
