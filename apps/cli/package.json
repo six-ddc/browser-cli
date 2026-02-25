@@ -28,7 +28,7 @@
     "@browser-cli/shared": "workspace:*",
     "commander": "^14.0.0",
     "defuddle": "^0.7.0",
-    "jsdom": "^26.1.0",
+    "jsdom": "^28.1.0",
     "ws": "^8.19.0"
   },
   "devDependencies": {
