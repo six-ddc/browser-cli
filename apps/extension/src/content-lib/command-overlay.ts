@@ -14,7 +14,6 @@
 const OVERLAY_DURATION_MS = 3000;
 
 let host: HTMLElement | null = null;
-let visible = false;
 let hideTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function ensureHost(): void {
@@ -81,22 +80,23 @@ export function showFor(durationMs: number): void {
     hideTimeout = null;
   }
 
+  // After ensureHost(), host is guaranteed to be non-null
+  const el = host as HTMLElement;
+
   // Snap to full opacity (no transition) then start fade
-  host!.style.transition = 'none';
-  host!.style.opacity = '1';
-  host!.classList.add('visible');
+  el.style.transition = 'none';
+  el.style.opacity = '1';
+  el.classList.add('visible');
   // Force reflow so the snap takes effect before we set the transition
-  void host!.offsetWidth;
+  void el.offsetWidth;
 
   // Start linear fade-out over the full duration
-  host!.style.transition = `opacity ${durationMs}ms linear`;
-  host!.style.opacity = '0';
-  visible = true;
+  el.style.transition = `opacity ${durationMs}ms linear`;
+  el.style.opacity = '0';
 
   // Remove from layout after fade completes
   hideTimeout = setTimeout(() => {
     hideTimeout = null;
-    visible = false;
     host?.classList.remove('visible');
   }, durationMs);
 }

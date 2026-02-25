@@ -32,8 +32,12 @@ const tabCmd = new Command('tab')
 tabCmd
   .command('new [url]')
   .description('Open a new tab')
-  .action(async (url: string | undefined, _opts: unknown, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'tabNew', params: { url } });
+  .option('--container <name>', 'Open tab in Firefox container (Firefox only)')
+  .action(async (url: string | undefined, opts: { container?: string }, cmd: Command) => {
+    const result = await sendCommand(cmd, {
+      action: 'tabNew',
+      params: { url, container: opts.container },
+    });
     if (result) console.log(`Tab ${result.tabId}: ${result.url}`);
   });
 

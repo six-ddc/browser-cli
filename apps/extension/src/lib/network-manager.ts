@@ -33,39 +33,43 @@ export class NetworkManager {
    */
   private initRequestTracking() {
     this.requestListener = (details) => {
-      const request: NetworkRequest = {
-        id: details.requestId,
-        url: details.url,
-        method: details.method,
-        type: details.type,
-        timestamp: details.timeStamp,
-        tabId: details.tabId,
-      };
+      try {
+        const request: NetworkRequest = {
+          id: details.requestId,
+          url: details.url,
+          method: details.method,
+          type: details.type,
+          timestamp: details.timeStamp,
+          tabId: details.tabId,
+        };
 
-      // Check if this request matches any block/redirect routes
-      for (const route of this.routes.values()) {
-        if (this.matchesPattern(details.url, route.pattern)) {
-          if (route.action === 'block') {
-            request.blocked = true;
-            if (IS_FIREFOX) {
-              this.requests.push(request);
-              this.trimRequests();
-              return { cancel: true };
-            }
-          } else if (route.redirectUrl) {
-            // action === 'redirect'
-            request.redirectedTo = route.redirectUrl;
-            if (IS_FIREFOX) {
-              this.requests.push(request);
-              this.trimRequests();
-              return { redirectUrl: route.redirectUrl };
+        // Check if this request matches any block/redirect routes
+        for (const route of this.routes.values()) {
+          if (this.matchesPattern(details.url, route.pattern)) {
+            if (route.action === 'block') {
+              request.blocked = true;
+              if (IS_FIREFOX) {
+                this.requests.push(request);
+                this.trimRequests();
+                return { cancel: true };
+              }
+            } else if (route.redirectUrl) {
+              // action === 'redirect'
+              request.redirectedTo = route.redirectUrl;
+              if (IS_FIREFOX) {
+                this.requests.push(request);
+                this.trimRequests();
+                return { redirectUrl: route.redirectUrl };
+              }
             }
           }
         }
-      }
 
-      this.requests.push(request);
-      this.trimRequests();
+        this.requests.push(request);
+        this.trimRequests();
+      } catch (err) {
+        console.error('[browser-cli] NetworkManager request listener error:', err);
+      }
 
       return undefined;
     };

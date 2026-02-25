@@ -66,6 +66,8 @@ export interface HandshakeMessage {
   protocolVersion: string;
   extensionId: string;
   browser?: BrowserInfo;
+  /** Persistent client ID for stable session assignment across reconnections */
+  clientId?: string;
 }
 
 /** Daemon → Extension: handshake acknowledgement */

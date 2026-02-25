@@ -11,7 +11,7 @@ import { getSocketPath } from '../util/paths.js';
 import { logger } from '../util/logger.js';
 
 /** Get root program options */
-export function getRootOpts(cmd: Command): { session?: string; json?: boolean } {
+export function getRootOpts(cmd: Command): { session?: string; tab?: string; json?: boolean } {
   // Walk up to root
   let root = cmd;
   while (root.parent) root = root.parent;
@@ -60,8 +60,19 @@ export async function sendCommand<A extends ActionType>(
   }
 
   try {
+    // Command-level tabId takes precedence over global --tab option
+    let tabId = options?.tabId;
+    if (tabId == null && rootOpts.tab) {
+      tabId = Number(rootOpts.tab);
+      if (Number.isNaN(tabId)) {
+        logger.error(
+          `Invalid --tab value "${rootOpts.tab}" — must be a numeric tab ID (see: tab list)`,
+        );
+        process.exit(1);
+      }
+    }
     const response = await client.sendCommand(command, {
-      tabId: options?.tabId,
+      tabId,
       sessionId: rootOpts.session,
     });
 

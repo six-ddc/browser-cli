@@ -7,6 +7,7 @@ const program = new Command()
   .description(`${APP_NAME} — browser automation from the command line`)
   .version(APP_VERSION)
   .option('--session <sessionId>', 'Target a specific browser connection by session ID')
+  .option('--tab <tabId>', 'Target a specific tab by ID (from tab list)')
   .option('--json', 'Output in JSON format');
 
 registerCommands(program);

@@ -598,6 +598,32 @@ export interface StateImportResult {
   imported: { cookies: number; localStorage: number; sessionStorage: number };
 }
 
+// ─── Container (Firefox contextualIdentities) ──────────────────────
+
+export type ContainerListParams = z.infer<typeof schemas.containerListParamsSchema>;
+export interface ContainerInfo {
+  name: string;
+  color: string;
+  icon: string;
+  cookieStoreId: string;
+}
+export interface ContainerListResult {
+  containers: ContainerInfo[];
+}
+
+export type ContainerCreateParams = z.infer<typeof schemas.containerCreateParamsSchema>;
+export interface ContainerCreateResult {
+  name: string;
+  color: string;
+  icon: string;
+  cookieStoreId: string;
+}
+
+export type ContainerRemoveParams = z.infer<typeof schemas.containerRemoveParamsSchema>;
+export interface ContainerRemoveResult {
+  removed: true;
+}
+
 // ─── Markdown ───────────────────────────────────────────────────────
 export type MarkdownParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface MarkdownResult {
@@ -724,6 +750,10 @@ export type ActionType =
   // State Management
   | 'stateExport'
   | 'stateImport'
+  // Container
+  | 'containerList'
+  | 'containerCreate'
+  | 'containerRemove'
   // Markdown
   | 'markdown';
 
@@ -814,6 +844,9 @@ export type Command =
   | { action: 'setHeaders'; params: SetHeadersParams }
   | { action: 'stateExport'; params: StateExportParams }
   | { action: 'stateImport'; params: StateImportParams }
+  | { action: 'containerList'; params: ContainerListParams }
+  | { action: 'containerCreate'; params: ContainerCreateParams }
+  | { action: 'containerRemove'; params: ContainerRemoveParams }
   | { action: 'markdown'; params: MarkdownParams };
 
 /** Map action type → result type */
@@ -900,5 +933,8 @@ export interface ActionResultMap {
   setHeaders: SetHeadersResult;
   stateExport: StateExportResult;
   stateImport: StateImportResult;
+  containerList: ContainerListResult;
+  containerCreate: ContainerCreateResult;
+  containerRemove: ContainerRemoveResult;
   markdown: MarkdownResult;
 }

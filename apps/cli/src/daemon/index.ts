@@ -10,8 +10,9 @@ import { WsServer } from './ws-server.js';
 import { SocketServer } from './socket-server.js';
 import { Bridge } from './bridge.js';
 import { writeDaemonPid, cleanupPidFile } from './process.js';
-import { getSocketPath } from '../util/paths.js';
+import { getSocketPath, getAppDir } from '../util/paths.js';
 import { logger } from '../util/logger.js';
+import { loadSessionMap, saveSessionMap } from './session-store.js';
 
 async function main() {
   const { values } = parseArgs({
@@ -30,8 +31,18 @@ async function main() {
   // Write PID
   writeDaemonPid(process.pid);
 
+  // Load persisted clientId→sessionId mapping
+  const appDir = getAppDir();
+  const sessionMap = loadSessionMap(appDir);
+  logger.info(`Loaded ${sessionMap.size} persisted session mapping(s)`);
+
   // Create servers
-  const wsServer = new WsServer();
+  const wsServer = new WsServer({
+    sessionMap,
+    onSessionMapChange: (map) => {
+      saveSessionMap(appDir, map);
+    },
+  });
   const bridge = new Bridge(wsServer);
   const socketServer = new SocketServer(
     (req) => bridge.handleRequest(req),

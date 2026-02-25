@@ -45,6 +45,9 @@ export enum ErrorCode {
   // Frame
   FRAME_ERROR = 'FRAME_ERROR',
   FRAME_NOT_FOUND = 'FRAME_NOT_FOUND',
+
+  // Container
+  CONTAINER_NOT_FOUND = 'CONTAINER_NOT_FOUND',
 }
 
 export interface ProtocolError {

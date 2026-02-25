@@ -64,6 +64,9 @@ const BG_ACTIONS = new Set([
   'bookmarkRemove',
   'bookmarkList',
   'historySearch',
+  'containerList',
+  'containerCreate',
+  'containerRemove',
   'setViewport',
   'setHeaders',
   'stateExport',
@@ -79,29 +82,39 @@ async function resolveTargetTab(tabId?: number): Promise<number> {
   return activeTab.id;
 }
 
+/** MV3 uses browser.action, MV2 (Firefox) uses browser.browserAction */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- browser.action is undefined at runtime in Firefox MV2
+const actionApi =
+  browser.action ?? (browser as unknown as { browserAction: typeof browser.action }).browserAction;
+
 /** Update extension badge to reflect current state */
 function updateBadge(mode: 'connected' | 'disconnected' | 'reconnecting' | 'disabled'): void {
   switch (mode) {
     case 'connected':
-      void browser.action.setBadgeText({ text: '' });
+      void actionApi.setBadgeText({ text: 'ON' });
+      void actionApi.setBadgeBackgroundColor({ color: '#E8F0FE' }); // light blue
+      void actionApi.setBadgeTextColor({ color: '#1A73E8' }); // blue
       break;
     case 'disconnected':
     case 'reconnecting':
-      void browser.action.setBadgeText({ text: '...' });
-      void browser.action.setBadgeBackgroundColor({ color: '#F9AB00' }); // yellow
+      void actionApi.setBadgeText({ text: '...' });
+      void actionApi.setBadgeBackgroundColor({ color: '#F9AB00' }); // yellow
       break;
     case 'disabled':
-      void browser.action.setBadgeText({ text: 'OFF' });
-      void browser.action.setBadgeBackgroundColor({ color: '#9AA0A6' }); // gray
+      void actionApi.setBadgeText({ text: '' });
       break;
   }
 }
 
-/** Tear down WsClient and mark as disabled */
+/** Tear down WsClient, NetworkManager and mark as disabled */
 function teardown(): void {
   if (wsClient) {
     wsClient.stop();
     wsClient = null;
+  }
+  if (networkManager) {
+    void networkManager.destroy();
+    networkManager = null;
   }
   initializing = false;
   void setState({
@@ -113,28 +126,46 @@ function teardown(): void {
   updateBadge('disabled');
 }
 
+/** Get or create a persistent client ID for stable session assignment */
+async function getOrCreateClientId(): Promise<string> {
+  const result = await browser.storage.local.get('browserCliClientId');
+  if (typeof result.browserCliClientId === 'string') {
+    return result.browserCliClientId;
+  }
+  const clientId = crypto.randomUUID();
+  await browser.storage.local.set({ browserCliClientId: clientId });
+  console.log('[browser-cli] Generated new clientId:', clientId);
+  return clientId;
+}
+
 /** Re-create WsClient + NetworkManager if the SW was restarted */
 async function ensureInitialized(): Promise<void> {
   if (wsClient || initializing) return;
+  // Set immediately before any await to prevent concurrent calls
+  // (e.g. defineBackground + onInstalled racing in Firefox MV2)
+  initializing = true;
 
   // Check if extension is enabled before initializing
   const enabled = await getEnabled();
   if (!enabled) {
+    initializing = false;
     updateBadge('disabled');
     return;
   }
 
-  initializing = true;
-
   try {
     console.log('[browser-cli] Lazy re-initialization after SW wake');
 
+    // Reset stale connection state from a previous instance (e.g. after extension reload)
+    await setState({ connected: false, sessionId: null, reconnecting: false, nextRetryIn: null });
+
     networkManager = new NetworkManager();
 
-    const port = await getPort();
+    const [port, clientId] = await Promise.all([getPort(), getOrCreateClientId()]);
 
     wsClient = new WsClient({
       port,
+      clientId,
       messageHandler: handleCommand,
       onConnect: () => {
         console.log('[browser-cli] Connected to daemon');
@@ -264,23 +295,28 @@ if (import.meta.env.FIREFOX) {
   try {
     browser.webRequest.onHeadersReceived.addListener(
       (details) => {
-        const headers = details.responseHeaders?.map((h) => {
-          if (h.name.toLowerCase() === 'content-security-policy' && h.value) {
-            let csp = h.value;
-            if (!csp.includes("'unsafe-eval'")) {
-              if (/script-src\s/.test(csp)) {
-                csp = csp.replace(/script-src\s+/, "script-src 'unsafe-eval' ");
-              } else if (/default-src\s/.test(csp)) {
-                // default-src is the fallback for script-src per CSP spec
-                csp = csp.replace(/default-src\s+/, "default-src 'unsafe-eval' ");
+        try {
+          const headers = details.responseHeaders?.map((h) => {
+            if (h.name.toLowerCase() === 'content-security-policy' && h.value) {
+              let csp = h.value;
+              if (!csp.includes("'unsafe-eval'")) {
+                if (/script-src\s/.test(csp)) {
+                  csp = csp.replace(/script-src\s+/, "script-src 'unsafe-eval' ");
+                } else if (/default-src\s/.test(csp)) {
+                  // default-src is the fallback for script-src per CSP spec
+                  csp = csp.replace(/default-src\s+/, "default-src 'unsafe-eval' ");
+                }
               }
+              csp = csp.replace(/;\s*require-trusted-types-for\s+[^;]*/g, '');
+              return { ...h, value: csp };
             }
-            csp = csp.replace(/;\s*require-trusted-types-for\s+[^;]*/g, '');
-            return { ...h, value: csp };
-          }
-          return h;
-        });
-        return { responseHeaders: headers };
+            return h;
+          });
+          return { responseHeaders: headers };
+        } catch (err) {
+          console.error('[browser-cli] CSP header modification error:', err);
+          return {}; // Pass through unmodified
+        }
       },
       { urls: ['<all_urls>'], types: ['main_frame', 'sub_frame'] },
       ['blocking', 'responseHeaders'],
@@ -320,7 +356,9 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
 // Listen for port and enabled changes from popup
 browser.storage.onChanged.addListener((changes) => {
   const stateChange = changes['browserCliState'];
-  if (stateChange?.newValue && stateChange.oldValue) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- changes may not contain our key when other storage keys change (e.g. browserCliClientId)
+  if (!stateChange) return;
+  if (stateChange.newValue && stateChange.oldValue) {
     const newState = stateChange.newValue as Record<string, unknown>;
     const oldState = stateChange.oldValue as Record<string, unknown>;
 
@@ -402,11 +440,11 @@ browser.runtime.onMessage.addListener(
           .executeScript({
             target: { tabId: sender.tab.id },
             world: 'MAIN',
-            func: (expr: string) => (0, eval)(expr),
+            func: (expr: string): unknown => (0, eval)(expr),
             args: [message.expression ?? ''],
           })
           .then((results) => {
-            sendResponse({ result: results[0]?.result });
+            sendResponse({ result: (results[0] as { result?: unknown } | undefined)?.result });
           })
           .catch((err: unknown) => {
             sendResponse({

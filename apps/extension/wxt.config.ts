@@ -29,7 +29,7 @@ export default defineConfig({
             'userScripts',
             'tabGroups', // Chrome-only: tab group management
           ]
-        : ['webRequest', 'webRequestBlocking']),
+        : ['webRequest', 'webRequestBlocking', 'contextualIdentities']),
     ],
     host_permissions: ['<all_urls>'],
     // Firefox requires a gecko add-on ID

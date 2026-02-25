@@ -91,10 +91,10 @@ function waitForDaemonReady(child: ChildProcess, timeout: number): Promise<void>
     child.on('message', (msg: unknown) => {
       clearTimeout(timer);
       const m = msg as Record<string, unknown>;
-      if (m?.ready) {
+      if (m.ready) {
         resolve();
-      } else if (m?.error) {
-        reject(new Error(String(m.error)));
+      } else if (m.error) {
+        reject(new Error(typeof m.error === 'string' ? m.error : JSON.stringify(m.error)));
       }
     });
 

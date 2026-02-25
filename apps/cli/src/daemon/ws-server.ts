@@ -35,6 +35,13 @@ export interface PendingRequest {
 
 const MAX_STORED_EVENTS = 1000;
 
+export interface WsServerOptions {
+  /** Pre-loaded clientId→sessionId mapping (from disk) */
+  sessionMap?: Map<string, string>;
+  /** Called when the clientId→sessionId mapping changes (for persistence) */
+  onSessionMapChange?: (map: Map<string, string>) => void;
+}
+
 export class WsServer {
   private wss: WebSocketServer | null = null;
   private connections = new Map<string, ExtensionConnection>();
@@ -42,6 +49,14 @@ export class WsServer {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private pending = new Map<string, PendingRequest>();
   private events: EventMessage[] = [];
+  /** Maps persistent clientId → friendly sessionId */
+  private clientSessionMap: Map<string, string>;
+  private onSessionMapChange?: (map: Map<string, string>) => void;
+
+  constructor(options: WsServerOptions = {}) {
+    this.clientSessionMap = options.sessionMap ?? new Map<string, string>();
+    this.onSessionMapChange = options.onSessionMapChange;
+  }
 
   get isConnected(): boolean {
     return this.connections.size > 0;
@@ -175,7 +190,7 @@ export class WsServer {
       );
     }
 
-    const sessionId = generateFriendlyId();
+    const sessionId = this.resolveSessionId(msg.clientId);
     this.connections.set(sessionId, {
       ws,
       extensionId: msg.extensionId,
@@ -197,6 +212,39 @@ export class WsServer {
     logger.success(
       `Extension connected (id=${msg.extensionId}, session=${sessionId}${browserStr})`,
     );
+  }
+
+  /**
+   * Resolve a stable session ID for the given clientId.
+   * Reuses existing mapping when possible, generates a new one otherwise.
+   */
+  private resolveSessionId(clientId?: string): string {
+    if (!clientId) {
+      // Legacy extension without clientId — always generate a new ID
+      return generateFriendlyId();
+    }
+
+    const existing = this.clientSessionMap.get(clientId);
+    if (existing && !this.connections.has(existing)) {
+      // Reuse the stored session ID (no active connection using it)
+      return existing;
+    }
+
+    if (existing && this.connections.has(existing)) {
+      // Session ID is taken by a stale connection — terminate it immediately
+      // (same browser reconnecting after extension reload; old WS is dead)
+      const oldConn = this.connections.get(existing);
+      logger.info(`Replacing stale connection for session=${existing} (same clientId reconnected)`);
+      oldConn?.ws.terminate();
+      this.connections.delete(existing);
+      return existing;
+    }
+
+    // New clientId — generate and persist
+    const sessionId = generateFriendlyId();
+    this.clientSessionMap.set(clientId, sessionId);
+    this.onSessionMapChange?.(this.clientSessionMap);
+    return sessionId;
   }
 
   private handlePong(ws: WebSocket, msg: PongMessage) {
