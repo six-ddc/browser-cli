@@ -53,7 +53,6 @@ vi.mock('../src/commands/shared.js', () => ({
       enabled: true,
       checked: false,
       cookies: [],
-      entries: {},
       tabs: [],
       routes: [],
       requests: [],
@@ -83,6 +82,18 @@ vi.mock('../src/commands/shared.js', () => ({
       closed: true,
       set: true,
       ruleCount: 0,
+      // Tab groups
+      groupId: 1,
+      tabCount: 2,
+      groups: [],
+      ungrouped: 0,
+      focused: true,
+      // Bookmarks
+      bookmarks: [],
+      id: '1',
+      removed: true,
+      // History
+      entries: [],
     });
   },
 }));
@@ -1015,6 +1026,107 @@ describe('AgentBrowser CLI syntax compatibility', () => {
     it('set headers <json>', async () => {
       await parseArgs('set', 'headers', '{"X-Custom":"value"}');
       expectCommand('setHeaders', { headers: { 'X-Custom': 'value' } });
+    });
+  });
+
+  // ─── Tab groups ────────────────────────────────────────────────────
+
+  describe('tab group', () => {
+    it('tab group <tabIds...> — create group', async () => {
+      await parseArgs('tab', 'group', '1', '2', '3');
+      expectCommand('tabGroupCreate', { tabIds: [1, 2, 3] });
+    });
+
+    it('tab group update <groupId> --title --color', async () => {
+      await parseArgs('tab', 'group', 'update', '5', '--title', 'Work', '--color', 'blue');
+      expectCommand('tabGroupUpdate', { groupId: 5, title: 'Work', color: 'blue' });
+    });
+
+    it('tab group update <groupId> --collapse', async () => {
+      await parseArgs('tab', 'group', 'update', '5', '--collapse');
+      expectCommand('tabGroupUpdate', { groupId: 5, collapsed: true });
+    });
+
+    it('tab group update <groupId> --expand', async () => {
+      await parseArgs('tab', 'group', 'update', '5', '--expand');
+      expectCommand('tabGroupUpdate', { groupId: 5, collapsed: false });
+    });
+
+    it('tab groups — list groups', async () => {
+      await parseArgs('tab', 'groups');
+      expectCommand('tabGroupList', {});
+    });
+
+    it('tab ungroup <tabIds...>', async () => {
+      await parseArgs('tab', 'ungroup', '1', '2');
+      expectCommand('tabUngroup', { tabIds: [1, 2] });
+    });
+  });
+
+  // ─── Window focus ──────────────────────────────────────────────────
+
+  describe('window focus', () => {
+    it('window focus (bare) — focus current window', async () => {
+      await parseArgs('window', 'focus');
+      expectCommand('windowFocus', {});
+    });
+
+    it('window focus <windowId>', async () => {
+      await parseArgs('window', 'focus', '42');
+      expectCommand('windowFocus', { windowId: 42 });
+    });
+  });
+
+  // ─── Bookmarks ────────────────────────────────────────────────────
+
+  describe('bookmark', () => {
+    it('bookmark (bare) — list all bookmarks', async () => {
+      await parseArgs('bookmark');
+      expectCommand('bookmarkList', {});
+    });
+
+    it('bookmark <search> — search bookmarks', async () => {
+      await parseArgs('bookmark', 'github');
+      expectCommand('bookmarkList', { query: 'github' });
+    });
+
+    it('bookmark add <url>', async () => {
+      await parseArgs('bookmark', 'add', 'https://example.com');
+      expectCommand('bookmarkAdd', { url: 'https://example.com' });
+    });
+
+    it('bookmark add <url> <title>', async () => {
+      await parseArgs('bookmark', 'add', 'https://example.com', 'Example Site');
+      expectCommand('bookmarkAdd', { url: 'https://example.com', title: 'Example Site' });
+    });
+
+    it('bookmark remove <id>', async () => {
+      await parseArgs('bookmark', 'remove', '42');
+      expectCommand('bookmarkRemove', { id: '42' });
+    });
+  });
+
+  // ─── History ──────────────────────────────────────────────────────
+
+  describe('history', () => {
+    it('history (bare) — list recent history', async () => {
+      await parseArgs('history');
+      expectCommand('historySearch', { text: '', limit: 20 });
+    });
+
+    it('history --limit 5', async () => {
+      await parseArgs('history', '--limit', '5');
+      expectCommand('historySearch', { text: '', limit: 5 });
+    });
+
+    it('history search <text>', async () => {
+      await parseArgs('history', 'search', 'github');
+      expectCommand('historySearch', { text: 'github', limit: 20 });
+    });
+
+    it('history --limit 50 search <text>', async () => {
+      await parseArgs('history', '--limit', '50', 'search', 'example');
+      expectCommand('historySearch', { text: 'example', limit: 50 });
     });
   });
 

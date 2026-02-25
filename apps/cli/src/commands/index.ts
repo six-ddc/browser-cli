@@ -62,6 +62,10 @@ import { stateCommand } from './state.js';
 import { findCommand } from './find.js';
 // Markdown
 import { markdownCommand } from './markdown.js';
+// Bookmarks
+import { bookmarkCommand } from './bookmark.js';
+// History
+import { historyCommand } from './history.js';
 
 export function registerCommands(program: Command): void {
   // Lifecycle
@@ -158,4 +162,10 @@ export function registerCommands(program: Command): void {
 
   // Markdown
   program.addCommand(markdownCommand);
+
+  // Bookmarks
+  program.addCommand(bookmarkCommand);
+
+  // History
+  program.addCommand(historyCommand);
 }

@@ -430,6 +430,141 @@ async function routeCommand(
       }
       return { closed: true };
     }
+    case 'windowFocus': {
+      const { windowId } = command.params;
+      const targetId = windowId ?? (await browser.windows.getCurrent()).id!;
+      await browser.windows.update(targetId, { focused: true });
+      return { windowId: targetId, focused: true };
+    }
+
+    // ─── Tab Groups ────────────────────────────────────────────
+    case 'tabGroupCreate': {
+      if (import.meta.env.FIREFOX) {
+        return { groupId: 0, tabCount: 0, warning: 'Tab groups are not supported in Firefox.' };
+      }
+      const { tabIds } = command.params;
+      const chromeTabsGroup = (
+        browser.tabs as unknown as { group: (opts: { tabIds: number[] }) => Promise<number> }
+      ).group;
+      const groupId = await chromeTabsGroup({ tabIds });
+      return { groupId, tabCount: tabIds.length };
+    }
+    case 'tabGroupUpdate': {
+      if (import.meta.env.FIREFOX) {
+        return {
+          groupId: command.params.groupId,
+          title: null,
+          color: 'grey',
+          warning: 'Tab groups are not supported in Firefox.',
+        };
+      }
+      const { groupId, title, color, collapsed } = command.params;
+      interface TabGroupInfo {
+        id: number;
+        title?: string;
+        color: string;
+      }
+      const tabGroups = (
+        globalThis as unknown as {
+          chrome: { tabGroups: { update: (id: number, props: object) => Promise<TabGroupInfo> } };
+        }
+      ).chrome.tabGroups;
+      const group = await tabGroups.update(groupId, { title, color, collapsed });
+      return { groupId: group.id, title: group.title ?? null, color: group.color };
+    }
+    case 'tabGroupList': {
+      if (import.meta.env.FIREFOX) {
+        return { groups: [], warning: 'Tab groups are not supported in Firefox.' };
+      }
+      interface ChromeTabGroup {
+        id: number;
+        title?: string;
+        color: string;
+        collapsed: boolean;
+        windowId: number;
+      }
+      const tabGroups = (
+        globalThis as unknown as {
+          chrome: { tabGroups: { query: (filter: object) => Promise<ChromeTabGroup[]> } };
+        }
+      ).chrome.tabGroups;
+      const groups = await tabGroups.query({});
+      const tabs = await browser.tabs.query({});
+      return {
+        groups: groups.map((g) => ({
+          id: g.id,
+          title: g.title ?? null,
+          color: g.color,
+          collapsed: g.collapsed,
+          windowId: g.windowId,
+          tabCount: tabs.filter(
+            (t) => (t as Browser.tabs.Tab & { groupId?: number }).groupId === g.id,
+          ).length,
+        })),
+      };
+    }
+    case 'tabUngroup': {
+      if (import.meta.env.FIREFOX) {
+        return { ungrouped: 0, warning: 'Tab groups are not supported in Firefox.' };
+      }
+      const { tabIds } = command.params;
+      const chromeTabsUngroup = (
+        browser.tabs as unknown as { ungroup: (tabIds: number[]) => Promise<void> }
+      ).ungroup;
+      await chromeTabsUngroup(tabIds);
+      return { ungrouped: tabIds.length };
+    }
+
+    // ─── Bookmarks ─────────────────────────────────────────────
+    case 'bookmarkAdd': {
+      const { url, title } = command.params;
+      const bookmark = await browser.bookmarks.create({ url, title: title ?? url });
+      return { id: bookmark.id, url: bookmark.url!, title: bookmark.title };
+    }
+    case 'bookmarkRemove': {
+      const { id } = command.params;
+      await browser.bookmarks.remove(id);
+      return { removed: true };
+    }
+    case 'bookmarkList': {
+      const { query, limit } = command.params;
+      const results = query
+        ? await browser.bookmarks.search(query)
+        : await browser.bookmarks.search({ query: '' });
+      const bookmarks = results
+        .filter((b) => b.url) // exclude folders
+        .slice(0, limit ?? 100);
+      return {
+        bookmarks: bookmarks.map((b) => ({
+          id: b.id,
+          url: b.url!,
+          title: b.title,
+          dateAdded: b.dateAdded,
+        })),
+        total: bookmarks.length,
+      };
+    }
+
+    // ─── History ───────────────────────────────────────────────
+    case 'historySearch': {
+      const { text, limit, startTime, endTime } = command.params;
+      const results = await browser.history.search({
+        text: text ?? '',
+        maxResults: limit ?? 100,
+        startTime,
+        endTime,
+      });
+      return {
+        entries: results.map((h) => ({
+          id: h.id,
+          url: h.url!,
+          title: h.title ?? '',
+          lastVisitTime: h.lastVisitTime,
+          visitCount: h.visitCount,
+        })),
+        total: results.length,
+      };
+    }
 
     // ─── State Management ──────────────────────────────────────
     case 'stateExport': {
@@ -660,7 +795,16 @@ export function getFallbackErrorCode(action: string): ErrorCode {
   if (action === 'screenshot') {
     return ErrorCode.SCREENSHOT_FAILED;
   }
-  if (['windowNew', 'windowList', 'windowClose'].includes(action)) {
+  if (['windowNew', 'windowList', 'windowClose', 'windowFocus'].includes(action)) {
+    return ErrorCode.UNKNOWN;
+  }
+  if (['tabGroupCreate', 'tabGroupUpdate', 'tabGroupList', 'tabUngroup'].includes(action)) {
+    return ErrorCode.TAB_NOT_FOUND;
+  }
+  if (['bookmarkAdd', 'bookmarkRemove', 'bookmarkList'].includes(action)) {
+    return ErrorCode.UNKNOWN;
+  }
+  if (action === 'historySearch') {
     return ErrorCode.UNKNOWN;
   }
   return ErrorCode.UNKNOWN;

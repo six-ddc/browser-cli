@@ -17,10 +17,18 @@ export default defineConfig({
       'scripting',
       'storage',
       'alarms',
+      'bookmarks',
+      'history',
       // Chrome: declarativeNetRequest for network interception
       // Firefox: webRequest + webRequestBlocking
       ...(browser !== 'firefox'
-        ? ['declarativeNetRequest', 'declarativeNetRequestFeedback', 'webRequest', 'userScripts']
+        ? [
+            'declarativeNetRequest',
+            'declarativeNetRequestFeedback',
+            'webRequest',
+            'userScripts',
+            'tabGroups', // Chrome-only: tab group management
+          ]
         : ['webRequest', 'webRequestBlocking']),
     ],
     host_permissions: ['<all_urls>'],

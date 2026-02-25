@@ -278,6 +278,47 @@ export const windowNewParamsSchema = z.object({
 export const windowCloseParamsSchema = z.object({
   windowId: z.number().optional(),
 });
+export const windowFocusParamsSchema = z.object({
+  windowId: z.number().optional(),
+});
+
+// Tab Group
+export const tabGroupCreateParamsSchema = z.object({
+  tabIds: z.array(z.number()),
+});
+export const tabGroupUpdateParamsSchema = z.object({
+  groupId: z.number(),
+  title: z.string().optional(),
+  color: z
+    .enum(['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'])
+    .optional(),
+  collapsed: z.boolean().optional(),
+});
+export const tabGroupListParamsSchema = z.object({});
+export const tabUngroupParamsSchema = z.object({
+  tabIds: z.array(z.number()),
+});
+
+// Bookmark
+export const bookmarkAddParamsSchema = z.object({
+  url: z.string(),
+  title: z.string().optional(),
+});
+export const bookmarkRemoveParamsSchema = z.object({
+  id: z.string(),
+});
+export const bookmarkListParamsSchema = z.object({
+  query: z.string().optional(),
+  limit: z.number().optional(),
+});
+
+// History
+export const historySearchParamsSchema = z.object({
+  text: z.string().optional(),
+  limit: z.number().optional(),
+  startTime: z.number().optional(),
+  endTime: z.number().optional(),
+});
 
 // Browser Config
 export const setViewportParamsSchema = z.object({
@@ -388,6 +429,15 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('windowNew'), params: windowNewParamsSchema }),
   z.object({ action: z.literal('windowList'), params: emptyParamsSchema }),
   z.object({ action: z.literal('windowClose'), params: windowCloseParamsSchema }),
+  z.object({ action: z.literal('windowFocus'), params: windowFocusParamsSchema }),
+  z.object({ action: z.literal('tabGroupCreate'), params: tabGroupCreateParamsSchema }),
+  z.object({ action: z.literal('tabGroupUpdate'), params: tabGroupUpdateParamsSchema }),
+  z.object({ action: z.literal('tabGroupList'), params: tabGroupListParamsSchema }),
+  z.object({ action: z.literal('tabUngroup'), params: tabUngroupParamsSchema }),
+  z.object({ action: z.literal('bookmarkAdd'), params: bookmarkAddParamsSchema }),
+  z.object({ action: z.literal('bookmarkRemove'), params: bookmarkRemoveParamsSchema }),
+  z.object({ action: z.literal('bookmarkList'), params: bookmarkListParamsSchema }),
+  z.object({ action: z.literal('historySearch'), params: historySearchParamsSchema }),
   z.object({ action: z.literal('setViewport'), params: setViewportParamsSchema }),
   z.object({ action: z.literal('setGeo'), params: setGeoParamsSchema }),
   z.object({ action: z.literal('setMedia'), params: setMediaParamsSchema }),

@@ -52,6 +52,42 @@ describe('getFallbackErrorCode', () => {
     expect(getFallbackErrorCode('windowNew')).toBe(ErrorCode.UNKNOWN);
   });
 
+  it('windowFocus -> UNKNOWN', () => {
+    expect(getFallbackErrorCode('windowFocus')).toBe(ErrorCode.UNKNOWN);
+  });
+
+  it('tabGroupCreate -> TAB_NOT_FOUND', () => {
+    expect(getFallbackErrorCode('tabGroupCreate')).toBe(ErrorCode.TAB_NOT_FOUND);
+  });
+
+  it('tabGroupUpdate -> TAB_NOT_FOUND', () => {
+    expect(getFallbackErrorCode('tabGroupUpdate')).toBe(ErrorCode.TAB_NOT_FOUND);
+  });
+
+  it('tabGroupList -> TAB_NOT_FOUND', () => {
+    expect(getFallbackErrorCode('tabGroupList')).toBe(ErrorCode.TAB_NOT_FOUND);
+  });
+
+  it('tabUngroup -> TAB_NOT_FOUND', () => {
+    expect(getFallbackErrorCode('tabUngroup')).toBe(ErrorCode.TAB_NOT_FOUND);
+  });
+
+  it('bookmarkAdd -> UNKNOWN', () => {
+    expect(getFallbackErrorCode('bookmarkAdd')).toBe(ErrorCode.UNKNOWN);
+  });
+
+  it('bookmarkRemove -> UNKNOWN', () => {
+    expect(getFallbackErrorCode('bookmarkRemove')).toBe(ErrorCode.UNKNOWN);
+  });
+
+  it('bookmarkList -> UNKNOWN', () => {
+    expect(getFallbackErrorCode('bookmarkList')).toBe(ErrorCode.UNKNOWN);
+  });
+
+  it('historySearch -> UNKNOWN', () => {
+    expect(getFallbackErrorCode('historySearch')).toBe(ErrorCode.UNKNOWN);
+  });
+
   it('unknownAction -> UNKNOWN', () => {
     expect(getFallbackErrorCode('unknownAction')).toBe(ErrorCode.UNKNOWN);
   });
