@@ -32,11 +32,16 @@ jobs:
       - name: Build extension zips
         run: pnpm --filter @browser-cli/extension build
 
+      - name: Collect extension zips
+        run: |
+          mkdir -p extension-zips
+          cp apps/extension/.output/*.zip extension-zips/
+
       - name: Upload extension artifacts
         uses: actions/upload-artifact@v4
         with:
           name: extension-zips
-          path: apps/extension/.output/*.zip
+          path: extension-zips/
 
   build-cli-binaries:
     runs-on: ubuntu-latest
