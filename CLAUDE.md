@@ -25,13 +25,13 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 ## Packages
 
 - packages/shared — protocol types, Zod schemas, constants (raw .ts exports, no build)
-- apps/cli — Commander.js CLI + daemon process (tsdown ESM build)
+- apps/cli — Commander.js CLI + daemon process (Bun build)
 - apps/extension — WXT + React browser extension (Vite build)
 
 ## Conventions
 
 - Shared package exports raw .ts (no build step), consumers bundle it
-- CLI uses tsdown with noExternal: ['@browser-cli/shared'] to bundle shared code
+- CLI uses Bun with packages: 'bundle' to bundle all dependencies (including shared)
 - CLI has two entry points: src/index.ts (CLI client) and src/daemon/index.ts (daemon)
 - Extension tsconfig extends .wxt/tsconfig.json (run wxt prepare first)
 - Extension typecheck: wxt prepare && tsc --noEmit
@@ -55,7 +55,6 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 
 - **NOT REQUIRED**: Browser-CLI is in active development. Breaking changes are acceptable.
 - Focus on correctness and W3C compliance over backward compatibility
-- Document breaking changes in COMPARISON_WITH_AGENT_BROWSER.md
 - Update version number appropriately (major version bump for breaking changes)
 
 ### ARIA Implementation
@@ -142,7 +141,6 @@ pnpm test:e2e:cross     # Cross-command interactions, --json flag
 ## Gotchas
 
 - WXT + Vite 7 requires Node >= 20 (crypto.hash API)
-- tsdown (Rolldown) requires Node ^20.19.0 for native bindings — .npmrc has node-version=20.19.0
 - Extension CSP must include `connect-src ws://localhost:*` for WS connections
 - chrome.tabs.sendMessage only works on http/https pages (not chrome://, extension pages)
 - fill() must use native value setter to work with React/Vue controlled components
