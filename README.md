@@ -3,26 +3,21 @@
 [![npm version](https://img.shields.io/npm/v/@browser-cli/cli.svg)](https://www.npmjs.com/package/@browser-cli/cli)
 [![license](https://img.shields.io/npm/l/@browser-cli/cli.svg)](LICENSE)
 
-Agentic browser automation CLI with skill support — control Chrome or Firefox via extension.
+Skill-powered browser automation CLI for AI agents — real browser extensions, no CDP or Playwright.
 
-Browser-CLI uses a browser extension as a bridge instead of a browser driver, giving you direct access to browser APIs (cookies, storage, tabs, etc.) while keeping the automation workflow in your terminal. No Playwright or WebDriver required.
+## Why Browser-CLI?
 
-## AI Agent Integration
+Most browser automation tools (Playwright, Puppeteer, Selenium) rely on CDP or WebDriver protocols — running a headless or debug-mode browser that doesn't behave like a real user's browser. Browser-CLI takes a different approach:
 
-Browser-CLI is designed to be used by AI agents as a skill. It ships with a [skill definition](skills/browser-cli/SKILL.md) that agents (like Claude Code) can use to automate browser tasks autonomously.
+- **Real browser, real extensions** — Runs inside your actual Chrome/Firefox via a lightweight extension. Same cookies, same sessions, same login state.
+- **Skill-first design** — Ships with a [skill definition](skills/browser-cli/SKILL.md) so AI agents (Claude Code, etc.) can call `/browser-cli` as a tool and automate tasks autonomously.
+- **No CDP, no WebDriver** — The extension communicates over WebSocket, with zero dependency on Chrome DevTools Protocol or browser drivers.
+- **Agent-friendly output** — Accessibility snapshots with element refs (`@e1`, `@e2`), semantic locators, structured errors with hints, and `--json` mode.
 
 ```bash
-# Agents can use browser-cli as a skill:
-# /browser-cli <describe your browser automation task>
+# AI agents use browser-cli as a skill:
+# /browser-cli navigate to hacker news and get the top 3 stories
 ```
-
-Features that make it agent-friendly:
-
-- **Accessibility snapshots** with element refs (`@e1`, `@e2`) for structured page understanding
-- **Semantic locators** (`role=button`, `text=Submit`, `label=Email`) for resilient element selection
-- **Find command** to locate and act on elements in one step
-- **Structured error messages** with hints for agent self-correction
-- **JSON output mode** (`--json`) for machine-readable responses
 
 ## Architecture
 
@@ -35,63 +30,41 @@ Features that make it agent-friendly:
 
 - **CLI** — Commander.js client that sends commands over a Unix socket
 - **Daemon** — Background process with a WebSocket server (port 9222) + Unix socket server
-- **Extension** — MV3 browser extension (Chrome + Firefox) that routes commands to browser APIs or content scripts
+- **Extension** — Browser extension (Chrome MV3 + Firefox MV2) that routes commands to chrome APIs or content scripts
 
 ## Features
 
-**Navigation** — goto, back, forward, reload, get URL/title
+**Navigation & Pages** — goto, back, forward, reload, markdown extraction, screenshots
 
-**Interaction** — click, double-click, hover, fill, type, press key, clear, focus, keydown/keyup, drag & drop
-
-**Forms** — check, uncheck, select dropdown options, upload files
-
-**Scrolling** — scroll page/element, scroll element into view
-
-**Data Queries** — get text/html/value/attribute, check visibility/enabled/checked state, count elements, bounding box
-
-**Snapshots** — Accessibility tree snapshot with interactive element refs (`@e1`, `@e2`, ...)
+**Interaction** — click, fill, type, press, hover, drag & drop, scroll, focus, check/uncheck, select, upload
 
 **Semantic Locators** — Find elements by role, text, label, placeholder, alt, title, testid, or xpath
 
-**Find Command** — Locate elements and perform actions in one step (`find role button click --name "Submit"`)
+**Find Command** — Locate + act in one step: `find role button click --name "Submit"`
 
-**Screenshots** — Full page or element screenshots (PNG/JPEG)
+**Snapshots** — Accessibility tree with interactive element refs (`@e1`, `@e2`, ...)
 
-**Wait** — Wait for selector, URL pattern, duration, text, load state, or custom function
+**Data Queries** — get text/html/value/attribute, check element state, count, bounding box
 
-**JavaScript** — Evaluate expressions in page context (supports base64 and stdin input)
+**Wait** — Wait for selector, URL, duration, text, load state, or custom function
 
-**Console & Errors** — Capture and retrieve console logs and page errors
+**JavaScript** — Evaluate expressions in page context (base64, stdin, MAIN world)
 
-**Tabs** — Open, list, switch, close tabs
-
-**Windows** — Open, list, close browser windows
+**Tabs & Windows** — Open, list, switch, close tabs and windows; tab groups (Chrome)
 
 **Frames** — Switch between main page and iframes
 
-**Cookies** — Get, set, clear cookies
+**State** — Cookies, localStorage, sessionStorage; save/load state snapshots
 
-**Storage** — Read/write localStorage and sessionStorage
+**Network** — Block or redirect requests, track network activity
 
-**State** — Save/load browser state (cookies + storage) to/from JSON files
+**Dialogs & Console** — Handle alert/confirm/prompt, capture console logs and errors
 
-**Dialogs** — Handle alert, confirm, prompt dialogs
+**Browser Config** — Viewport, geolocation, media preferences, custom headers
 
-**Highlight** — Visually highlight elements on the page
+**Bookmarks & History** — Search and manage bookmarks and browsing history
 
-**Mouse Control** — Low-level mouse move, button down/up, wheel scroll
-
-**Network Interception** — Block or redirect requests, track network activity
-
-**Markdown** — Extract page content as readable Markdown
-
-**Bookmarks** — Search and manage browser bookmarks
-
-**History** — Browse and search browser history
-
-**Browser Configuration** — Set viewport size, geolocation, media preferences, custom HTTP headers
-
-**Containers** — Manage Firefox containers (Firefox only)
+**Containers** — Firefox container management
 
 ## Quick Start
 

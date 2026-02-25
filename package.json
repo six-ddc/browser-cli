@@ -2,7 +2,7 @@
   "name": "@browser-cli/root",
   "private": true,
   "type": "module",
-  "description": "Agentic browser automation CLI with skill support — control Chrome via extension",
+  "description": "Skill-powered browser automation CLI for AI agents — real browser extensions, no CDP or Playwright",
   "author": "six-ddc",
   "license": "MIT",
   "repository": {
