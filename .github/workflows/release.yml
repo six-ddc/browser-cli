@@ -38,7 +38,7 @@ jobs:
           cp apps/extension/.output/*.zip extension-zips/
 
       - name: Upload extension artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: extension-zips
           path: extension-zips/
@@ -91,7 +91,7 @@ jobs:
         run: codesign --force --sign - apps/cli/dist/${{ matrix.outfile }}
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.outfile }}
           path: apps/cli/dist/${{ matrix.outfile }}
