@@ -125,7 +125,7 @@ browser-cli find role button --name "Submit"
 browser-cli stop
 ```
 
-For the full command reference — including all operations, selector types, semantic locators, and workflow examples — see **[skills/skills/browser-cli/SKILL.md](skills/skills/browser-cli/SKILL.md)**.
+For the full command reference — including all operations, selector types, semantic locators, and workflow examples — see **[skills/browser-cli/SKILL.md](skills/browser-cli/SKILL.md)**.
 
 ## Development
 

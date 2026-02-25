@@ -14,7 +14,7 @@ A site guide is worth creating when:
 
 ## File Conventions
 
-- **Location**: `skills/skills/browser-cli/references/sites/<domain>.md`
+- **Location**: `skills/browser-cli/references/sites/<domain>.md`
 - **Naming**: Use the bare domain — `xiaohongshu.com.md`, `twitter.com.md`, `github.com.md`
 - **Language**: Write in the site's primary user language (Chinese sites in Chinese, etc.)
 - **Registration**: Add the new file to the table in `SKILL.md` under "Site-Specific Guides"
@@ -293,7 +293,7 @@ Before submitting, confirm the guide meets all these criteria:
 
 ## Registering in SKILL.md
 
-After creating the guide, add it to `skills/skills/browser-cli/SKILL.md` in the
+After creating the guide, add it to `skills/browser-cli/SKILL.md` in the
 "Site-Specific Guides" table:
 
 ```markdown

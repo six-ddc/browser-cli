@@ -45,7 +45,7 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 
 ### Single Source of Truth
 
-- **`skills/skills/browser-cli/SKILL.md`** is the authoritative CLI command reference.
+- **`skills/browser-cli/SKILL.md`** is the authoritative CLI command reference.
 - Whenever CLI behavior changes — adding, removing, or modifying commands, options, flags, or syntax — **you MUST update SKILL.md** in the same changeset.
 - README.md only contains a brief usage snippet and links to SKILL.md; do NOT duplicate command details in README.md.
 

@@ -217,13 +217,19 @@ browser-cli screenshot [options]
 
 ### Tab Management
 
-| Command             | Description                 |
-| ------------------- | --------------------------- |
-| `tab`               | List all tabs               |
-| `tab <n>`           | Switch to tab by ID         |
-| `tab new [url]`     | Open new tab                |
-| `tab list`          | List all tabs               |
-| `tab close [tabId]` | Close tab (default: active) |
+| Command                                                                  | Description                                |
+| ------------------------------------------------------------------------ | ------------------------------------------ |
+| `tab`                                                                    | List all tabs                              |
+| `tab <n>`                                                                | Switch to tab by ID                        |
+| `tab new [url]`                                                          | Open new tab                               |
+| `tab list`                                                               | List all tabs                              |
+| `tab close [tabId]`                                                      | Close tab (default: active)                |
+| `tab group <tabIds...>`                                                  | Group tabs together (Chrome only)          |
+| `tab group update <groupId> [--title] [--color] [--collapse] [--expand]` | Update a tab group (Chrome only)           |
+| `tab groups`                                                             | List all tab groups (Chrome only)          |
+| `tab ungroup <tabIds...>`                                                | Remove tabs from their group (Chrome only) |
+
+**Tab group colors**: `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`
 
 ### Frame Management (iframe)
 
@@ -313,12 +319,13 @@ browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 
 ### Window Management
 
-| Command                   | Description     |
-| ------------------------- | --------------- |
-| `window`                  | List windows    |
-| `window new [url]`        | Open new window |
-| `window list`             | List windows    |
-| `window close [windowId]` | Close window    |
+| Command                   | Description                          |
+| ------------------------- | ------------------------------------ |
+| `window`                  | List windows                         |
+| `window new [url]`        | Open new window                      |
+| `window list`             | List windows                         |
+| `window close [windowId]` | Close window                         |
+| `window focus [windowId]` | Focus a window (defaults to current) |
 
 ### Browser Configuration
 
@@ -328,6 +335,21 @@ browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 | `set geo <lat> <lng>`           | Override geolocation (`--accuracy <m>`) |
 | `set media <colorScheme>`       | Override media preference (dark/light)  |
 | `set headers <json>`            | Set extra HTTP headers                  |
+
+### Bookmarks
+
+| Command                      | Description                         |
+| ---------------------------- | ----------------------------------- |
+| `bookmark [search]`          | List bookmarks or search by keyword |
+| `bookmark add <url> [title]` | Add a bookmark                      |
+| `bookmark remove <id>`       | Remove a bookmark by ID             |
+
+### History
+
+| Command                 | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `history [--limit N]`   | List recent browser history (default: 20 entries) |
+| `history search <text>` | Search browser history by text (`--limit N`)      |
 
 ### State Management (Save/Load)
 
