@@ -44,21 +44,26 @@ jobs:
           path: extension-zips/
 
   build-cli-binaries:
-    runs-on: ubuntu-latest
-
     strategy:
       matrix:
         include:
           - target: bun-linux-x64
             outfile: browser-cli-linux-x64
+            os: ubuntu-latest
           - target: bun-linux-arm64
             outfile: browser-cli-linux-arm64
+            os: ubuntu-latest
           - target: bun-darwin-x64
             outfile: browser-cli-darwin-x64
+            os: macos-latest
           - target: bun-darwin-arm64
             outfile: browser-cli-darwin-arm64
+            os: macos-latest
           - target: bun-windows-x64
             outfile: browser-cli-windows-x64.exe
+            os: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +85,10 @@ jobs:
       - name: Build binary (${{ matrix.target }})
         working-directory: apps/cli
         run: bun run ./build-binary.ts --target ${{ matrix.target }} --outfile ./dist/${{ matrix.outfile }}
+
+      - name: Ad-hoc sign macOS binary
+        if: startsWith(matrix.target, 'bun-darwin')
+        run: codesign --force --sign - apps/cli/dist/${{ matrix.outfile }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
