@@ -15,6 +15,8 @@ We will acknowledge receipt within 48 hours and aim to release a fix promptly.
 Browser-CLI is a browser automation tool with elevated permissions by design:
 
 - **Extension permissions**: The extension requires `<all_urls>`, `tabs`, `cookies`, `scripting`, and `storage` permissions to function.
-- **Local-only communication**: The daemon binds to `127.0.0.1` only — it does not accept remote connections.
+- **Local-only communication**: The daemon binds to `127.0.0.1` by default — it does not accept remote connections.
+- **Auth token**: When binding to a non-loopback host (`--ws-host`), a cryptographic auth token is required for WebSocket connections. The token is stored at `~/.browser-cli/auth-token` with `0600` permissions.
+- **URL scheme blocking**: Navigation commands (`navigate`, `tab new`, `window new`) block dangerous URL schemes (`javascript:`, `data:`, `vbscript:`).
 - **evaluate command**: Executes arbitrary JavaScript in the page's MAIN world. Only use with trusted input.
 - **Unix socket**: The daemon socket is created in `~/.browser-cli/` with default file permissions.
