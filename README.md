@@ -1,8 +1,28 @@
 # Browser-CLI
 
-Extension-based browser automation from the command line — control Chrome or Firefox without Playwright or WebDriver.
+[![npm version](https://img.shields.io/npm/v/@browser-cli/cli.svg)](https://www.npmjs.com/package/@browser-cli/cli)
+[![license](https://img.shields.io/npm/l/@browser-cli/cli.svg)](LICENSE)
 
-Browser-CLI uses a browser extension as a bridge instead of a browser driver, giving you direct access to browser APIs (cookies, storage, tabs, etc.) while keeping the automation workflow in your terminal.
+Agentic browser automation CLI with skill support — control Chrome or Firefox via extension.
+
+Browser-CLI uses a browser extension as a bridge instead of a browser driver, giving you direct access to browser APIs (cookies, storage, tabs, etc.) while keeping the automation workflow in your terminal. No Playwright or WebDriver required.
+
+## AI Agent Integration
+
+Browser-CLI is designed to be used by AI agents as a skill. It ships with a [skill definition](skills/browser-cli/SKILL.md) that agents (like Claude Code) can use to automate browser tasks autonomously.
+
+```bash
+# Agents can use browser-cli as a skill:
+# /browser-cli <describe your browser automation task>
+```
+
+Features that make it agent-friendly:
+
+- **Accessibility snapshots** with element refs (`@e1`, `@e2`) for structured page understanding
+- **Semantic locators** (`role=button`, `text=Submit`, `label=Email`) for resilient element selection
+- **Find command** to locate and act on elements in one step
+- **Structured error messages** with hints for agent self-correction
+- **JSON output mode** (`--json`) for machine-readable responses
 
 ## Architecture
 
@@ -21,11 +41,9 @@ Browser-CLI uses a browser extension as a bridge instead of a browser driver, gi
 
 **Navigation** — goto, back, forward, reload, get URL/title
 
-**Interaction** — click, double-click, hover, fill, type, press key, clear, focus, keydown/keyup
+**Interaction** — click, double-click, hover, fill, type, press key, clear, focus, keydown/keyup, drag & drop
 
-**Forms** — check, uncheck, select dropdown options
-
-**Drag & Drop** — Drag elements to targets with full DataTransfer API support
+**Forms** — check, uncheck, select dropdown options, upload files
 
 **Scrolling** — scroll page/element, scroll element into view
 
@@ -33,7 +51,7 @@ Browser-CLI uses a browser extension as a bridge instead of a browser driver, gi
 
 **Snapshots** — Accessibility tree snapshot with interactive element refs (`@e1`, `@e2`, ...)
 
-**Semantic Locators** — Find elements by role, text, label, placeholder, alt, title, testid, or xpath (AgentBrowser-compatible syntax)
+**Semantic Locators** — Find elements by role, text, label, placeholder, alt, title, testid, or xpath
 
 **Find Command** — Locate elements and perform actions in one step (`find role button click --name "Submit"`)
 
@@ -43,11 +61,13 @@ Browser-CLI uses a browser extension as a bridge instead of a browser driver, gi
 
 **JavaScript** — Evaluate expressions in page context (supports base64 and stdin input)
 
-**Console** — Capture and retrieve console logs and errors
+**Console & Errors** — Capture and retrieve console logs and page errors
 
 **Tabs** — Open, list, switch, close tabs
 
 **Windows** — Open, list, close browser windows
+
+**Frames** — Switch between main page and iframes
 
 **Cookies** — Get, set, clear cookies
 
@@ -63,45 +83,44 @@ Browser-CLI uses a browser extension as a bridge instead of a browser driver, gi
 
 **Network Interception** — Block or redirect requests, track network activity
 
+**Markdown** — Extract page content as readable Markdown
+
+**Bookmarks** — Search and manage browser bookmarks
+
+**History** — Browse and search browser history
+
 **Browser Configuration** — Set viewport size, geolocation, media preferences, custom HTTP headers
+
+**Containers** — Manage Firefox containers (Firefox only)
 
 ## Quick Start
 
 ### Prerequisites
 
 - Node.js >= 20
-- pnpm >= 10
 - Chrome / Chromium or Firefox
 
 ### Install
 
 ```bash
-git clone https://github.com/six-ddc/browser-cli.git
-cd browser-cli
-pnpm install
-pnpm build
-
-# Link the CLI command globally for local development
-cd apps/cli && pnpm link --global
+npm install -g @browser-cli/cli
 ```
 
-After linking, the `browser-cli` command will be available system-wide. Changes to the code will be reflected after running `pnpm build` (no need to re-link).
-
 ### Load the Extension
+
+The browser extension is required for Browser-CLI to communicate with the browser. Download the latest extension from [GitHub Releases](https://github.com/six-ddc/browser-cli/releases).
 
 **Chrome:**
 
 1. Open `chrome://extensions` in Chrome
 2. Enable **Developer mode**
-3. Click **Load unpacked** and select `apps/extension/.output/chrome-mv3`
-
-Or install from the zip file at `apps/extension/.output/<name>-chrome.zip`.
+3. Click **Load unpacked** and select the extracted extension folder
 
 **Firefox:**
 
 1. Open `about:debugging#/runtime/this-firefox` in Firefox
 2. Click **Load Temporary Add-on**
-3. Select the zip file at `apps/extension/.output/<name>-firefox.zip`
+3. Select the extension zip file
 
 ### Usage
 
@@ -121,6 +140,9 @@ browser-cli click 'role=button[name="Submit"]'
 browser-cli fill 'label=Email' user@example.com
 browser-cli find role button --name "Submit"
 
+# Extract page content
+browser-cli markdown
+
 # Stop the daemon
 browser-cli stop
 ```
@@ -128,6 +150,25 @@ browser-cli stop
 For the full command reference — including all operations, selector types, semantic locators, and workflow examples — see **[skills/browser-cli/SKILL.md](skills/browser-cli/SKILL.md)**.
 
 ## Development
+
+### Prerequisites
+
+- Node.js >= 20
+- pnpm >= 10
+
+### Setup
+
+```bash
+git clone https://github.com/six-ddc/browser-cli.git
+cd browser-cli
+pnpm install
+pnpm build
+
+# Link the CLI command globally for local development
+cd apps/cli && pnpm link --global
+```
+
+After linking, the `browser-cli` command will be available system-wide. Changes to the code will be reflected after running `pnpm build` (no need to re-link).
 
 ```bash
 # Start extension in dev mode (hot reload)
@@ -143,21 +184,6 @@ pnpm test          # Vitest
 
 # Format code
 pnpm format
-```
-
-### Running the CLI locally
-
-After building, you can run the CLI in several ways:
-
-```bash
-# Option 1: Use the globally linked command (recommended)
-browser-cli start
-
-# Option 2: Run directly via node
-node apps/cli/bin/cli.js start
-
-# Option 3: Run via pnpm
-pnpm --filter @browser-cli/cli exec browser-cli start
 ```
 
 To unlink the global command:
