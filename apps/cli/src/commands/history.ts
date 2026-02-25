@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { sendCommand, getRootOpts } from './shared.js';
+import { sendCommand } from './shared.js';
 
 const historyCmd = new Command('history')
   .description('Browse history')
@@ -27,7 +27,7 @@ historyCmd
   .description('Search browser history (use --limit before "search" to customize)')
   .action(async (text: string, _opts: unknown, cmd: Command) => {
     // --limit is on the parent command; read from there
-    const parentOpts = cmd.parent?.opts() as { limit?: string } | undefined;
+    const parentOpts = cmd.parent?.opts<{ limit?: string }>();
     const limit = parseInt(parentOpts?.limit ?? '20', 10);
     const result = await sendCommand(cmd, {
       action: 'historySearch',

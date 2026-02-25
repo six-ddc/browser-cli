@@ -66,6 +66,8 @@ import { markdownCommand } from './markdown.js';
 import { bookmarkCommand } from './bookmark.js';
 // History
 import { historyCommand } from './history.js';
+// Container
+import { containerCommand } from './container.js';
 
 export function registerCommands(program: Command): void {
   // Lifecycle
@@ -168,4 +170,7 @@ export function registerCommands(program: Command): void {
 
   // History
   program.addCommand(historyCommand);
+
+  // Container (Firefox)
+  program.addCommand(containerCommand);
 }

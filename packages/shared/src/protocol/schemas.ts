@@ -188,7 +188,10 @@ export const getConsoleParamsSchema = z.object({
 });
 
 // Tab
-export const tabNewParamsSchema = z.object({ url: z.string().optional() });
+export const tabNewParamsSchema = z.object({
+  url: z.string().optional(),
+  container: z.string().optional(),
+});
 export const tabSwitchParamsSchema = z.object({ tabId: z.number() });
 export const tabCloseParamsSchema = z.object({ tabId: z.number().optional() });
 
@@ -337,6 +340,15 @@ export const setHeadersParamsSchema = z.object({
   headers: z.record(z.string(), z.string()),
 });
 
+// Container (Firefox contextualIdentities)
+export const containerListParamsSchema = z.object({});
+export const containerCreateParamsSchema = z.object({
+  name: z.string(),
+  color: z.string().optional(),
+  icon: z.string().optional(),
+});
+export const containerRemoveParamsSchema = z.object({ name: z.string() });
+
 // State Management
 export const stateExportParamsSchema = z.object({});
 export const stateImportParamsSchema = z.object({
@@ -445,6 +457,9 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('stateExport'), params: stateExportParamsSchema }),
   z.object({ action: z.literal('stateImport'), params: stateImportParamsSchema }),
   z.object({ action: z.literal('markdown'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('containerList'), params: containerListParamsSchema }),
+  z.object({ action: z.literal('containerCreate'), params: containerCreateParamsSchema }),
+  z.object({ action: z.literal('containerRemove'), params: containerRemoveParamsSchema }),
 ]);
 
 // ─── Message Schemas ─────────────────────────────────────────────────
@@ -483,6 +498,7 @@ export const handshakeMessageSchema = z.object({
   protocolVersion: z.string(),
   extensionId: z.string(),
   browser: browserInfoSchema.optional(),
+  clientId: z.string().optional(),
 });
 
 export const handshakeAckMessageSchema = z.object({

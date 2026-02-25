@@ -8,7 +8,7 @@
 
 import type { EvaluateParams } from '@browser-cli/shared';
 
-export async function handleEvaluate(params: EvaluateParams): Promise<{ value: unknown }> {
+export function handleEvaluate(params: EvaluateParams): Promise<{ value: unknown }> {
   const { expression } = params;
 
   // Content script eval() runs in the ISOLATED world and is NOT subject
@@ -16,10 +16,9 @@ export async function handleEvaluate(params: EvaluateParams): Promise<{ value: u
   // (document, elements, attributes) are shared with the page so all
   // querySelector / innerText / getAttribute patterns work.
   try {
-    // eslint-disable-next-line no-eval -- intentional: user-requested eval
-    const result = (0, eval)(expression);
-    return { value: result };
+    const result: unknown = (0, eval)(expression);
+    return Promise.resolve({ value: result });
   } catch (e: unknown) {
-    throw new Error((e as Error).message);
+    return Promise.reject(new Error((e as Error).message));
   }
 }

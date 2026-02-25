@@ -87,10 +87,11 @@ browser-cli fill @e5 "hello"      # Fill element ref
 
 ## Global Options
 
-| Option                  | Description                                                                                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--session <sessionId>` | Target a specific browser connection by session ID (e.g., `brave-falcon`). Only needed with multiple browsers; get IDs from `browser-cli status` |
-| `--json`                | Output in JSON format (machine-readable)                                                                                                         |
+| Option                  | Description                                                                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--session <sessionId>` | Target a specific browser connection by session ID (e.g., `brave-falcon`). Only needed with multiple browsers; get IDs from `browser-cli status`                                                   |
+| `--tab <tabId>`         | Target a specific tab by ID (get IDs from `tab list`). Commands run against this tab instead of the active tab. For `screenshot`, the tab is auto-switched to active first (Chrome API limitation) |
+| `--json`                | Output in JSON format (machine-readable)                                                                                                                                                           |
 
 ## Operations Reference
 
@@ -217,19 +218,33 @@ browser-cli screenshot [options]
 
 ### Tab Management
 
-| Command                                                                  | Description                                |
-| ------------------------------------------------------------------------ | ------------------------------------------ |
-| `tab`                                                                    | List all tabs                              |
-| `tab <n>`                                                                | Switch to tab by ID                        |
-| `tab new [url]`                                                          | Open new tab                               |
-| `tab list`                                                               | List all tabs                              |
-| `tab close [tabId]`                                                      | Close tab (default: active)                |
-| `tab group <tabIds...>`                                                  | Group tabs together (Chrome only)          |
-| `tab group update <groupId> [--title] [--color] [--collapse] [--expand]` | Update a tab group (Chrome only)           |
-| `tab groups`                                                             | List all tab groups (Chrome only)          |
-| `tab ungroup <tabIds...>`                                                | Remove tabs from their group (Chrome only) |
+| Command                                                                  | Description                                      |
+| ------------------------------------------------------------------------ | ------------------------------------------------ |
+| `tab`                                                                    | List all tabs                                    |
+| `tab <n>`                                                                | Switch to tab by ID                              |
+| `tab new [url] [--container <name>]`                                     | Open new tab (optionally in a Firefox container) |
+| `tab list`                                                               | List all tabs                                    |
+| `tab close [tabId]`                                                      | Close tab (default: active)                      |
+| `tab group <tabIds...>`                                                  | Group tabs together (Chrome only)                |
+| `tab group update <groupId> [--title] [--color] [--collapse] [--expand]` | Update a tab group (Chrome only)                 |
+| `tab groups`                                                             | List all tab groups (Chrome only)                |
+| `tab ungroup <tabIds...>`                                                | Remove tabs from their group (Chrome only)       |
 
 **Tab group colors**: `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`
+
+### Container Management (Firefox only)
+
+| Command                                      | Description                 |
+| -------------------------------------------- | --------------------------- |
+| `container list`                             | List all containers         |
+| `container create <name> [--color] [--icon]` | Create a new container      |
+| `container remove <name>`                    | Remove a container          |
+| `tab new [url] --container <name>`           | Open new tab in a container |
+
+**Container colors**: `blue`, `turquoise`, `green`, `yellow`, `orange`, `red`, `pink`, `purple`
+**Container icons**: `fingerprint`, `briefcase`, `dollar`, `cart`, `circle`, `gift`, `vacation`, `food`, `fruit`, `pet`, `tree`, `chill`, `fence`
+
+> On Chrome, container commands output a warning and exit 0 — containers are a Firefox-only feature.
 
 ### Frame Management (iframe)
 

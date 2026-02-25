@@ -17,6 +17,8 @@ export type MessageHandler = (msg: RequestMessage) => Promise<ResponseMessage>;
 
 export interface WsClientOptions {
   port?: number;
+  /** Persistent client ID for stable session assignment across reconnections */
+  clientId?: string;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onHandshake?: (ack: HandshakeAckMessage) => void;
@@ -150,6 +152,7 @@ export class WsClient {
         protocolVersion: PROTOCOL_VERSION,
         extensionId: browser.runtime.id,
         browser: parseBrowserInfo(navigator.userAgent),
+        ...(this.options.clientId ? { clientId: this.options.clientId } : {}),
       };
       this.ws?.send(JSON.stringify(handshake));
     };

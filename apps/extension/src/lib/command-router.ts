@@ -9,6 +9,19 @@ import { ErrorCode, createError, isProtocolError } from '@browser-cli/shared';
 import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
 
+/** Firefox contextualIdentities API (not in WXT/Chrome types) */
+interface ContextualIdentity {
+  name: string;
+  color: string;
+  icon: string;
+  cookieStoreId: string;
+}
+interface ContextualIdentitiesAPI {
+  query: (filter: { name?: string }) => Promise<ContextualIdentity[]>;
+  create: (details: { name: string; color: string; icon: string }) => Promise<ContextualIdentity>;
+  remove: (cookieStoreId: string) => Promise<ContextualIdentity>;
+}
+
 /** Typed response from content script via browser.tabs.sendMessage */
 interface ContentScriptResponse {
   success: boolean;
@@ -114,8 +127,35 @@ async function routeCommand(
 
     // ─── Tabs ──────────────────────────────────────────────────
     case 'tabNew': {
-      const { url } = command.params;
-      const tab = await browser.tabs.create({ url: url || 'about:blank' });
+      const { url, container } = command.params;
+      let cookieStoreId: string | undefined;
+      if (container) {
+        if (!import.meta.env.FIREFOX) {
+          const tab = await browser.tabs.create({ url: url || 'about:blank' });
+          return {
+            tabId: tab.id,
+            url: tab.url || url || 'about:blank',
+            warning:
+              '--container is not supported in Chrome; tab opened without container isolation.',
+          };
+        }
+        const ctxIds = (browser as unknown as { contextualIdentities: ContextualIdentitiesAPI })
+          .contextualIdentities;
+        const identities = await ctxIds.query({ name: container });
+        if (identities.length === 0) {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
+          throw createError(
+            ErrorCode.CONTAINER_NOT_FOUND,
+            `Container "${container}" not found`,
+            'Use "container list" to see available containers, or "container create" to create one.',
+          );
+        }
+        cookieStoreId = identities[0].cookieStoreId;
+      }
+      const tab = await browser.tabs.create({
+        url: url || 'about:blank',
+        ...((cookieStoreId != null ? { cookieStoreId } : {}) as Record<string, unknown>),
+      } as Browser.tabs.CreateProperties);
       return { tabId: tab.id, url: tab.url || url || 'about:blank' };
     }
     case 'tabList': {
@@ -189,6 +229,16 @@ async function routeCommand(
     // ─── Screenshot ────────────────────────────────────────────
     case 'screenshot': {
       const { selector, format, quality } = command.params;
+
+      // captureVisibleTab() can only capture the active tab (Chrome API limitation).
+      // If targeting a non-active tab, auto-switch to it first.
+      const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+      if (!tabs[0] || tabs[0].id !== targetTabId) {
+        await browser.tabs.update(targetTabId, { active: true });
+        await waitForTabLoad(targetTabId, 5_000);
+        // Brief delay to ensure the browser has painted the tab content
+        await new Promise((r) => setTimeout(r, 150));
+      }
 
       // If selector is provided, scroll element into view first via content script
       let cropRect: { x: number; y: number; width: number; height: number } | null = null;
@@ -432,7 +482,8 @@ async function routeCommand(
     }
     case 'windowFocus': {
       const { windowId } = command.params;
-      const targetId = windowId ?? (await browser.windows.getCurrent()).id!;
+      const current = await browser.windows.getCurrent();
+      const targetId = windowId ?? current.id ?? 0;
       await browser.windows.update(targetId, { focused: true });
       return { windowId: targetId, focused: true };
     }
@@ -519,7 +570,7 @@ async function routeCommand(
     case 'bookmarkAdd': {
       const { url, title } = command.params;
       const bookmark = await browser.bookmarks.create({ url, title: title ?? url });
-      return { id: bookmark.id, url: bookmark.url!, title: bookmark.title };
+      return { id: bookmark.id, url: bookmark.url ?? url, title: bookmark.title };
     }
     case 'bookmarkRemove': {
       const { id } = command.params;
@@ -537,7 +588,7 @@ async function routeCommand(
       return {
         bookmarks: bookmarks.map((b) => ({
           id: b.id,
-          url: b.url!,
+          url: b.url ?? '',
           title: b.title,
           dateAdded: b.dateAdded,
         })),
@@ -557,7 +608,7 @@ async function routeCommand(
       return {
         entries: results.map((h) => ({
           id: h.id,
-          url: h.url!,
+          url: h.url ?? '',
           title: h.title ?? '',
           lastVisitTime: h.lastVisitTime,
           visitCount: h.visitCount,
@@ -780,6 +831,64 @@ async function routeCommand(
       return { set: true, ruleCount: rules.length };
     }
 
+    // ─── Container (Firefox contextualIdentities) ───────────────
+    case 'containerList': {
+      if (!import.meta.env.FIREFOX) {
+        return { containers: [], warning: 'Containers are only supported in Firefox.' };
+      }
+      const ctxIdsL = (browser as unknown as { contextualIdentities: ContextualIdentitiesAPI })
+        .contextualIdentities;
+      const identitiesL = await ctxIdsL.query({});
+      return {
+        containers: identitiesL.map((i) => ({
+          name: i.name,
+          color: i.color,
+          icon: i.icon,
+          cookieStoreId: i.cookieStoreId,
+        })),
+      };
+    }
+    case 'containerCreate': {
+      if (!import.meta.env.FIREFOX) {
+        return {
+          name: '',
+          color: '',
+          icon: '',
+          cookieStoreId: '',
+          warning: 'Containers are only supported in Firefox.',
+        };
+      }
+      const { name, color = 'blue', icon = 'circle' } = command.params;
+      const ctxIdsC = (browser as unknown as { contextualIdentities: ContextualIdentitiesAPI })
+        .contextualIdentities;
+      const identity = await ctxIdsC.create({ name, color, icon });
+      return {
+        name: identity.name,
+        color: identity.color,
+        icon: identity.icon,
+        cookieStoreId: identity.cookieStoreId,
+      };
+    }
+    case 'containerRemove': {
+      if (!import.meta.env.FIREFOX) {
+        return { removed: true, warning: 'Containers are only supported in Firefox.' };
+      }
+      const { name } = command.params;
+      const ctxIdsR = (browser as unknown as { contextualIdentities: ContextualIdentitiesAPI })
+        .contextualIdentities;
+      const identitiesR = await ctxIdsR.query({ name });
+      if (identitiesR.length === 0) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
+        throw createError(
+          ErrorCode.CONTAINER_NOT_FOUND,
+          `Container "${name}" not found`,
+          'Use "container list" to see available containers.',
+        );
+      }
+      await ctxIdsR.remove(identitiesR[0].cookieStoreId);
+      return { removed: true };
+    }
+
     default:
       throw new Error(`Unknown background command: ${command.action}`);
   }
@@ -806,6 +915,9 @@ export function getFallbackErrorCode(action: string): ErrorCode {
   }
   if (action === 'historySearch') {
     return ErrorCode.UNKNOWN;
+  }
+  if (['containerList', 'containerCreate', 'containerRemove'].includes(action)) {
+    return ErrorCode.CONTAINER_NOT_FOUND;
   }
   return ErrorCode.UNKNOWN;
 }
