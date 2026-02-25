@@ -12,6 +12,7 @@ import { DEFAULT_WS_PORT } from '@browser-cli/shared';
 export const CONFIGURED_WS_PORT: number = Number(import.meta.env.VITE_WS_PORT) || DEFAULT_WS_PORT;
 
 export interface ConnectionState {
+  enabled: boolean;
   connected: boolean;
   sessionId: string | null;
   port: number;
@@ -22,6 +23,7 @@ export interface ConnectionState {
 }
 
 const DEFAULT_STATE: ConnectionState = {
+  enabled: true,
   connected: false,
   sessionId: null,
   port: CONFIGURED_WS_PORT,
@@ -38,6 +40,7 @@ export function isValidState(raw: unknown): raw is ConnectionState {
   if (typeof raw !== 'object' || raw === null) return false;
   const obj = raw as Record<string, unknown>;
   return (
+    typeof obj.enabled === 'boolean' &&
     typeof obj.connected === 'boolean' &&
     (typeof obj.sessionId === 'string' || obj.sessionId === null) &&
     typeof obj.port === 'number' &&
@@ -57,6 +60,16 @@ export async function getState(): Promise<ConnectionState> {
   if (!raw) return { ...DEFAULT_STATE };
 
   if (!isValidState(raw)) {
+    // Migrate legacy state missing the `enabled` field
+    const obj = raw as Record<string, unknown>;
+    if (typeof obj.connected === 'boolean' && obj.enabled === undefined) {
+      const migrated = { ...DEFAULT_STATE, ...obj, enabled: true };
+      if (isValidState(migrated)) {
+        console.log('[browser-cli] Migrated stored state (added enabled field)');
+        await browser.storage.local.set({ [STORAGE_KEY]: migrated });
+        return migrated;
+      }
+    }
     console.warn('[browser-cli] Invalid stored state, using defaults:', raw);
     return { ...DEFAULT_STATE };
   }
@@ -82,4 +95,9 @@ export async function getPort(): Promise<number> {
 
 export async function setPort(port: number): Promise<void> {
   await setState({ port });
+}
+
+export async function getEnabled(): Promise<boolean> {
+  const state = await getState();
+  return state.enabled;
 }

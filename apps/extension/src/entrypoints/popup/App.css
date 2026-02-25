@@ -103,6 +103,51 @@ body {
   font-weight: 500;
   color: var(--cr-on-surface);
   letter-spacing: 0;
+  flex: 1;
+}
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--cr-outline-variant);
+  border-radius: var(--cr-radius-full);
+  transition: background 0.2s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--cr-surface);
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--cr-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(16px);
 }
 
 /* Status chip */
@@ -138,6 +183,11 @@ body {
   color: var(--cr-yellow-on-container);
 }
 
+.status-chip--disabled {
+  background: var(--cr-surface-variant);
+  color: var(--cr-on-surface-tertiary);
+}
+
 .status-dot {
   width: 6px;
   height: 6px;
@@ -156,6 +206,10 @@ body {
 .status-dot--reconnecting {
   background: var(--cr-yellow);
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-dot--disabled {
+  background: var(--cr-on-surface-tertiary);
 }
 
 @keyframes pulse {
