@@ -191,6 +191,7 @@ export const getConsoleParamsSchema = z.object({
 export const tabNewParamsSchema = z.object({
   url: z.string().optional(),
   container: z.string().optional(),
+  group: z.string().optional(),
 });
 export const tabSwitchParamsSchema = z.object({ tabId: z.number() });
 export const tabCloseParamsSchema = z.object({ tabId: z.number().optional() });

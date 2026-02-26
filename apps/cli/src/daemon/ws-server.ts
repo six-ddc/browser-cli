@@ -3,6 +3,8 @@ import {
   PROTOCOL_VERSION,
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
+  COMMAND_TIMEOUT_MS,
+  DEFAULT_WS_HOST,
   generateFriendlyId,
   schemas,
 } from '@browser-cli/shared';
@@ -99,7 +101,7 @@ export class WsServer {
     return null;
   }
 
-  start(port: number, host = '127.0.0.1'): Promise<void> {
+  start(port: number, host = DEFAULT_WS_HOST): Promise<void> {
     return new Promise((resolve, reject) => {
       this.wss = new WebSocketServer({ port, host });
 
@@ -327,7 +329,7 @@ export class WsServer {
   /** Send a command to the extension and wait for a response */
   sendRequest(
     msg: RequestMessage,
-    timeoutMs: number = 30_000,
+    timeoutMs: number = COMMAND_TIMEOUT_MS,
     sessionId?: string,
   ): Promise<ResponseMessage> {
     return new Promise((resolve, reject) => {

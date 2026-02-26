@@ -58,24 +58,6 @@ export const stopCommand = new Command('stop')
     }
   });
 
-export const closeCommand = new Command('close')
-  .alias('quit')
-  .alias('exit')
-  .description('Close the browser-cli session (stop daemon)')
-  .action(async (_opts: unknown, cmd: Command) => {
-    const rootOpts = getRootOpts(cmd);
-    const stopped = await stopDaemon();
-    if (rootOpts.json) {
-      console.log(JSON.stringify({ success: true, stopped }));
-      return;
-    }
-    if (stopped) {
-      logger.success('Session closed (daemon stopped)');
-    } else {
-      logger.warn('No active session (daemon is not running)');
-    }
-  });
-
 export const statusCommand = new Command('status')
   .description('Show daemon and extension connection status')
   .action(async (_opts: unknown, cmd: Command) => {

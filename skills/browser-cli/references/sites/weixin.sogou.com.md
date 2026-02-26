@@ -2,13 +2,21 @@
 
 > 搜狗微信搜索 — 微信公众号文章搜索引擎，独家收录微信公众号文章内容。
 
+> **Tip**: 为避免干扰用户浏览，建议先在独立标签页中操作：
+>
+> ```
+> browser-cli tab new 'https://weixin.sogou.com' --group browser-cli
+> ```
+>
+> 后续命令加 `--tab <tabId>`。
+
 ## 搜索
 
 ```bash
-browser-cli navigate 'https://weixin.sogou.com/'
-browser-cli fill '#query' '<关键词>'
-browser-cli click 'input[type="submit"]'
-browser-cli wait '.news-list' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://weixin.sogou.com/'
+browser-cli --tab <tabId> fill '#query' '<关键词>'
+browser-cli --tab <tabId> click 'input[type="submit"]'
+browser-cli --tab <tabId> wait '.news-list' --timeout 5000
 ```
 
 > **注意**: `press Enter` 不生效，必须 `click 'input[type="submit"]'`（"搜文章"按钮）提交搜索。
@@ -17,12 +25,12 @@ browser-cli wait '.news-list' --timeout 5000
 
 **URL 模式**: `/weixin?type=2&query=<keyword>&page=<n>`
 
-**等待加载**: `browser-cli wait '.news-list' --timeout 5000`
+**等待加载**: `browser-cli --tab <tabId> wait '.news-list' --timeout 5000`
 
 **提取搜索结果**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll(".news-list > li")].map((el, i) => ({
   index: i + 1,
   title: el.querySelector("h3 a")?.innerText || "",
@@ -54,14 +62,14 @@ URL 参数分页 — 修改 `page` 参数：
 
 ```bash
 # 第 2 页
-browser-cli navigate 'https://weixin.sogou.com/weixin?type=2&query=<关键词>&page=2'
-browser-cli wait '.news-list' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://weixin.sogou.com/weixin?type=2&query=<关键词>&page=2'
+browser-cli --tab <tabId> wait '.news-list' --timeout 5000
 ```
 
 或点击"下一页"：
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const links = [...document.querySelectorAll(".p-fy a")];
   const next = links.find(a => a.innerText === "下一页");
@@ -72,7 +80,7 @@ EOF
 ```
 
 ```bash
-browser-cli wait '.news-list' --timeout 5000
+browser-cli --tab <tabId> wait '.news-list' --timeout 5000
 ```
 
 ## 阅读文章
@@ -83,11 +91,11 @@ browser-cli wait '.news-list' --timeout 5000
 
 ```bash
 # 先提取目标文章的 URL
-browser-cli eval 'document.querySelectorAll(".news-list > li h3 a")[0]?.href'
+browser-cli --tab <tabId> eval 'document.querySelectorAll(".news-list > li h3 a")[0]?.href'
 
 # 然后直接导航 + markdown 提取（navigate 完成即表示页面已加载）
-browser-cli navigate '<提取到的URL>'
-browser-cli markdown
+browser-cli --tab <tabId> navigate '<提取到的URL>'
+browser-cli --tab <tabId> markdown
 ```
 
 `markdown` 对所有页面状态都能正确返回：
@@ -100,7 +108,7 @@ browser-cli markdown
 如需结构化数据，可用 `eval` 提取：
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const title = document.querySelector("#activity-name")?.innerText?.trim() || "";
   const author = document.querySelector("#js_name")?.innerText?.trim() || "";
@@ -125,15 +133,15 @@ EOF
 **返回搜索结果**:
 
 ```bash
-browser-cli back
-browser-cli wait '.news-list' --timeout 5000
+browser-cli --tab <tabId> back
+browser-cli --tab <tabId> wait '.news-list' --timeout 5000
 ```
 
 ## 注意事项
 
 - **弹窗拦截**: 搜索结果链接为 `target="_blank"`，直接 `click` 可能被浏览器弹窗拦截。推荐先 `eval` 提取 URL 再 `navigate`
 - **重定向**: 搜狗链接（`/link?url=...`）为重定向 URL，`navigate` 会自动跟随到 `mp.weixin.qq.com` 真实地址
-- **markdown 优先**: 微信文章页面用 `browser-cli markdown` 提取效果最佳，格式化输出包含标题、作者、正文和图片
+- **markdown 优先**: 微信文章页面用 `browser-cli --tab <tabId> markdown` 提取效果最佳，格式化输出包含标题、作者、正文和图片
 - **反爬**: 频繁搜索可能触发验证码（需输入图片验证码），如结果异常检查是否出现验证码页面
 - **无登录要求**: 搜索和阅读文章均不需要登录
 - **日期格式**: 搜索结果页日期为 `YYYY-M-DD`（月份不补零），文章页日期为中文格式

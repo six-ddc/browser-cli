@@ -43,69 +43,30 @@ Stop the daemon when done:
 browser-cli stop
 ```
 
-Close the session (aliases: `quit`, `exit`):
-
-```bash
-browser-cli close
-```
-
 > The browser extension must be installed and connected. Run `browser-cli status` to verify.
 
-## Quick Start Examples
+## Quick Start
 
-### Navigate and inspect
-
-```bash
-browser-cli navigate https://example.com
-browser-cli get title
-browser-cli snapshot -ic
-```
-
-### Fill a form and submit
+To avoid disrupting the user's browsing, prefer opening a dedicated tab group with `tab new --group`, then use `--tab <id>` for subsequent commands:
 
 ```bash
-browser-cli fill 'input[name="email"]' user@example.com
-browser-cli fill 'input[name="password"]' secret123
-browser-cli click 'button[type="submit"]'
-```
+# Step 1: Open a new tab in the "browser-cli" group (creates group if needed)
+browser-cli tab new https://example.com --group browser-cli
+# Output: Tab 12345: https://example.com (group: browser-cli)
 
-### Use semantic locators (AI-friendly)
+# Step 2: ALL subsequent commands MUST use --tab <id>
+browser-cli --tab 12345 get title
+browser-cli --tab 12345 snapshot -ic
 
-```bash
-browser-cli click 'role=button[name="Submit"]'
-browser-cli fill 'label=Email' user@example.com
-browser-cli click 'text=Sign In'
-```
+# Step 3: Interact — still using --tab
+browser-cli --tab 12345 click 'role=button[name="Submit"]'
+browser-cli --tab 12345 fill 'label=Email' user@example.com
 
-### Find + act in one step
+# To navigate to a different URL in the same tab:
+browser-cli --tab 12345 navigate 'https://other.com'
 
-```bash
-browser-cli find role button click --name "Submit"
-browser-cli find label Email fill user@example.com
-browser-cli find text "Sign In"
-```
-
-### Use element refs from snapshot
-
-```bash
-browser-cli snapshot -ic          # Shows @e1, @e2, @e3...
-browser-cli click @e3             # Click element ref
-browser-cli fill @e5 "hello"      # Fill element ref
-```
-
-### Run a multi-step script
-
-```bash
-# From file
-browser-cli script my-flow.mjs
-
-# Inline via stdin (short scripts)
-browser-cli script - <<'EOF'
-export default async function(browser) {
-  await browser.navigate({ url: 'https://example.com' });
-  return await browser.getTitle();
-}
-EOF
+# To open another URL in a new tab (same group):
+browser-cli tab new https://other.com --group browser-cli
 ```
 
 ## Global Options
@@ -116,7 +77,41 @@ EOF
 | `--tab <tabId>`         | Target a specific tab by ID (get IDs from `tab list`). Commands run against this tab instead of the active tab. For `screenshot`, the tab is auto-switched to active first (Chrome API limitation) |
 | `--json`                | Output in JSON format (machine-readable)                                                                                                                                                           |
 
-## Operations Reference
+## Selector Types
+
+Browser-CLI supports multiple selector types:
+
+### CSS Selectors (default)
+
+```bash
+browser-cli click '#submit-btn'
+browser-cli fill 'input[name="email"]' value
+browser-cli click '.nav > a:first-child'
+```
+
+### Semantic Locators (AgentBrowser-compatible, `=` syntax)
+
+```bash
+browser-cli click 'role=button[name="Submit"]'     # ARIA role + name
+browser-cli click 'text=Sign In'                    # Text content (partial)
+browser-cli click 'text="Sign In"'                  # Text content (exact)
+browser-cli fill 'label=Email' value                # Form label
+browser-cli fill 'placeholder=Search...' query      # Placeholder text
+browser-cli click 'alt=Company Logo'                # Image alt text
+browser-cli click 'title=Help'                      # Title attribute
+browser-cli click 'testid=login-btn'                # Test ID (exact, case-sensitive)
+browser-cli click 'xpath=//button[@type="submit"]'  # XPath
+```
+
+### Element References (from snapshot)
+
+```bash
+browser-cli snapshot -ic     # Output: @e1 button "Submit", @e2 input "Email", ...
+browser-cli click @e1        # Use ref directly
+browser-cli fill @e2 hello   # Fill by ref
+```
+
+## Commands Reference
 
 ### Navigation & Waiting
 
@@ -288,17 +283,17 @@ Evaluates JavaScript in the page context and returns the result. CSP-strict page
 
 #### Tab Management
 
-| Command                                                                  | Description                                      |
-| ------------------------------------------------------------------------ | ------------------------------------------------ |
-| `tab`                                                                    | List all tabs                                    |
-| `tab <n>`                                                                | Switch to tab by ID                              |
-| `tab new [url] [--container <name>]`                                     | Open new tab (optionally in a Firefox container) |
-| `tab list`                                                               | List all tabs                                    |
-| `tab close [tabId]`                                                      | Close tab (default: active)                      |
-| `tab group <tabIds...>`                                                  | Group tabs together (Chrome only)                |
-| `tab group update <groupId> [--title] [--color] [--collapse] [--expand]` | Update a tab group (Chrome only)                 |
-| `tab groups`                                                             | List all tab groups (Chrome only)                |
-| `tab ungroup <tabIds...>`                                                | Remove tabs from their group (Chrome only)       |
+| Command                                                                  | Description                                             |
+| ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `tab`                                                                    | List all tabs                                           |
+| `tab <n>`                                                                | Switch to tab by ID                                     |
+| `tab new [url] [--group <name>] [--container <name>]`                    | Open new tab (optionally in a named group or container) |
+| `tab list`                                                               | List all tabs                                           |
+| `tab close [tabId]`                                                      | Close tab (default: active)                             |
+| `tab group <tabIds...>`                                                  | Group tabs together (Chrome only)                       |
+| `tab group update <groupId> [--title] [--color] [--collapse] [--expand]` | Update a tab group (Chrome only)                        |
+| `tab groups`                                                             | List all tab groups (Chrome only)                       |
+| `tab ungroup <tabIds...>`                                                | Remove tabs from their group (Chrome only)              |
 
 **Tab group colors**: `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`
 
@@ -406,7 +401,7 @@ Evaluates JavaScript in the page context and returns the result. CSP-strict page
 | `state save <path>` | Export cookies + localStorage + sessionStorage to JSON file |
 | `state load <path>` | Import cookies + storage from JSON file                     |
 
-### Script Execution (multi-step)
+## Script Execution
 
 Run multi-step browser automation as a single operation. Unlike `eval` (which runs a single JS expression in the page context), `script` runs an ES module in the **CLI process (Node.js)** and dispatches each `browser.xxx()` call through the CLI → Daemon → Extension pipeline. This means scripts can use Node.js APIs, `process.env`, and npm packages.
 
@@ -484,91 +479,31 @@ export default async function (browser) {
 }
 ```
 
-## Selector Types
-
-Browser-CLI supports multiple selector types:
-
-### CSS Selectors (default)
-
-```bash
-browser-cli click '#submit-btn'
-browser-cli fill 'input[name="email"]' value
-browser-cli click '.nav > a:first-child'
-```
-
-### Semantic Locators (AgentBrowser-compatible, `=` syntax)
-
-```bash
-browser-cli click 'role=button[name="Submit"]'     # ARIA role + name
-browser-cli click 'text=Sign In'                    # Text content (partial)
-browser-cli click 'text="Sign In"'                  # Text content (exact)
-browser-cli fill 'label=Email' value                # Form label
-browser-cli fill 'placeholder=Search...' query      # Placeholder text
-browser-cli click 'alt=Company Logo'                # Image alt text
-browser-cli click 'title=Help'                      # Title attribute
-browser-cli click 'testid=login-btn'                # Test ID (exact, case-sensitive)
-browser-cli click 'xpath=//button[@type="submit"]'  # XPath
-```
-
-### Element References (from snapshot)
-
-```bash
-browser-cli snapshot -ic     # Output: @e1 button "Submit", @e2 input "Email", ...
-browser-cli click @e1        # Use ref directly
-browser-cli fill @e2 hello   # Fill by ref
-```
-
-## Detailed References
-
-For comprehensive documentation on each domain:
-
-- [SELECTOR_REFERENCE.md](references/SELECTOR_REFERENCE.md) — CSS selectors, semantic locators (role/text/label/placeholder/alt/title/testid/xpath), element refs, find command engines, position selectors, best practices
-- [INTERACTION_REFERENCE.md](references/INTERACTION_REFERENCE.md) — click, fill, type, press, drag, check/uncheck, select, upload, mouse control, scroll, form filling patterns
-- [QUERY_REFERENCE.md](references/QUERY_REFERENCE.md) — get/is queries, wait operations, snapshot flags, screenshot options, eval, console/errors, data extraction patterns
-- [NETWORK_REFERENCE.md](references/NETWORK_REFERENCE.md) — network interception (route/unroute/requests), cookies, storage, tabs, frames, windows, dialogs, browser config, state save/load
-
-### Site-Specific Guides
-
-For known websites, site-specific guides provide tested selectors and extraction
-commands. Check for a matching guide before using generic extraction.
-
-| Domain               | Guide                                                                     |
-| -------------------- | ------------------------------------------------------------------------- |
-| google.com           | [sites/google.com.md](references/sites/google.com.md)                     |
-| mail.google.com      | [sites/mail.google.com.md](references/sites/mail.google.com.md)           |
-| x.com                | [sites/x.com.md](references/sites/x.com.md)                               |
-| weixin.sogou.com     | [sites/weixin.sogou.com.md](references/sites/weixin.sogou.com.md)         |
-| xiaohongshu.com      | [sites/xiaohongshu.com.md](references/sites/xiaohongshu.com.md)           |
-| news.ycombinator.com | [sites/news.ycombinator.com.md](references/sites/news.ycombinator.com.md) |
-| reddit.com           | [sites/reddit.com.md](references/sites/reddit.com.md)                     |
-
-When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
-
-To add a new site guide, see [sites/CONTRIBUTING.md](references/sites/CONTRIBUTING.md).
-
 ## Common Workflows
 
 ### Login to a website
 
 ```bash
-browser-cli navigate https://app.example.com/login
-browser-cli snapshot -ic
-browser-cli find label Username fill admin
-browser-cli find label Password fill secret123
-browser-cli find role button --name "Log In"
-browser-cli wait --url '**/dashboard*'
-browser-cli get title
+browser-cli tab new https://app.example.com/login --group browser-cli
+# Output: Tab 12345: ...
+browser-cli --tab 12345 snapshot -ic
+browser-cli --tab 12345 find label Username fill admin
+browser-cli --tab 12345 find label Password fill secret123
+browser-cli --tab 12345 find role button --name "Log In"
+browser-cli --tab 12345 wait --url '**/dashboard*'
+browser-cli --tab 12345 get title
 ```
 
 ### Scrape data from a page
 
 ```bash
-browser-cli navigate https://example.com/products
-browser-cli wait '.product-list'
-browser-cli get count '.product-item'
-browser-cli snapshot -c
-browser-cli get text '.product-item:first-child .title'
-browser-cli get attr '.product-item:first-child a' href
+browser-cli tab new https://example.com/products --group browser-cli
+# Output: Tab 12345: ...
+browser-cli --tab 12345 wait '.product-list'
+browser-cli --tab 12345 get count '.product-item'
+browser-cli --tab 12345 snapshot -c
+browser-cli --tab 12345 get text '.product-item:first-child .title'
+browser-cli --tab 12345 get attr '.product-item:first-child a' href
 ```
 
 ### Fill a multi-step form
@@ -601,24 +536,56 @@ browser-cli frame main                      # Back to main page
 ```bash
 browser-cli network route '*google-analytics*' --abort
 browser-cli network route '*doubleclick.net*' --abort
-browser-cli navigate https://example.com
-browser-cli network requests --blocked        # Verify blocked requests
+browser-cli tab new https://example.com --group browser-cli
+# Output: Tab 12345: ...
+browser-cli --tab 12345 network requests --blocked        # Verify blocked requests
 ```
 
 ### Tab management
 
 ```bash
 browser-cli tab new https://example.com       # Open in new tab
+browser-cli tab new https://example.com --group "Research"  # Open in named group (Chrome)
 browser-cli tab                               # List all tabs
 browser-cli tab 123                           # Switch to tab
 browser-cli tab close                         # Close active tab
 ```
 
-## Known Limitations
+## Site-Specific Guides
 
-**`hover` does not trigger CSS `:hover`** — browser-cli runs inside an extension, so `hover` and `mouse move` use JS `dispatchEvent` to synthesize mouse events. These fire JS event listeners (`mouseenter`, `mouseover`, etc.) but **do not activate the CSS `:hover` pseudo-class** — only real OS-level mouse input does. This means hover menus/dropdowns that rely on CSS `:hover` for `display` toggling will not appear.
+For known websites, site-specific guides provide tested selectors and extraction
+commands. Check for a matching guide before using generic extraction.
 
-**Workaround**: use `eval` to directly manipulate the hidden element's style or trigger the action:
+| Domain               | Guide                                                                     |
+| -------------------- | ------------------------------------------------------------------------- |
+| google.com           | [sites/google.com.md](references/sites/google.com.md)                     |
+| mail.google.com      | [sites/mail.google.com.md](references/sites/mail.google.com.md)           |
+| x.com                | [sites/x.com.md](references/sites/x.com.md)                               |
+| weixin.sogou.com     | [sites/weixin.sogou.com.md](references/sites/weixin.sogou.com.md)         |
+| xiaohongshu.com      | [sites/xiaohongshu.com.md](references/sites/xiaohongshu.com.md)           |
+| news.ycombinator.com | [sites/news.ycombinator.com.md](references/sites/news.ycombinator.com.md) |
+| reddit.com           | [sites/reddit.com.md](references/sites/reddit.com.md)                     |
+
+When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
+
+To add a new site guide, see [sites/CONTRIBUTING.md](references/sites/CONTRIBUTING.md).
+
+## Detailed References
+
+For comprehensive documentation on each domain:
+
+- [SELECTOR_REFERENCE.md](references/SELECTOR_REFERENCE.md) — CSS selectors, semantic locators (role/text/label/placeholder/alt/title/testid/xpath), element refs, find command engines, position selectors, best practices
+- [INTERACTION_REFERENCE.md](references/INTERACTION_REFERENCE.md) — click, fill, type, press, drag, check/uncheck, select, upload, mouse control, scroll, form filling patterns
+- [QUERY_REFERENCE.md](references/QUERY_REFERENCE.md) — get/is queries, wait operations, snapshot flags, screenshot options, eval, console/errors, data extraction patterns
+- [NETWORK_REFERENCE.md](references/NETWORK_REFERENCE.md) — network interception (route/unroute/requests), cookies, storage, tabs, frames, windows, dialogs, browser config, state save/load
+
+## Known Limitations & Error Handling
+
+### Hover limitation
+
+`hover` and `mouse move` use JS `dispatchEvent` to synthesize mouse events. These fire JS event listeners (`mouseenter`, `mouseover`, etc.) but **do not activate the CSS `:hover` pseudo-class** — only real OS-level mouse input does. Hover menus/dropdowns that rely on CSS `:hover` will not appear.
+
+**Workaround**: use `eval` to directly manipulate the hidden element's style:
 
 ```bash
 browser-cli eval --stdin <<'EOF'
@@ -630,9 +597,9 @@ browser-cli eval --stdin <<'EOF'
 EOF
 ```
 
-## Error Handling
+### Error recovery
 
-All commands return structured output. On error, you'll see:
+All commands return structured output. On error:
 
 ```
 Error: ELEMENT_NOT_FOUND — No element matches selector "button.submit"

@@ -33,13 +33,19 @@ tabCmd
   .command('new [url]')
   .description('Open a new tab')
   .option('--container <name>', 'Open tab in Firefox container (Firefox only)')
-  .action(async (url: string | undefined, opts: { container?: string }, cmd: Command) => {
-    const result = await sendCommand(cmd, {
-      action: 'tabNew',
-      params: { url, container: opts.container },
-    });
-    if (result) console.log(`Tab ${result.tabId}: ${result.url}`);
-  });
+  .option('--group <name>', 'Add tab to named group (Chrome only, creates group if needed)')
+  .action(
+    async (url: string | undefined, opts: { container?: string; group?: string }, cmd: Command) => {
+      const result = await sendCommand(cmd, {
+        action: 'tabNew',
+        params: { url, container: opts.container, group: opts.group },
+      });
+      if (result) {
+        const groupSuffix = result.groupName ? ` (group: ${result.groupName})` : '';
+        console.log(`Tab ${result.tabId}: ${result.url}${groupSuffix}`);
+      }
+    },
+  );
 
 tabCmd
   .command('list')

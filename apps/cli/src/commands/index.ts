@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 
 // Lifecycle
-import { startCommand, stopCommand, closeCommand, statusCommand } from './lifecycle.js';
+import { startCommand, stopCommand, statusCommand } from './lifecycle.js';
 // Navigation
 import { navigateCommand, backCommand, forwardCommand, reloadCommand } from './navigate.js';
 // Interaction
@@ -75,7 +75,6 @@ export function registerCommands(program: Command): void {
   // Lifecycle
   program.addCommand(startCommand);
   program.addCommand(stopCommand);
-  program.addCommand(closeCommand);
   program.addCommand(statusCommand);
 
   // Navigation

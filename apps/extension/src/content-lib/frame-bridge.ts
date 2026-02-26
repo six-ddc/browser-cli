@@ -4,7 +4,7 @@
  */
 
 import type { Command } from '@browser-cli/shared';
-import { ErrorCode, createError } from '@browser-cli/shared';
+import { ErrorCode, createError, COMMAND_TIMEOUT_MS } from '@browser-cli/shared';
 
 export interface FrameInfo {
   index: number;
@@ -166,7 +166,7 @@ export async function executeInFrame(
       window.removeEventListener('message', handler);
       // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- ProtocolError is a structured error object
       reject(createError(ErrorCode.TIMEOUT, 'Frame command timeout'));
-    }, 30000);
+    }, COMMAND_TIMEOUT_MS);
 
     const handler = (
       event: MessageEvent<{

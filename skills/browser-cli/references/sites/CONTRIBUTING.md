@@ -34,8 +34,10 @@ and guessed selectors almost always fail. The correct workflow is:
 ```bash
 browser-cli start
 browser-cli status                    # confirm extension is connected
-browser-cli navigate '<url>'
-browser-cli wait '<expected-element>' --timeout 5000
+# Open in a dedicated tab group to avoid disrupting user browsing
+browser-cli tab new '<url>' --group browser-cli
+# Use --tab <tabId> for all subsequent commands
+browser-cli --tab <tabId> wait '<expected-element>' --timeout 5000
 ```
 
 If you don't know what to wait for yet, use `snapshot` to explore:

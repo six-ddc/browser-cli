@@ -276,6 +276,8 @@ export type TabNewParams = z.infer<typeof schemas.tabNewParamsSchema>;
 export interface TabNewResult {
   tabId: number;
   url: string;
+  groupId?: number;
+  groupName?: string;
 }
 
 export type TabListParams = z.infer<typeof schemas.emptyParamsSchema>;
@@ -641,390 +643,143 @@ export interface MarkdownRawResult {
   url: string;
 }
 
-// ─── Action Type Union ───────────────────────────────────────────────
-
-export type ActionType =
-  // Navigation
-  | 'navigate'
-  | 'goBack'
-  | 'goForward'
-  | 'reload'
-  | 'getUrl'
-  | 'getTitle'
-  // Interaction
-  | 'click'
-  | 'dblclick'
-  | 'hover'
-  | 'fill'
-  | 'type'
-  | 'press'
-  | 'clear'
-  | 'focus'
-  | 'drag'
-  | 'keydown'
-  | 'keyup'
-  // Mouse
-  | 'mouseMove'
-  | 'mouseDown'
-  | 'mouseUp'
-  | 'mouseWheel'
-  // Form
-  | 'check'
-  | 'uncheck'
-  | 'select'
-  | 'upload'
-  // Scroll
-  | 'scroll'
-  | 'scrollIntoView'
-  // Data queries
-  | 'getText'
-  | 'getHtml'
-  | 'getValue'
-  | 'getAttribute'
-  | 'isVisible'
-  | 'isEnabled'
-  | 'isChecked'
-  | 'count'
-  | 'boundingBox'
-  // Snapshot
-  | 'snapshot'
-  // Screenshot
-  | 'screenshot'
-  // Wait
-  | 'wait'
-  | 'waitForUrl'
-  // Evaluate
-  | 'evaluate'
-  // Console
-  | 'getConsole'
-  | 'getErrors'
-  // Tabs
-  | 'tabNew'
-  | 'tabList'
-  | 'tabSwitch'
-  | 'tabClose'
-  // Cookies
-  | 'cookiesGet'
-  | 'cookiesSet'
-  | 'cookiesClear'
-  // Storage
-  | 'storageGet'
-  | 'storageSet'
-  | 'storageClear'
-  // Dialog
-  | 'dialogAccept'
-  | 'dialogDismiss'
-  // Highlight
-  | 'highlight'
-  // Frames
-  | 'switchFrame'
-  | 'listFrames'
-  | 'getCurrentFrame'
-  // Network
-  | 'route'
-  | 'unroute'
-  | 'getRequests'
-  | 'getRoutes'
-  | 'clearRequests'
-  // Window
-  | 'windowNew'
-  | 'windowList'
-  | 'windowClose'
-  | 'windowFocus'
-  // Tab Groups
-  | 'tabGroupCreate'
-  | 'tabGroupUpdate'
-  | 'tabGroupList'
-  | 'tabUngroup'
-  // Bookmarks
-  | 'bookmarkAdd'
-  | 'bookmarkRemove'
-  | 'bookmarkList'
-  // History
-  | 'historySearch'
-  // Browser Config
-  | 'setViewport'
-  | 'setGeo'
-  | 'setMedia'
-  | 'setHeaders'
-  // State Management
-  | 'stateExport'
-  | 'stateImport'
-  // Container
-  | 'containerList'
-  | 'containerCreate'
-  | 'containerRemove'
-  // Markdown
-  | 'markdown';
+// ─── Action Definition (Single Source of Truth) ─────────────────────
 
 /**
- * Discriminated union of all commands.
- * Each variant pairs an action type with its params.
+ * Discriminated union of all actions.
+ * Each variant pairs an action type with its params and result.
+ * Command, ActionType, ActionParamsMap, and ActionResultMap are all derived from this.
  */
-export type Command =
-  | { action: 'navigate'; params: NavigateParams }
-  | { action: 'goBack'; params: GoBackParams }
-  | { action: 'goForward'; params: GoForwardParams }
-  | { action: 'reload'; params: ReloadParams }
-  | { action: 'getUrl'; params: GetUrlParams }
-  | { action: 'getTitle'; params: GetTitleParams }
-  | { action: 'click'; params: ClickParams }
-  | { action: 'dblclick'; params: DblClickParams }
-  | { action: 'hover'; params: HoverParams }
-  | { action: 'fill'; params: FillParams }
-  | { action: 'type'; params: TypeParams }
-  | { action: 'press'; params: PressParams }
-  | { action: 'clear'; params: ClearParams }
-  | { action: 'focus'; params: FocusParams }
-  | { action: 'drag'; params: DragParams }
-  | { action: 'keydown'; params: KeyDownParams }
-  | { action: 'keyup'; params: KeyUpParams }
-  | { action: 'mouseMove'; params: MouseMoveParams }
-  | { action: 'mouseDown'; params: MouseDownParams }
-  | { action: 'mouseUp'; params: MouseUpParams }
-  | { action: 'mouseWheel'; params: MouseWheelParams }
-  | { action: 'check'; params: CheckParams }
-  | { action: 'uncheck'; params: UncheckParams }
-  | { action: 'select'; params: SelectParams }
-  | { action: 'upload'; params: UploadParams }
-  | { action: 'scroll'; params: ScrollParams }
-  | { action: 'scrollIntoView'; params: ScrollIntoViewParams }
-  | { action: 'getText'; params: GetTextParams }
-  | { action: 'getHtml'; params: GetHtmlParams }
-  | { action: 'getValue'; params: GetValueParams }
-  | { action: 'getAttribute'; params: GetAttributeParams }
-  | { action: 'isVisible'; params: IsVisibleParams }
-  | { action: 'isEnabled'; params: IsEnabledParams }
-  | { action: 'isChecked'; params: IsCheckedParams }
-  | { action: 'count'; params: CountParams }
-  | { action: 'boundingBox'; params: BoundingBoxParams }
-  | { action: 'snapshot'; params: SnapshotParams }
-  | { action: 'screenshot'; params: ScreenshotParams }
-  | { action: 'wait'; params: WaitParams }
-  | { action: 'waitForUrl'; params: WaitForUrlParams }
-  | { action: 'evaluate'; params: EvaluateParams }
-  | { action: 'getConsole'; params: GetConsoleParams }
-  | { action: 'getErrors'; params: GetErrorsParams }
-  | { action: 'tabNew'; params: TabNewParams }
-  | { action: 'tabList'; params: TabListParams }
-  | { action: 'tabSwitch'; params: TabSwitchParams }
-  | { action: 'tabClose'; params: TabCloseParams }
-  | { action: 'cookiesGet'; params: CookiesGetParams }
-  | { action: 'cookiesSet'; params: CookiesSetParams }
-  | { action: 'cookiesClear'; params: CookiesClearParams }
-  | { action: 'storageGet'; params: StorageGetParams }
-  | { action: 'storageSet'; params: StorageSetParams }
-  | { action: 'storageClear'; params: StorageClearParams }
-  | { action: 'dialogAccept'; params: DialogAcceptParams }
-  | { action: 'dialogDismiss'; params: DialogDismissParams }
-  | { action: 'highlight'; params: HighlightParams }
-  | { action: 'switchFrame'; params: SwitchFrameParams }
-  | { action: 'listFrames'; params: ListFramesParams }
-  | { action: 'getCurrentFrame'; params: GetCurrentFrameParams }
-  | { action: 'route'; params: RouteParams }
-  | { action: 'unroute'; params: UnrouteParams }
-  | { action: 'getRequests'; params: GetRequestsParams }
-  | { action: 'getRoutes'; params: GetRoutesParams }
-  | { action: 'clearRequests'; params: ClearRequestsParams }
-  | { action: 'windowNew'; params: WindowNewParams }
-  | { action: 'windowList'; params: WindowListParams }
-  | { action: 'windowClose'; params: WindowCloseParams }
-  | { action: 'windowFocus'; params: WindowFocusParams }
-  | { action: 'tabGroupCreate'; params: TabGroupCreateParams }
-  | { action: 'tabGroupUpdate'; params: TabGroupUpdateParams }
-  | { action: 'tabGroupList'; params: TabGroupListParams }
-  | { action: 'tabUngroup'; params: TabUngroupParams }
-  | { action: 'bookmarkAdd'; params: BookmarkAddParams }
-  | { action: 'bookmarkRemove'; params: BookmarkRemoveParams }
-  | { action: 'bookmarkList'; params: BookmarkListParams }
-  | { action: 'historySearch'; params: HistorySearchParams }
-  | { action: 'setViewport'; params: SetViewportParams }
-  | { action: 'setGeo'; params: SetGeoParams }
-  | { action: 'setMedia'; params: SetMediaParams }
-  | { action: 'setHeaders'; params: SetHeadersParams }
-  | { action: 'stateExport'; params: StateExportParams }
-  | { action: 'stateImport'; params: StateImportParams }
-  | { action: 'containerList'; params: ContainerListParams }
-  | { action: 'containerCreate'; params: ContainerCreateParams }
-  | { action: 'containerRemove'; params: ContainerRemoveParams }
-  | { action: 'markdown'; params: MarkdownParams };
+export type ActionDef =
+  // Navigation
+  | { action: 'navigate'; params: NavigateParams; result: NavigateResult }
+  | { action: 'goBack'; params: GoBackParams; result: GoBackResult }
+  | { action: 'goForward'; params: GoForwardParams; result: GoForwardResult }
+  | { action: 'reload'; params: ReloadParams; result: ReloadResult }
+  | { action: 'getUrl'; params: GetUrlParams; result: GetUrlResult }
+  | { action: 'getTitle'; params: GetTitleParams; result: GetTitleResult }
+  // Interaction
+  | { action: 'click'; params: ClickParams; result: ClickResult }
+  | { action: 'dblclick'; params: DblClickParams; result: DblClickResult }
+  | { action: 'hover'; params: HoverParams; result: HoverResult }
+  | { action: 'fill'; params: FillParams; result: FillResult }
+  | { action: 'type'; params: TypeParams; result: TypeResult }
+  | { action: 'press'; params: PressParams; result: PressResult }
+  | { action: 'clear'; params: ClearParams; result: ClearResult }
+  | { action: 'focus'; params: FocusParams; result: FocusResult }
+  | { action: 'drag'; params: DragParams; result: DragResult }
+  | { action: 'keydown'; params: KeyDownParams; result: KeyDownResult }
+  | { action: 'keyup'; params: KeyUpParams; result: KeyUpResult }
+  // Mouse
+  | { action: 'mouseMove'; params: MouseMoveParams; result: MouseMoveResult }
+  | { action: 'mouseDown'; params: MouseDownParams; result: MouseDownResult }
+  | { action: 'mouseUp'; params: MouseUpParams; result: MouseUpResult }
+  | { action: 'mouseWheel'; params: MouseWheelParams; result: MouseWheelResult }
+  // Form
+  | { action: 'check'; params: CheckParams; result: CheckResult }
+  | { action: 'uncheck'; params: UncheckParams; result: UncheckResult }
+  | { action: 'select'; params: SelectParams; result: SelectResult }
+  | { action: 'upload'; params: UploadParams; result: UploadResult }
+  // Scroll
+  | { action: 'scroll'; params: ScrollParams; result: ScrollResult }
+  | { action: 'scrollIntoView'; params: ScrollIntoViewParams; result: ScrollIntoViewResult }
+  // Data queries
+  | { action: 'getText'; params: GetTextParams; result: GetTextResult }
+  | { action: 'getHtml'; params: GetHtmlParams; result: GetHtmlResult }
+  | { action: 'getValue'; params: GetValueParams; result: GetValueResult }
+  | { action: 'getAttribute'; params: GetAttributeParams; result: GetAttributeResult }
+  | { action: 'isVisible'; params: IsVisibleParams; result: IsVisibleResult }
+  | { action: 'isEnabled'; params: IsEnabledParams; result: IsEnabledResult }
+  | { action: 'isChecked'; params: IsCheckedParams; result: IsCheckedResult }
+  | { action: 'count'; params: CountParams; result: CountResult }
+  | { action: 'boundingBox'; params: BoundingBoxParams; result: BoundingBoxResult }
+  // Snapshot
+  | { action: 'snapshot'; params: SnapshotParams; result: SnapshotResult }
+  // Screenshot
+  | { action: 'screenshot'; params: ScreenshotParams; result: ScreenshotResult }
+  // Wait
+  | { action: 'wait'; params: WaitParams; result: WaitResult }
+  | { action: 'waitForUrl'; params: WaitForUrlParams; result: WaitForUrlResult }
+  // Evaluate
+  | { action: 'evaluate'; params: EvaluateParams; result: EvaluateResult }
+  // Console
+  | { action: 'getConsole'; params: GetConsoleParams; result: GetConsoleResult }
+  | { action: 'getErrors'; params: GetErrorsParams; result: GetErrorsResult }
+  // Tabs
+  | { action: 'tabNew'; params: TabNewParams; result: TabNewResult }
+  | { action: 'tabList'; params: TabListParams; result: TabListResult }
+  | { action: 'tabSwitch'; params: TabSwitchParams; result: TabSwitchResult }
+  | { action: 'tabClose'; params: TabCloseParams; result: TabCloseResult }
+  // Cookies
+  | { action: 'cookiesGet'; params: CookiesGetParams; result: CookiesGetResult }
+  | { action: 'cookiesSet'; params: CookiesSetParams; result: CookiesSetResult }
+  | { action: 'cookiesClear'; params: CookiesClearParams; result: CookiesClearResult }
+  // Storage
+  | { action: 'storageGet'; params: StorageGetParams; result: StorageGetResult }
+  | { action: 'storageSet'; params: StorageSetParams; result: StorageSetResult }
+  | { action: 'storageClear'; params: StorageClearParams; result: StorageClearResult }
+  // Dialog
+  | { action: 'dialogAccept'; params: DialogAcceptParams; result: DialogAcceptResult }
+  | { action: 'dialogDismiss'; params: DialogDismissParams; result: DialogDismissResult }
+  // Highlight
+  | { action: 'highlight'; params: HighlightParams; result: HighlightResult }
+  // Frames
+  | { action: 'switchFrame'; params: SwitchFrameParams; result: SwitchFrameResult }
+  | { action: 'listFrames'; params: ListFramesParams; result: ListFramesResult }
+  | { action: 'getCurrentFrame'; params: GetCurrentFrameParams; result: GetCurrentFrameResult }
+  // Network
+  | { action: 'route'; params: RouteParams; result: RouteResult }
+  | { action: 'unroute'; params: UnrouteParams; result: UnrouteResult }
+  | { action: 'getRequests'; params: GetRequestsParams; result: GetRequestsResult }
+  | { action: 'getRoutes'; params: GetRoutesParams; result: GetRoutesResult }
+  | { action: 'clearRequests'; params: ClearRequestsParams; result: ClearRequestsResult }
+  // Window
+  | { action: 'windowNew'; params: WindowNewParams; result: WindowNewResult }
+  | { action: 'windowList'; params: WindowListParams; result: WindowListResult }
+  | { action: 'windowClose'; params: WindowCloseParams; result: WindowCloseResult }
+  | { action: 'windowFocus'; params: WindowFocusParams; result: WindowFocusResult }
+  // Tab Groups
+  | { action: 'tabGroupCreate'; params: TabGroupCreateParams; result: TabGroupCreateResult }
+  | { action: 'tabGroupUpdate'; params: TabGroupUpdateParams; result: TabGroupUpdateResult }
+  | { action: 'tabGroupList'; params: TabGroupListParams; result: TabGroupListResult }
+  | { action: 'tabUngroup'; params: TabUngroupParams; result: TabUngroupResult }
+  // Bookmarks
+  | { action: 'bookmarkAdd'; params: BookmarkAddParams; result: BookmarkAddResult }
+  | { action: 'bookmarkRemove'; params: BookmarkRemoveParams; result: BookmarkRemoveResult }
+  | { action: 'bookmarkList'; params: BookmarkListParams; result: BookmarkListResult }
+  // History
+  | { action: 'historySearch'; params: HistorySearchParams; result: HistorySearchResult }
+  // Browser Config
+  | { action: 'setViewport'; params: SetViewportParams; result: SetViewportResult }
+  | { action: 'setGeo'; params: SetGeoParams; result: SetGeoResult }
+  | { action: 'setMedia'; params: SetMediaParams; result: SetMediaResult }
+  | { action: 'setHeaders'; params: SetHeadersParams; result: SetHeadersResult }
+  // State Management
+  | { action: 'stateExport'; params: StateExportParams; result: StateExportResult }
+  | { action: 'stateImport'; params: StateImportParams; result: StateImportResult }
+  // Container
+  | { action: 'containerList'; params: ContainerListParams; result: ContainerListResult }
+  | { action: 'containerCreate'; params: ContainerCreateParams; result: ContainerCreateResult }
+  | { action: 'containerRemove'; params: ContainerRemoveParams; result: ContainerRemoveResult }
+  // Markdown
+  | { action: 'markdown'; params: MarkdownParams; result: MarkdownResult };
+
+// ─── Derived Types ──────────────────────────────────────────────────
+
+type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
+
+/** All action type strings */
+export type ActionType = ActionDef['action'];
+
+/** Wire command: action + params (no result) */
+export type Command = DistributiveOmit<ActionDef, 'result'>;
 
 /** Map action type → result type */
-export interface ActionResultMap {
-  navigate: NavigateResult;
-  goBack: GoBackResult;
-  goForward: GoForwardResult;
-  reload: ReloadResult;
-  getUrl: GetUrlResult;
-  getTitle: GetTitleResult;
-  click: ClickResult;
-  dblclick: DblClickResult;
-  hover: HoverResult;
-  fill: FillResult;
-  type: TypeResult;
-  press: PressResult;
-  clear: ClearResult;
-  focus: FocusResult;
-  drag: DragResult;
-  keydown: KeyDownResult;
-  keyup: KeyUpResult;
-  mouseMove: MouseMoveResult;
-  mouseDown: MouseDownResult;
-  mouseUp: MouseUpResult;
-  mouseWheel: MouseWheelResult;
-  check: CheckResult;
-  uncheck: UncheckResult;
-  select: SelectResult;
-  upload: UploadResult;
-  scroll: ScrollResult;
-  scrollIntoView: ScrollIntoViewResult;
-  getText: GetTextResult;
-  getHtml: GetHtmlResult;
-  getValue: GetValueResult;
-  getAttribute: GetAttributeResult;
-  isVisible: IsVisibleResult;
-  isEnabled: IsEnabledResult;
-  isChecked: IsCheckedResult;
-  count: CountResult;
-  boundingBox: BoundingBoxResult;
-  snapshot: SnapshotResult;
-  screenshot: ScreenshotResult;
-  wait: WaitResult;
-  waitForUrl: WaitForUrlResult;
-  evaluate: EvaluateResult;
-  getConsole: GetConsoleResult;
-  getErrors: GetErrorsResult;
-  tabNew: TabNewResult;
-  tabList: TabListResult;
-  tabSwitch: TabSwitchResult;
-  tabClose: TabCloseResult;
-  cookiesGet: CookiesGetResult;
-  cookiesSet: CookiesSetResult;
-  cookiesClear: CookiesClearResult;
-  storageGet: StorageGetResult;
-  storageSet: StorageSetResult;
-  storageClear: StorageClearResult;
-  dialogAccept: DialogAcceptResult;
-  dialogDismiss: DialogDismissResult;
-  highlight: HighlightResult;
-  switchFrame: SwitchFrameResult;
-  listFrames: ListFramesResult;
-  getCurrentFrame: GetCurrentFrameResult;
-  route: RouteResult;
-  unroute: UnrouteResult;
-  getRequests: GetRequestsResult;
-  getRoutes: GetRoutesResult;
-  clearRequests: ClearRequestsResult;
-  windowNew: WindowNewResult;
-  windowList: WindowListResult;
-  windowClose: WindowCloseResult;
-  windowFocus: WindowFocusResult;
-  tabGroupCreate: TabGroupCreateResult;
-  tabGroupUpdate: TabGroupUpdateResult;
-  tabGroupList: TabGroupListResult;
-  tabUngroup: TabUngroupResult;
-  bookmarkAdd: BookmarkAddResult;
-  bookmarkRemove: BookmarkRemoveResult;
-  bookmarkList: BookmarkListResult;
-  historySearch: HistorySearchResult;
-  setViewport: SetViewportResult;
-  setGeo: SetGeoResult;
-  setMedia: SetMediaResult;
-  setHeaders: SetHeadersResult;
-  stateExport: StateExportResult;
-  stateImport: StateImportResult;
-  containerList: ContainerListResult;
-  containerCreate: ContainerCreateResult;
-  containerRemove: ContainerRemoveResult;
-  markdown: MarkdownResult;
-}
+export type ActionResultMap = {
+  [D in ActionDef as D['action']]: D['result'];
+};
 
 /** Map action type → params type */
-export interface ActionParamsMap {
-  navigate: NavigateParams;
-  goBack: GoBackParams;
-  goForward: GoForwardParams;
-  reload: ReloadParams;
-  getUrl: GetUrlParams;
-  getTitle: GetTitleParams;
-  click: ClickParams;
-  dblclick: DblClickParams;
-  hover: HoverParams;
-  fill: FillParams;
-  type: TypeParams;
-  press: PressParams;
-  clear: ClearParams;
-  focus: FocusParams;
-  drag: DragParams;
-  keydown: KeyDownParams;
-  keyup: KeyUpParams;
-  mouseMove: MouseMoveParams;
-  mouseDown: MouseDownParams;
-  mouseUp: MouseUpParams;
-  mouseWheel: MouseWheelParams;
-  check: CheckParams;
-  uncheck: UncheckParams;
-  select: SelectParams;
-  upload: UploadParams;
-  scroll: ScrollParams;
-  scrollIntoView: ScrollIntoViewParams;
-  getText: GetTextParams;
-  getHtml: GetHtmlParams;
-  getValue: GetValueParams;
-  getAttribute: GetAttributeParams;
-  isVisible: IsVisibleParams;
-  isEnabled: IsEnabledParams;
-  isChecked: IsCheckedParams;
-  count: CountParams;
-  boundingBox: BoundingBoxParams;
-  snapshot: SnapshotParams;
-  screenshot: ScreenshotParams;
-  wait: WaitParams;
-  waitForUrl: WaitForUrlParams;
-  evaluate: EvaluateParams;
-  getConsole: GetConsoleParams;
-  getErrors: GetErrorsParams;
-  tabNew: TabNewParams;
-  tabList: TabListParams;
-  tabSwitch: TabSwitchParams;
-  tabClose: TabCloseParams;
-  cookiesGet: CookiesGetParams;
-  cookiesSet: CookiesSetParams;
-  cookiesClear: CookiesClearParams;
-  storageGet: StorageGetParams;
-  storageSet: StorageSetParams;
-  storageClear: StorageClearParams;
-  dialogAccept: DialogAcceptParams;
-  dialogDismiss: DialogDismissParams;
-  highlight: HighlightParams;
-  switchFrame: SwitchFrameParams;
-  listFrames: ListFramesParams;
-  getCurrentFrame: GetCurrentFrameParams;
-  route: RouteParams;
-  unroute: UnrouteParams;
-  getRequests: GetRequestsParams;
-  getRoutes: GetRoutesParams;
-  clearRequests: ClearRequestsParams;
-  windowNew: WindowNewParams;
-  windowList: WindowListParams;
-  windowClose: WindowCloseParams;
-  windowFocus: WindowFocusParams;
-  tabGroupCreate: TabGroupCreateParams;
-  tabGroupUpdate: TabGroupUpdateParams;
-  tabGroupList: TabGroupListParams;
-  tabUngroup: TabUngroupParams;
-  bookmarkAdd: BookmarkAddParams;
-  bookmarkRemove: BookmarkRemoveParams;
-  bookmarkList: BookmarkListParams;
-  historySearch: HistorySearchParams;
-  setViewport: SetViewportParams;
-  setGeo: SetGeoParams;
-  setMedia: SetMediaParams;
-  setHeaders: SetHeadersParams;
-  stateExport: StateExportParams;
-  stateImport: StateImportParams;
-  containerList: ContainerListParams;
-  containerCreate: ContainerCreateParams;
-  containerRemove: ContainerRemoveParams;
-  markdown: MarkdownParams;
-}
+export type ActionParamsMap = {
+  [D in ActionDef as D['action']]: D['params'];
+};

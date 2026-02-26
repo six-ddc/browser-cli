@@ -18,13 +18,9 @@ import { registerCommands } from '../src/commands/index.js';
 
 let lastCommand: { action: string; params: Record<string, unknown> } | null = null;
 let sendCommandMock: Mock;
-let stopDaemonMock: Mock;
 
 vi.mock('../src/daemon/process.js', () => ({
-  stopDaemon: (...args: unknown[]) => {
-    stopDaemonMock(...args);
-    return true;
-  },
+  stopDaemon: () => true,
   getDaemonPid: () => null,
   startDaemon: () => Promise.resolve({ pid: 12345, info: {} }),
   ensureDaemon: () => Promise.resolve({ pid: 12345, info: {} }),
@@ -134,7 +130,6 @@ function expectCommand(action: string, params: Record<string, unknown>): void {
 beforeEach(() => {
   lastCommand = null;
   sendCommandMock = vi.fn();
-  stopDaemonMock = vi.fn();
 });
 
 describe('AgentBrowser CLI syntax compatibility', () => {
@@ -1127,25 +1122,6 @@ describe('AgentBrowser CLI syntax compatibility', () => {
     it('history --limit 50 search <text>', async () => {
       await parseArgs('history', '--limit', '50', 'search', 'example');
       expectCommand('historySearch', { text: 'example', limit: 50 });
-    });
-  });
-
-  // ─── Close / Quit / Exit ────────────────────────────────────────────
-
-  describe('close / quit / exit', () => {
-    it('close — stops daemon', async () => {
-      await parseArgs('close');
-      expect(stopDaemonMock).toHaveBeenCalled();
-    });
-
-    it('quit — alias for close', async () => {
-      await parseArgs('quit');
-      expect(stopDaemonMock).toHaveBeenCalled();
-    });
-
-    it('exit — alias for close', async () => {
-      await parseArgs('exit');
-      expect(stopDaemonMock).toHaveBeenCalled();
     });
   });
 

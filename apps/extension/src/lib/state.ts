@@ -3,7 +3,7 @@
  * Uses a serial queue to prevent concurrent read-modify-write races.
  */
 
-import { DEFAULT_WS_URL } from '@browser-cli/shared';
+import { DEFAULT_WS_HOST, DEFAULT_WS_URL } from '@browser-cli/shared';
 
 /**
  * WS URL configured at build time via VITE_WS_URL env var.
@@ -14,7 +14,7 @@ export const CONFIGURED_WS_URL: string = (() => {
   const envUrl = import.meta.env.VITE_WS_URL as string | undefined;
   if (envUrl) return envUrl;
   const envPort = import.meta.env.VITE_WS_PORT as string | undefined;
-  if (envPort) return `ws://127.0.0.1:${envPort}`;
+  if (envPort) return `ws://${DEFAULT_WS_HOST}:${envPort}`;
   return DEFAULT_WS_URL;
 })();
 

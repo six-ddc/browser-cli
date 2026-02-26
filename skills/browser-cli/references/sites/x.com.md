@@ -2,6 +2,14 @@
 
 > X (formerly Twitter) — social media platform for short-form posts, news, and discussions.
 
+> **Tip**: To avoid disrupting user browsing, open a dedicated tab first:
+>
+> ```
+> browser-cli tab new 'https://x.com' --group browser-cli
+> ```
+>
+> Then use `--tab <tabId>` for all subsequent commands.
+
 ## Login Required
 
 **Most X.com features require login.** Search, Explore, timeline interactions, followers list, and compose are all unavailable when logged out. A bottom bar also blocks the UI.
@@ -11,7 +19,7 @@
 **Detect login state**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const tweetButton = !!document.querySelector('[data-testid="SideNav_NewTweet_Button"]');
   const accountSwitcher = !!document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]');
@@ -33,20 +41,20 @@ EOF
 
 > X.com is not logged in. Please log in manually in the browser, then tell me to continue.
 
-After the user logs in, run `browser-cli reload` and re-check login state before proceeding.
+After the user logs in, run `browser-cli --tab <tabId> reload` and re-check login state before proceeding.
 
 ## Profile Page
 
 **URL pattern**: `/<handle>` (e.g., `/elonmusk`, `/OpenAI`)
 
-**Navigation**: `browser-cli navigate 'https://x.com/<handle>'`
+**Navigation**: `browser-cli --tab <tabId> navigate 'https://x.com/<handle>'`
 
-**Wait**: `browser-cli wait '[data-testid="UserName"]' --timeout 5000`
+**Wait**: `browser-cli --tab <tabId> wait '[data-testid="UserName"]' --timeout 5000`
 
 **Extract profile info**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const nameEl = document.querySelector('[data-testid="UserName"]');
   const spans = nameEl ? [...nameEl.querySelectorAll('span')] : [];
@@ -93,8 +101,8 @@ Tabs are `[role="tab"]` elements. Switch tabs via URL or click:
 
 ```bash
 # Switch to Replies tab
-browser-cli navigate 'https://x.com/<handle>/with_replies'
-browser-cli wait '[data-testid="tweet"]' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://x.com/<handle>/with_replies'
+browser-cli --tab <tabId> wait '[data-testid="tweet"]' --timeout 5000
 ```
 
 ## Timeline (Tweet List)
@@ -104,7 +112,7 @@ Tweets on profile pages, search results, and home feed all share the same `[data
 **Extract tweets from current page**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('[data-testid="tweet"]')].map((el, i) => {
   const userNameEl = el.querySelector('[data-testid="User-Name"]');
   const links = userNameEl ? [...userNameEl.querySelectorAll('a')] : [];
@@ -186,7 +194,7 @@ A simple `querySelectorAll` after scrolling will miss earlier tweets.
 Step 1 — Inject collector and collect initial batch:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 window.__tweetCollector = new Map();
 function __collectTweets() {
   document.querySelectorAll('article[data-testid="tweet"]').forEach(el => {
@@ -216,36 +224,36 @@ EOF
 Step 2 — Scroll and collect in a loop until you have enough:
 
 ```bash
-browser-cli scroll down --amount 2000
-browser-cli wait 1500
-browser-cli eval '__collectTweets()'   # returns total collected count
+browser-cli --tab <tabId> scroll down --amount 2000
+browser-cli --tab <tabId> wait 1500
+browser-cli --tab <tabId> eval '__collectTweets()'   # returns total collected count
 # Repeat until count >= N
 ```
 
 Step 3 — Read results:
 
 ```bash
-browser-cli eval 'JSON.stringify([...window.__tweetCollector.values()])'
+browser-cli --tab <tabId> eval 'JSON.stringify([...window.__tweetCollector.values()])'
 ```
 
 Step 4 — Cleanup:
 
 ```bash
-browser-cli eval 'delete window.__tweetCollector; delete window.__collectTweets;'
+browser-cli --tab <tabId> eval 'delete window.__tweetCollector; delete window.__collectTweets;'
 ```
 
 ## Tweet Detail Page
 
 **URL pattern**: `/<handle>/status/<tweetId>`
 
-**Navigation**: `browser-cli navigate 'https://x.com/<handle>/status/<tweetId>'`
+**Navigation**: `browser-cli --tab <tabId> navigate 'https://x.com/<handle>/status/<tweetId>'`
 
-**Wait**: `browser-cli wait '[data-testid="tweet"]' --timeout 5000`
+**Wait**: `browser-cli --tab <tabId> wait '[data-testid="tweet"]' --timeout 5000`
 
 **Extract tweet detail**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const tweet = document.querySelector('[data-testid="tweet"]');
   if (!tweet) return { error: "tweet not found" };
@@ -294,19 +302,19 @@ EOF
 
 ```bash
 # Entire tweet (text + media + engagement bar)
-browser-cli screenshot --selector 'article[data-testid="tweet"]' --path tweet.png
+browser-cli --tab <tabId> screenshot --selector 'article[data-testid="tweet"]' --path tweet.png
 
 # Only the photo/media area
-browser-cli screenshot --selector 'article[data-testid="tweet"] [data-testid="tweetPhoto"]' --path tweet-photo.png
+browser-cli --tab <tabId> screenshot --selector 'article[data-testid="tweet"] [data-testid="tweetPhoto"]' --path tweet-photo.png
 
 # Full page screenshot
-browser-cli screenshot --path page.png
+browser-cli --tab <tabId> screenshot --path page.png
 ```
 
 ### Extract image URLs
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const tweet = document.querySelector('article[data-testid="tweet"]');
   const photos = [...(tweet?.querySelectorAll('[data-testid="tweetPhoto"] img') || [])];
@@ -330,7 +338,7 @@ Image URL format: `https://pbs.twimg.com/media/<id>?format=jpg&name=<size>`
 ### Check media type
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const tweet = document.querySelector('article[data-testid="tweet"]');
   return {
@@ -350,17 +358,17 @@ EOF
 **Navigate to search**:
 
 ```bash
-browser-cli navigate 'https://x.com/search?q=<query>&src=typed_query'
-browser-cli wait '[data-testid="tweet"]' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://x.com/search?q=<query>&src=typed_query'
+browser-cli --tab <tabId> wait '[data-testid="tweet"]' --timeout 5000
 ```
 
 **Search via input**:
 
 ```bash
-browser-cli click '[data-testid="SearchBox_Search_Input"]'
-browser-cli fill '[data-testid="SearchBox_Search_Input"]' '<query>'
-browser-cli press Enter
-browser-cli wait '[data-testid="tweet"]' --timeout 5000
+browser-cli --tab <tabId> click '[data-testid="SearchBox_Search_Input"]'
+browser-cli --tab <tabId> fill '[data-testid="SearchBox_Search_Input"]' '<query>'
+browser-cli --tab <tabId> press Enter
+browser-cli --tab <tabId> wait '[data-testid="tweet"]' --timeout 5000
 ```
 
 **Search tabs** (URL `f` parameter):
@@ -384,7 +392,7 @@ Use `browser-cli eval` to simulate a paste or insertText event:
 
 ```bash
 # Method: InputEvent beforeinput (recommended)
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const el = document.querySelector('<textarea-selector>');
   el.focus();
@@ -401,7 +409,7 @@ EOF
 After input, verify the submit button is enabled:
 
 ```bash
-browser-cli eval 'document.querySelector("<button-selector>")?.getAttribute("aria-disabled")'
+browser-cli --tab <tabId> eval 'document.querySelector("<button-selector>")?.getAttribute("aria-disabled")'
 # null = enabled, "true" = disabled (text is empty or exceeds limit)
 ```
 
@@ -410,15 +418,15 @@ browser-cli eval 'document.querySelector("<button-selector>")?.getAttribute("ari
 All interactions require navigating to the tweet first:
 
 ```bash
-browser-cli navigate 'https://x.com/<handle>/status/<tweetId>'
-browser-cli wait 'article[data-testid="tweet"]' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://x.com/<handle>/status/<tweetId>'
+browser-cli --tab <tabId> wait 'article[data-testid="tweet"]' --timeout 5000
 ```
 
 ### Like / Unlike
 
 ```bash
 # Check state first
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const tweet = document.querySelector('article[data-testid="tweet"]');
   return {
@@ -429,14 +437,14 @@ JSON.stringify((() => {
 EOF
 
 # Like (if not already liked)
-browser-cli click 'article[data-testid="tweet"] [data-testid="like"]'
-browser-cli wait 1000
+browser-cli --tab <tabId> click 'article[data-testid="tweet"] [data-testid="like"]'
+browser-cli --tab <tabId> wait 1000
 
 # Verify — unlike button should now be visible
-browser-cli eval '!!document.querySelector("article[data-testid=\"tweet\"] [data-testid=\"unlike\"]")'
+browser-cli --tab <tabId> eval '!!document.querySelector("article[data-testid=\"tweet\"] [data-testid=\"unlike\"]")'
 
 # Unlike (if already liked)
-browser-cli click 'article[data-testid="tweet"] [data-testid="unlike"]'
+browser-cli --tab <tabId> click 'article[data-testid="tweet"] [data-testid="unlike"]'
 ```
 
 | State     | Selector                 |
@@ -448,7 +456,7 @@ browser-cli click 'article[data-testid="tweet"] [data-testid="unlike"]'
 
 ```bash
 # Check state first
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify({
   reposted: !!document.querySelector('article[data-testid="tweet"] [data-testid="unretweet"]'),
   notReposted: !!document.querySelector('article[data-testid="tweet"] [data-testid="retweet"]'),
@@ -456,18 +464,18 @@ JSON.stringify({
 EOF
 
 # Repost (if not already reposted)
-browser-cli click 'article[data-testid="tweet"] [data-testid="retweet"]'
-browser-cli wait '[data-testid="retweetConfirm"]' --timeout 3000
-browser-cli click '[data-testid="retweetConfirm"]'
-browser-cli wait 1500
+browser-cli --tab <tabId> click 'article[data-testid="tweet"] [data-testid="retweet"]'
+browser-cli --tab <tabId> wait '[data-testid="retweetConfirm"]' --timeout 3000
+browser-cli --tab <tabId> click '[data-testid="retweetConfirm"]'
+browser-cli --tab <tabId> wait 1500
 
 # Verify — unretweet button should now be visible
-browser-cli eval '!!document.querySelector("article[data-testid=\"tweet\"] [data-testid=\"unretweet\"]")'
+browser-cli --tab <tabId> eval '!!document.querySelector("article[data-testid=\"tweet\"] [data-testid=\"unretweet\"]")'
 
 # Undo repost
-browser-cli click 'article[data-testid="tweet"] [data-testid="unretweet"]'
-browser-cli wait '[data-testid="unretweetConfirm"]' --timeout 3000
-browser-cli click '[data-testid="unretweetConfirm"]'
+browser-cli --tab <tabId> click 'article[data-testid="tweet"] [data-testid="unretweet"]'
+browser-cli --tab <tabId> wait '[data-testid="unretweetConfirm"]' --timeout 3000
+browser-cli --tab <tabId> click '[data-testid="unretweetConfirm"]'
 ```
 
 | State        | Selector                    | Menu confirm                       |
@@ -479,13 +487,13 @@ browser-cli click '[data-testid="unretweetConfirm"]'
 
 ```bash
 # Open retweet menu → click Quote
-browser-cli click 'article[data-testid="tweet"] [data-testid="retweet"]'
-browser-cli wait '[role="menuitem"]' --timeout 3000
-browser-cli click '[role="menuitem"]:last-child'   # "Quote" is the second menu item
-browser-cli wait '[role="dialog"][aria-modal="true"]' --timeout 3000
+browser-cli --tab <tabId> click 'article[data-testid="tweet"] [data-testid="retweet"]'
+browser-cli --tab <tabId> wait '[role="menuitem"]' --timeout 3000
+browser-cli --tab <tabId> click '[role="menuitem"]:last-child'   # "Quote" is the second menu item
+browser-cli --tab <tabId> wait '[role="dialog"][aria-modal="true"]' --timeout 3000
 
 # Input comment via eval (see "Text Input" section)
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const el = document.querySelector('[role="dialog"] [data-testid="tweetTextarea_0"]');
   el.focus();
@@ -496,19 +504,19 @@ browser-cli eval --stdin <<'EOF'
 EOF
 
 # Submit
-browser-cli click '[role="dialog"] [data-testid="tweetButton"]'
-browser-cli wait 2000
+browser-cli --tab <tabId> click '[role="dialog"] [data-testid="tweetButton"]'
+browser-cli --tab <tabId> wait 2000
 ```
 
 ### Reply
 
 ```bash
 # Click reply button → opens dialog
-browser-cli click 'article[data-testid="tweet"] [data-testid="reply"]'
-browser-cli wait '[role="dialog"][aria-modal="true"]' --timeout 3000
+browser-cli --tab <tabId> click 'article[data-testid="tweet"] [data-testid="reply"]'
+browser-cli --tab <tabId> wait '[role="dialog"][aria-modal="true"]' --timeout 3000
 
 # Input reply via eval (see "Text Input" section)
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const el = document.querySelector('[role="dialog"] [data-testid="tweetTextarea_0"]');
   el.focus();
@@ -519,15 +527,15 @@ browser-cli eval --stdin <<'EOF'
 EOF
 
 # Submit
-browser-cli click '[role="dialog"] [data-testid="tweetButton"]'
-browser-cli wait 2000
+browser-cli --tab <tabId> click '[role="dialog"] [data-testid="tweetButton"]'
+browser-cli --tab <tabId> wait 2000
 ```
 
 ### Bookmark
 
 ```bash
-browser-cli click 'article[data-testid="tweet"] [data-testid="bookmark"]'         # Bookmark
-browser-cli click 'article[data-testid="tweet"] [data-testid="removeBookmark"]'    # Remove bookmark
+browser-cli --tab <tabId> click 'article[data-testid="tweet"] [data-testid="bookmark"]'         # Bookmark
+browser-cli --tab <tabId> click 'article[data-testid="tweet"] [data-testid="removeBookmark"]'    # Remove bookmark
 ```
 
 ### Dialog selectors (reply / quote)
@@ -543,11 +551,11 @@ browser-cli click 'article[data-testid="tweet"] [data-testid="removeBookmark"]' 
 **From Home page** (inline compose):
 
 ```bash
-browser-cli navigate 'https://x.com/home'
-browser-cli wait '[data-testid="tweetTextarea_0"]' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://x.com/home'
+browser-cli --tab <tabId> wait '[data-testid="tweetTextarea_0"]' --timeout 5000
 
 # Input text via eval (see "Text Input" section)
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const el = document.querySelector('[data-testid="tweetTextarea_0"]');
   el.focus();
@@ -557,18 +565,18 @@ browser-cli eval --stdin <<'EOF'
 })()
 EOF
 
-browser-cli click '[data-testid="tweetButtonInline"]'
-browser-cli wait 2000
+browser-cli --tab <tabId> click '[data-testid="tweetButtonInline"]'
+browser-cli --tab <tabId> wait 2000
 ```
 
 **From anywhere** (modal compose):
 
 ```bash
-browser-cli click '[data-testid="SideNav_NewTweet_Button"]'
-browser-cli wait '[role="dialog"] [data-testid="tweetTextarea_0"]' --timeout 3000
+browser-cli --tab <tabId> click '[data-testid="SideNav_NewTweet_Button"]'
+browser-cli --tab <tabId> wait '[role="dialog"] [data-testid="tweetTextarea_0"]' --timeout 3000
 
 # Input text via eval (see "Text Input" section)
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const el = document.querySelector('[role="dialog"] [data-testid="tweetTextarea_0"]');
   el.focus();
@@ -578,8 +586,8 @@ browser-cli eval --stdin <<'EOF'
 })()
 EOF
 
-browser-cli click '[role="dialog"] [data-testid="tweetButton"]'
-browser-cli wait 2000
+browser-cli --tab <tabId> click '[role="dialog"] [data-testid="tweetButton"]'
+browser-cli --tab <tabId> wait 2000
 ```
 
 > Note: Home page uses `tweetButtonInline`; modal compose (SideNav button, reply, quote) uses `tweetButton`.
@@ -589,14 +597,14 @@ browser-cli wait 2000
 **URL**: `/explore`
 
 ```bash
-browser-cli navigate 'https://x.com/explore'
-browser-cli wait '[data-testid="trend"]' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://x.com/explore'
+browser-cli --tab <tabId> wait '[data-testid="trend"]' --timeout 5000
 ```
 
 **Extract trending topics**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('[data-testid="trend"]')].map((el, i) => ({
   index: i + 1,
   text: el.innerText,
@@ -629,7 +637,8 @@ EOF
 - **Image URLs**: Tweet images are `<img>` inside `[data-testid="tweetPhoto"]`, with `src` like `https://pbs.twimg.com/media/<id>?format=jpg&name=small`
 - **Card previews**: Link previews use `[data-testid="card.wrapper"]` with `[data-testid="card.layoutLarge.media"]` inside
 - **SPA navigation**: X is a full SPA. Use `browser-cli navigate` for initial navigation, then `browser-cli wait` for dynamic content
-- **Rate limiting**: Twitter may throttle requests. Add `browser-cli wait 1000` between rapid successive operations
+- **Rate limiting**: Twitter may throttle requests. Add `browser-cli --tab <tabId> wait 1000` between rapid successive operations
 - **Follow button**: The follow button's `data-testid` includes the user's numeric ID (e.g., `44196397-follow`). Use `[data-testid$="-follow"]` to match any user's follow button
 - **Virtual scroll**: Timeline uses virtual scrolling — older tweets are removed from DOM as you scroll. Always use the global collector pattern (see "Infinite scroll" in Timeline section) when collecting multiple tweets
 - **Domain**: Both `twitter.com` and `x.com` work; `twitter.com` redirects to `x.com`
+- **CSP error with `eval`**: If `browser-cli eval` returns a CSP (Content Security Policy) error on Chrome, the browser extension likely lacks the "User Scripts" permission. Ask the user to: go to `chrome://extensions`, find the Browser-CLI extension, click **Details**, and enable **Allow User Scripts**. Then reload the x.com page and retry. Without this permission, `chrome.scripting.executeScript({ world: 'MAIN' })` cannot inject scripts into pages with strict CSP like x.com

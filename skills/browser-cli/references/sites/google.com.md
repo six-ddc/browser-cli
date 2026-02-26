@@ -2,34 +2,42 @@
 
 > Google — the world's most widely used search engine.
 
+> **Tip**: To avoid disrupting user browsing, open a dedicated tab first:
+>
+> ```
+> browser-cli tab new 'https://www.google.com' --group browser-cli
+> ```
+>
+> Then use `--tab <tabId>` for all subsequent commands.
+
 ## Search
 
 Initiate a search from the homepage:
 
 ```bash
-browser-cli navigate 'https://www.google.com'
-browser-cli fill 'textarea[name="q"]' '<query>'
-browser-cli press Enter
-browser-cli wait '#search' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.google.com'
+browser-cli --tab <tabId> fill 'textarea[name="q"]' '<query>'
+browser-cli --tab <tabId> press Enter
+browser-cli --tab <tabId> wait '#search' --timeout 5000
 ```
 
 Or navigate directly via URL:
 
 ```bash
-browser-cli navigate 'https://www.google.com/search?q=<query>'
-browser-cli wait '#search' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.google.com/search?q=<query>'
+browser-cli --tab <tabId> wait '#search' --timeout 5000
 ```
 
 ## Search Results Page
 
 **URL pattern**: `/search?q=<query>` (additional params: `&start=<offset>`, `&num=<count>`, `&tbm=<type>`)
 
-**Wait**: `browser-cli wait '#search' --timeout 5000`
+**Wait**: `browser-cli --tab <tabId> wait '#search' --timeout 5000`
 
 **Extract search results**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll(".MjjYud")].map((el, i) => {
   const h3 = el.querySelector("h3");
   if (!h3) return null;
@@ -62,14 +70,14 @@ EOF
 Open the Tools panel to access time and verbatim filters:
 
 ```bash
-browser-cli click '#hdtb-tls'
-browser-cli wait 1000
+browser-cli --tab <tabId> click '#hdtb-tls'
+browser-cli --tab <tabId> wait 1000
 ```
 
 Click the "Any time" dropdown to open time filters:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const btn = document.querySelector(".mTpL7c.XhWQv");
   if (btn) { btn.click(); return "time dropdown opened"; }
@@ -79,14 +87,14 @@ EOF
 ```
 
 ```bash
-browser-cli wait 'a[href*="tbs=qdr"]' --timeout 3000
+browser-cli --tab <tabId> wait 'a[href*="tbs=qdr"]' --timeout 3000
 ```
 
 Then click the desired time range:
 
 ```bash
 # Past hour / Past 24 hours / Past week / Past month / Past year
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const links = [...document.querySelectorAll("a[href*='tbs=qdr']")];
   // qdr:h = past hour, qdr:d = past 24h, qdr:w = past week, qdr:m = past month, qdr:y = past year
@@ -113,15 +121,15 @@ URL-based — increment the `start` parameter by 10:
 
 ```bash
 # Page 2 (results 11–20)
-browser-cli navigate 'https://www.google.com/search?q=<query>&start=10'
-browser-cli wait '#search' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.google.com/search?q=<query>&start=10'
+browser-cli --tab <tabId> wait '#search' --timeout 5000
 ```
 
 Or click the "Next" link:
 
 ```bash
-browser-cli click '#pnnext'
-browser-cli wait '#search' --timeout 5000
+browser-cli --tab <tabId> click '#pnnext'
+browser-cli --tab <tabId> wait '#search' --timeout 5000
 ```
 
 ## Image Search
@@ -131,14 +139,14 @@ browser-cli wait '#search' --timeout 5000
 **Navigation**:
 
 ```bash
-browser-cli navigate 'https://www.google.com/search?q=<query>&tbm=isch'
-browser-cli wait '#search' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.google.com/search?q=<query>&tbm=isch'
+browser-cli --tab <tabId> wait '#search' --timeout 5000
 ```
 
 **Extract image results**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll("#search [data-lpage]")].slice(0, 20).map((el, i) => ({
   index: i + 1,
   title: el.querySelector(".toI8Rb")?.innerText || el.querySelector("img")?.alt || "",
@@ -165,8 +173,8 @@ EOF
 **Pagination**: Infinite scroll
 
 ```bash
-browser-cli scroll down --amount 2000
-browser-cli wait 2000
+browser-cli --tab <tabId> scroll down --amount 2000
+browser-cli --tab <tabId> wait 2000
 ```
 
 ## News Search
@@ -176,14 +184,14 @@ browser-cli wait 2000
 **Navigation**:
 
 ```bash
-browser-cli navigate 'https://www.google.com/search?q=<query>&tbm=nws'
-browser-cli wait '#search' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.google.com/search?q=<query>&tbm=nws'
+browser-cli --tab <tabId> wait '#search' --timeout 5000
 ```
 
 **Extract news results**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll("#search .SoaBEf")].map((el, i) => ({
   index: i + 1,
   title: el.querySelector("[role='heading']")?.innerText || "",
@@ -211,7 +219,7 @@ EOF
 When Google displays a Knowledge Panel for an entity (person, company, place, etc.), extract it from `#rhs`:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const rhs = document.querySelector("#rhs");
   if (!rhs) return null;
@@ -251,9 +259,9 @@ EOF
 ## Notes
 
 - **Dynamic rendering**: Google uses progressive rendering; always `wait '#search'` before extraction
-- **Consent page**: In some regions (EU), Google shows a cookie consent page. Dismiss with: `browser-cli click '#L2AGLb'` (Accept All button)
-- **CAPTCHA**: Excessive automated queries may trigger a CAPTCHA. If extraction returns empty, check for CAPTCHA with `browser-cli snapshot -ic`
-- **Selectors may change**: Google frequently updates class names. Stable selectors: `#search`, `#rhs`, `h3`, `cite`, `[data-attrid]`. Unstable: `.MjjYud`, `.VwiC3b`, `.SoaBEf`, `.UqSP2b` — if extraction fails, use `snapshot -ic` to inspect current structure
+- **Consent page**: In some regions (EU), Google shows a cookie consent page. Dismiss with: `browser-cli --tab <tabId> click '#L2AGLb'` (Accept All button)
+- **CAPTCHA**: Excessive automated queries may trigger a CAPTCHA. If extraction returns empty, check for CAPTCHA with `browser-cli --tab <tabId> snapshot -ic`
+- **Selectors may change**: Google frequently updates class names. Stable selectors: `#search`, `#rhs`, `h3`, `cite`, `[data-attrid]`. Unstable: `.MjjYud`, `.VwiC3b`, `.SoaBEf`, `.UqSP2b` — if extraction fails, use `browser-cli --tab <tabId> snapshot -ic` to inspect current structure
 - **Search type params**: `tbm=isch` (images), `tbm=nws` (news), `tbm=vid` (videos), `tbm=shop` (shopping)
 - **Safe search**: Append `&safe=active` for safe search, `&safe=off` to disable
 - **Language/region**: `&hl=en` for language, `&gl=us` for region

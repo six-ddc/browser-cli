@@ -45,6 +45,60 @@ let setHeadersListener:
     ) => Browser.webRequest.BlockingResponse)
   | null = null;
 
+const TAB_GROUP_COLORS = [
+  'grey',
+  'blue',
+  'red',
+  'yellow',
+  'green',
+  'pink',
+  'purple',
+  'cyan',
+  'orange',
+] as const;
+
+/** Add a tab to a named group, creating the group if it doesn't exist (Chrome only). */
+async function addTabToNamedGroup(
+  tabId: number,
+  groupName: string,
+): Promise<{ groupId: number; groupName: string }> {
+  const chromeTabsGroup = (
+    browser.tabs as unknown as {
+      group: (opts: { tabIds: number[]; groupId?: number }) => Promise<number>;
+    }
+  ).group;
+
+  interface ChromeTabGroup {
+    id: number;
+    title?: string;
+  }
+  const tabGroups = (
+    globalThis as unknown as {
+      chrome: {
+        tabGroups: {
+          query: (filter: object) => Promise<ChromeTabGroup[]>;
+          update: (id: number, props: object) => Promise<ChromeTabGroup>;
+        };
+      };
+    }
+  ).chrome.tabGroups;
+
+  // Try to find existing group by title
+  const allGroups = await tabGroups.query({});
+  const existing = allGroups.find((g) => g.title === groupName);
+
+  if (existing) {
+    await chromeTabsGroup({ tabIds: [tabId], groupId: existing.id });
+    return { groupId: existing.id, groupName };
+  }
+
+  // Create new group with random color
+  const groupId = await chromeTabsGroup({ tabIds: [tabId] });
+  const color = TAB_GROUP_COLORS[Math.floor(Math.random() * TAB_GROUP_COLORS.length)];
+  await tabGroups.update(groupId, { title: groupName, color });
+  return { groupId, groupName };
+}
+
 export async function handleBackgroundCommand(
   msg: RequestMessage,
   targetTabId: number,
@@ -132,18 +186,23 @@ async function routeCommand(
 
     // ─── Tabs ──────────────────────────────────────────────────
     case 'tabNew': {
-      const { url, container } = command.params;
+      const { url, container, group } = command.params;
       if (url) assertSafeUrl(url);
       let cookieStoreId: string | undefined;
       if (container) {
         if (!import.meta.env.FIREFOX) {
           const tab = await browser.tabs.create({ url: url || 'about:blank' });
-          return {
+          const result: Record<string, unknown> = {
             tabId: tab.id,
             url: tab.url || url || 'about:blank',
             warning:
               '--container is not supported in Chrome; tab opened without container isolation.',
           };
+          if (group && tab.id) {
+            const groupResult = await addTabToNamedGroup(tab.id, group);
+            Object.assign(result, groupResult);
+          }
+          return result;
         }
         const ctxIds = (browser as unknown as { contextualIdentities: ContextualIdentitiesAPI })
           .contextualIdentities;
@@ -162,7 +221,15 @@ async function routeCommand(
         url: url || 'about:blank',
         ...((cookieStoreId != null ? { cookieStoreId } : {}) as Record<string, unknown>),
       } as Browser.tabs.CreateProperties);
-      return { tabId: tab.id, url: tab.url || url || 'about:blank' };
+      const result: Record<string, unknown> = {
+        tabId: tab.id,
+        url: tab.url || url || 'about:blank',
+      };
+      if (group && tab.id && !import.meta.env.FIREFOX) {
+        const groupResult = await addTabToNamedGroup(tab.id, group);
+        Object.assign(result, groupResult);
+      }
+      return result;
     }
     case 'tabList': {
       const tabs = await browser.tabs.query({});

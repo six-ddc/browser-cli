@@ -2,10 +2,18 @@
 
 > Hacker News — tech community news aggregator by Y Combinator.
 
+> **Tip**: To avoid disrupting user browsing, open a dedicated tab first:
+>
+> ```
+> browser-cli tab new 'https://news.ycombinator.com' --group browser-cli
+> ```
+>
+> Then use `--tab <tabId>` for all subsequent commands.
+
 ## Login Detection
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify({
   loggedIn: !!document.querySelector('#logout'),
   loginLink: !!document.querySelector('a[href*="login"]'),
@@ -30,8 +38,8 @@ All category pages share the same DOM structure except `/jobs` (no score/comment
 **Navigation**:
 
 ```bash
-browser-cli navigate 'https://news.ycombinator.com/'
-browser-cli wait '.athing' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/'
+browser-cli --tab <tabId> wait '.athing' --timeout 5000
 ```
 
 Category URLs:
@@ -49,7 +57,7 @@ Category URLs:
 **Extract posts**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('.athing')].map((el, i) => {
   const titleLink = el.querySelector('.titleline > a');
   const siteStr = el.querySelector('.sitestr')?.innerText || '';
@@ -76,7 +84,7 @@ EOF
 **Extract jobs** (no score/user/comments):
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('.athing')].map((el, i) => {
   const titleLink = el.querySelector('.titleline > a');
   const sub = el.nextElementSibling;
@@ -111,15 +119,15 @@ EOF
 URL-based — append `?p=<n>`:
 
 ```bash
-browser-cli navigate 'https://news.ycombinator.com/news?p=2'
-browser-cli wait '.athing' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/news?p=2'
+browser-cli --tab <tabId> wait '.athing' --timeout 5000
 ```
 
 Or click the "More" link:
 
 ```bash
-browser-cli click '.morelink'
-browser-cli wait '.athing' --timeout 5000
+browser-cli --tab <tabId> click '.morelink'
+browser-cli --tab <tabId> wait '.athing' --timeout 5000
 ```
 
 ## Comment Page (Post Detail)
@@ -129,14 +137,14 @@ browser-cli wait '.athing' --timeout 5000
 **Navigation**:
 
 ```bash
-browser-cli navigate 'https://news.ycombinator.com/item?id=<post-id>'
-browser-cli wait '.comment-tree' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/item?id=<post-id>'
+browser-cli --tab <tabId> wait '.comment-tree' --timeout 5000
 ```
 
 **Extract post metadata**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const fat = document.querySelector('.fatitem');
   if (!fat) return null;
@@ -154,7 +162,7 @@ EOF
 **Extract all comments** (JSON, preserves nesting depth and paragraph structure):
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('.comtr')].map(el => {
   const depth = parseInt(el.querySelector('.ind')?.getAttribute('indent') || '0');
   const ct = el.querySelector('.commtext');
@@ -182,7 +190,7 @@ The `depth` field indicates nesting level: `0` = top-level, `1` = reply, `2` = r
 **Formatted comment tree** (human-readable tree view, recommended for display):
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const comments = [...document.querySelectorAll('.comtr')];
   const lines = comments.map(el => {
@@ -225,8 +233,8 @@ EOF
 If a post has many comments, a "More" link appears at the bottom:
 
 ```bash
-browser-cli click '.morelink'
-browser-cli wait '.comtr' --timeout 5000
+browser-cli --tab <tabId> click '.morelink'
+browser-cli --tab <tabId> wait '.comtr' --timeout 5000
 ```
 
 ## Interactions
@@ -234,21 +242,21 @@ browser-cli wait '.comtr' --timeout 5000
 **Collapse/expand a comment thread**:
 
 ```bash
-browser-cli click '#<comment-id>.togg'
+browser-cli --tab <tabId> click '#<comment-id>.togg'
 ```
 
 **Navigate to a specific comment**:
 
 ```bash
-browser-cli navigate 'https://news.ycombinator.com/item?id=<comment-id>'
-browser-cli wait '.comtr' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/item?id=<comment-id>'
+browser-cli --tab <tabId> wait '.comtr' --timeout 5000
 ```
 
 **User profile**:
 
 ```bash
-browser-cli navigate 'https://news.ycombinator.com/user?id=<username>'
-browser-cli wait '#hnmain' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/user?id=<username>'
+browser-cli --tab <tabId> wait '#hnmain' --timeout 5000
 ```
 
 ## Search
@@ -256,14 +264,14 @@ browser-cli wait '#hnmain' --timeout 5000
 Hacker News uses Algolia for search:
 
 ```bash
-browser-cli navigate 'https://hn.algolia.com/?q=<query>'
-browser-cli wait '.Story' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://hn.algolia.com/?q=<query>'
+browser-cli --tab <tabId> wait '.Story' --timeout 5000
 ```
 
 **Extract Algolia search results**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('.Story')].map((el, i) => ({
   index: i + 1,
   title: el.querySelector('.Story_title a')?.innerText || '',
@@ -283,5 +291,5 @@ EOF
 - **Comment indent**: The `.ind` element has an `indent` attribute (0, 1, 2, …) representing depth. The inner `<img>` has `width` = `indent * 40` pixels.
 - **Deleted comments**: Deleted comments show `[deleted]` with no `.hnuser` element. The extraction scripts handle this with `|| '[deleted]'`.
 - **Ask HN / Show HN**: These use the same post list structure. Ask HN posts link to their own comment page (self-posts). Show HN posts may link to external URLs.
-- **Rate limiting**: HN may rate-limit rapid requests. Add `browser-cli wait 1000` between navigations if needed.
+- **Rate limiting**: HN may rate-limit rapid requests. Add `browser-cli --tab <tabId> wait 1000` between navigations if needed.
 - **No login required for reading**: All posts and comments are publicly accessible.

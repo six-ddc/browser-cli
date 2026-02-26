@@ -119,48 +119,6 @@ test.describe('stop command', () => {
   });
 });
 
-test.describe('close/quit/exit aliases', () => {
-  test.afterEach(() => {
-    ensureStopped();
-  });
-
-  test('close stops daemon', () => {
-    lifecycleBcli('start', '--port', String(E2E_WS_PORT));
-    const r = lifecycleBcli('close');
-    expect(r.exitCode).toBe(0);
-    const hasExpected = r.output.includes('closed') || r.output.includes('stopped');
-    expect(hasExpected).toBe(true);
-  });
-
-  test('quit alias works', () => {
-    lifecycleBcli('start', '--port', String(E2E_WS_PORT));
-    const r = lifecycleBcli('quit');
-    expect(r.exitCode).toBe(0);
-
-    // Verify daemon is actually stopped
-    const s = lifecycleBcli('status');
-    expect(s.output).toMatch(/not running|daemon.*false/i);
-  });
-
-  test('exit alias works', () => {
-    lifecycleBcli('start', '--port', String(E2E_WS_PORT));
-    const r = lifecycleBcli('exit');
-    expect(r.exitCode).toBe(0);
-
-    // Verify daemon is actually stopped
-    const s = lifecycleBcli('status');
-    expect(s.output).toMatch(/not running|daemon.*false/i);
-  });
-
-  test('close when not running handles gracefully', () => {
-    ensureStopped();
-    const r = lifecycleBcli('close');
-    expect(r.exitCode).toBe(0);
-    const hasExpected = r.output.includes('not running') || r.output.includes('No active session');
-    expect(hasExpected).toBe(true);
-  });
-});
-
 test.describe('status --json when not running', () => {
   test('reports daemon not running', () => {
     ensureStopped();

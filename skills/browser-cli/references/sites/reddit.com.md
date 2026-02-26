@@ -2,6 +2,14 @@
 
 > Reddit — social news aggregation, content rating, and discussion platform with thousands of community-driven subreddits.
 
+> **Tip**: To avoid disrupting user browsing, open a dedicated tab first:
+>
+> ```
+> browser-cli tab new 'https://www.reddit.com' --group browser-cli
+> ```
+>
+> Then use `--tab <tabId>` for all subsequent commands.
+
 ## Login Required
 
 **Reddit blocks unauthenticated browser access.** Both `reddit.com` and `old.reddit.com` return a "blocked by network security" page without login.
@@ -11,7 +19,7 @@
 **Detect login state**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const expandUser = !!document.querySelector('#expand-user-drawer-button');
   const createPost = !!document.querySelector('a[href="/submit"]');
@@ -34,20 +42,20 @@ EOF
 
 > Reddit is not logged in. Please log in manually in the browser, then tell me to continue.
 
-After the user logs in, run `browser-cli reload` and re-check login state before proceeding.
+After the user logs in, run `browser-cli --tab <tabId> reload` and re-check login state before proceeding.
 
 ## Homepage / Feed
 
 **URL**: `https://www.reddit.com/`
 
-**Navigation**: `browser-cli navigate 'https://www.reddit.com/'`
+**Navigation**: `browser-cli --tab <tabId> navigate 'https://www.reddit.com/'`
 
-**Wait**: `browser-cli wait 'shreddit-post' --timeout 5000`
+**Wait**: `browser-cli --tab <tabId> wait 'shreddit-post' --timeout 5000`
 
 **Extract posts**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('shreddit-post')].map((el, i) => ({
   index: i + 1,
   title: el.getAttribute('post-title'),
@@ -86,8 +94,8 @@ EOF
 The feed uses lazy loading via `faceplate-partial`. Scroll down to trigger loading:
 
 ```bash
-browser-cli scroll down --amount 2000
-browser-cli wait 2000
+browser-cli --tab <tabId> scroll down --amount 2000
+browser-cli --tab <tabId> wait 2000
 # Re-run extraction to get newly loaded posts
 ```
 
@@ -100,8 +108,8 @@ browser-cli wait 2000
 **Navigation**:
 
 ```bash
-browser-cli navigate 'https://www.reddit.com/r/<subreddit>/'
-browser-cli wait 'shreddit-post' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.reddit.com/r/<subreddit>/'
+browser-cli --tab <tabId> wait 'shreddit-post' --timeout 5000
 ```
 
 **Sort options** (via URL):
@@ -117,14 +125,14 @@ browser-cli wait 'shreddit-post' --timeout 5000
 
 ```bash
 # Top posts of the week in r/programming
-browser-cli navigate 'https://www.reddit.com/r/programming/top/?t=week'
-browser-cli wait 'shreddit-post' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.reddit.com/r/programming/top/?t=week'
+browser-cli --tab <tabId> wait 'shreddit-post' --timeout 5000
 ```
 
 **Extract subreddit info**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const h = document.querySelector('shreddit-subreddit-header');
   if (!h) return { error: 'no header' };
@@ -159,14 +167,14 @@ EOF
 
 **URL pattern**: `/r/<subreddit>/comments/<postId>/<slug>/`
 
-**Navigation**: `browser-cli navigate 'https://www.reddit.com/r/<subreddit>/comments/<postId>/<slug>/'`
+**Navigation**: `browser-cli --tab <tabId> navigate 'https://www.reddit.com/r/<subreddit>/comments/<postId>/<slug>/'`
 
-**Wait**: `browser-cli wait 'shreddit-comment' --timeout 5000`
+**Wait**: `browser-cli --tab <tabId> wait 'shreddit-comment' --timeout 5000`
 
 **Extract post detail**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const p = document.querySelector('shreddit-post');
   if (!p) return { error: 'post not found' };
@@ -204,7 +212,7 @@ Comments use `shreddit-comment` custom elements with shadow DOM. The `depth` att
 **Extract comments**:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('shreddit-comment')].map((c, i) => {
   const bodySlot = [...c.children].find(ch => ch.getAttribute('slot') === 'comment');
   return {
@@ -250,7 +258,7 @@ shreddit-comment[depth="0"]        ← top-level comment
 **Formatted comment tree** (human-readable tree view):
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 (() => {
   const comments = [...document.querySelectorAll('shreddit-comment')];
   const lines = comments.map(c => {
@@ -273,21 +281,21 @@ Collapsed reply threads show "N more replies" buttons (e.g. "另外 8 条回复"
 
 ```bash
 # Find collapsed reply buttons
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify([...document.querySelectorAll('button')].filter(b =>
   /more repl|条回复/i.test(b.innerText)
 ).map(b => b.innerText.trim()))
 EOF
 
 # Click to expand (click the first collapsed thread)
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 const btn = [...document.querySelectorAll('button')].find(b =>
   /more repl|条回复/i.test(b.innerText)
 );
 btn?.click();
 'clicked: ' + (btn?.innerText || 'none');
 EOF
-browser-cli wait 2000
+browser-cli --tab <tabId> wait 2000
 ```
 
 ### Scroll to Load More Top-Level Comments
@@ -295,8 +303,8 @@ browser-cli wait 2000
 The comment page loads a limited set of top-level comments initially. Scroll down to trigger lazy loading of more comments:
 
 ```bash
-browser-cli scroll down --amount 3000
-browser-cli wait 2000
+browser-cli --tab <tabId> scroll down --amount 3000
+browser-cli --tab <tabId> wait 2000
 # Re-run comment extraction
 ```
 
@@ -306,8 +314,8 @@ Comment sort is controlled via URL parameter or the `shreddit-comments-sort-drop
 
 ```bash
 # Sort by: best (default), top, new, controversial, old, qa
-browser-cli navigate 'https://www.reddit.com/r/<sub>/comments/<id>/<slug>/?sort=new'
-browser-cli wait 'shreddit-comment' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.reddit.com/r/<sub>/comments/<id>/<slug>/?sort=new'
+browser-cli --tab <tabId> wait 'shreddit-comment' --timeout 5000
 ```
 
 | Sort          | URL `?sort=` value |
@@ -326,19 +334,19 @@ browser-cli wait 'shreddit-comment' --timeout 5000
 **Navigate to search**:
 
 ```bash
-browser-cli navigate 'https://www.reddit.com/search/?q=<query>&type=posts'
-browser-cli wait 3000
+browser-cli --tab <tabId> navigate 'https://www.reddit.com/search/?q=<query>&type=posts'
+browser-cli --tab <tabId> wait 3000
 ```
 
 **Search via input** (from any page):
 
 ```bash
-browser-cli fill 'input[name="q"]' '<query>'
-browser-cli eval 'document.querySelector("input[name=q]").form.submit()'
-browser-cli wait 3000
+browser-cli --tab <tabId> fill 'input[name="q"]' '<query>'
+browser-cli --tab <tabId> eval 'document.querySelector("input[name=q]").form.submit()'
+browser-cli --tab <tabId> wait 3000
 ```
 
-> **Note**: `browser-cli press Enter` does not trigger Reddit's custom search form submission. Use `form.submit()` via eval instead.
+> **Note**: `browser-cli --tab <tabId> press Enter` does not trigger Reddit's custom search form submission. Use `form.submit()` via eval instead.
 
 **Search type tabs**:
 
@@ -362,8 +370,8 @@ browser-cli wait 3000
 
 ```bash
 # Search for "rust programming", sort by top
-browser-cli navigate 'https://www.reddit.com/search/?q=rust+programming&type=posts&sort=top'
-browser-cli wait 3000
+browser-cli --tab <tabId> navigate 'https://www.reddit.com/search/?q=rust+programming&type=posts&sort=top'
+browser-cli --tab <tabId> wait 3000
 ```
 
 **Extract search results** (posts):
@@ -371,7 +379,7 @@ browser-cli wait 3000
 Search results use a different structure from feed — they are `div` cards rather than `shreddit-post` elements:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const cards = document.querySelectorAll('div.flex.justify-between.items-center.p-md');
   return [...cards].map((card, i) => {
@@ -394,9 +402,9 @@ EOF
 **Extract community search results**:
 
 ```bash
-browser-cli navigate 'https://www.reddit.com/search/?q=<query>&type=communities'
-browser-cli wait 3000
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> navigate 'https://www.reddit.com/search/?q=<query>&type=communities'
+browser-cli --tab <tabId> wait 3000
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify((() => {
   const main = document.querySelector('main');
   const items = [...main.querySelectorAll('div.flex.justify-start.gap-x-md')];
@@ -417,8 +425,8 @@ EOF
 **Direct navigation** (recommended):
 
 ```bash
-browser-cli navigate 'https://www.reddit.com/r/<subreddit>/'
-browser-cli wait 'shreddit-post' --timeout 5000
+browser-cli --tab <tabId> navigate 'https://www.reddit.com/r/<subreddit>/'
+browser-cli --tab <tabId> wait 'shreddit-post' --timeout 5000
 ```
 
 **Common subreddit URL patterns**:
@@ -457,7 +465,7 @@ browser-cli wait 'shreddit-post' --timeout 5000
 - **Comment depth**: The `depth` attribute on `shreddit-comment` indicates nesting level. Nested comments are direct children of their parent comment element
 - **Collapsed replies**: Some reply threads are collapsed behind "N more replies" buttons. Click these buttons to expand
 - **Infinite scroll**: Feed uses lazy-loaded `faceplate-partial` elements. Scroll down to trigger. Posts mostly accumulate in DOM, but some may be removed in very long scroll sessions
-- **SPA navigation**: Reddit is an SPA. Use `browser-cli navigate` for initial navigation, then `browser-cli wait` for dynamic content
+- **SPA navigation**: Reddit is an SPA. Use `browser-cli --tab <tabId> navigate` for initial navigation, then `browser-cli --tab <tabId> wait` for dynamic content
 - **Localization**: Reddit UI text adapts to browser language (e.g., "条评论" for Chinese). Stats regex in extraction scripts should handle both English and localized text
 - **Sort via URL**: Both subreddit sort and comment sort are most reliably controlled via URL parameters rather than clicking dropdown UIs (which use shadow DOM)
 - **GIF/media comments**: Comments with `content-type="giphy"` are GIF reactions — their `[slot="comment"]` text will be empty. Check `contentType` to distinguish from missing text

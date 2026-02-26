@@ -2,6 +2,14 @@
 
 > Gmail — Google's email service. A heavy SPA with strict CSP.
 
+> **Tip**: To avoid disrupting user browsing, open a dedicated tab first:
+>
+> ```
+> browser-cli tab new 'https://mail.google.com' --group browser-cli
+> ```
+>
+> Then use `--tab <tabId>` for all subsequent commands.
+
 ## CSP and eval
 
 Gmail enforces Trusted Types (`require-trusted-types-for 'script'`).
@@ -42,21 +50,21 @@ deployments. This guide uses **stable HTML attributes** wherever possible:
 **Navigation**:
 
 ```bash
-browser-cli navigate 'https://mail.google.com/mail/u/0/#inbox'
-browser-cli wait 3000
+browser-cli --tab <tabId> navigate 'https://mail.google.com/mail/u/0/#inbox'
+browser-cli --tab <tabId> wait 3000
 ```
 
 **Wait signal**: The page title contains "Inbox" and an unread count:
 
 ```bash
-browser-cli get title
+browser-cli --tab <tabId> get title
 # → "Inbox (48) - user@gmail.com - Gmail"
 ```
 
 **Extract email list** (`eval`):
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify(Array.from(document.querySelectorAll("tr:has(span[data-thread-id])")).map(r => ({
   threadId: r.querySelector("span[data-thread-id]")?.getAttribute("data-legacy-thread-id") || "",
   unread: getComputedStyle(r.querySelector("span[email]")).fontWeight === "700",
@@ -87,7 +95,7 @@ EOF
 **Extract email list** (snapshot, always works):
 
 ```bash
-browser-cli snapshot -ic | grep -E '^\s+row "'
+browser-cli --tab <tabId> snapshot -ic | grep -E '^\s+row "'
 ```
 
 Row accessible name format:
@@ -102,32 +110,32 @@ row "starred, <sender>, <subject>, <time>, <snippet>..."    ← starred
 
 ```bash
 # Via snapshot ref
-browser-cli click '@e41'   # use the actual @ref from snapshot
+browser-cli --tab <tabId> click '@e41'   # use the actual @ref from snapshot
 
 # Via find
-browser-cli find text '<subject text>' click
+browser-cli --tab <tabId> find text '<subject text>' click
 ```
 
 **Category tabs** (Primary, Promotions, Social):
 
 ```bash
-browser-cli snapshot -ic | grep 'tab "'
+browser-cli --tab <tabId> snapshot -ic | grep 'tab "'
 # → tab "Primary" [@e36]
 # → tab "Promotions, 49 new messages," [@e37]
 # → tab "Social, 13 new messages," [@e38]
 
-browser-cli click '@e37'
-browser-cli wait 2000
+browser-cli --tab <tabId> click '@e37'
+browser-cli --tab <tabId> wait 2000
 ```
 
 **Pagination**:
 
 ```bash
-browser-cli find role 'button' --name 'Older' click
-browser-cli wait 3000
+browser-cli --tab <tabId> find role 'button' --name 'Older' click
+browser-cli --tab <tabId> wait 3000
 
-browser-cli find role 'button' --name 'Newer' click
-browser-cli wait 3000
+browser-cli --tab <tabId> find role 'button' --name 'Newer' click
+browser-cli --tab <tabId> wait 3000
 ```
 
 **Snapshot key elements**:
@@ -151,14 +159,14 @@ browser-cli wait 3000
 **Navigation**:
 
 ```bash
-browser-cli find text '<subject text>' click
-browser-cli wait 2000
+browser-cli --tab <tabId> find text '<subject text>' click
+browser-cli --tab <tabId> wait 2000
 ```
 
 **Extract email metadata** (`eval`):
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify({
   subject: document.querySelector("h2[data-thread-perm-id]")?.textContent || "",
   senderName: document.querySelector("[data-legacy-message-id] span[email]")?.getAttribute("name") || "",
@@ -172,7 +180,7 @@ EOF
 **Extract email body HTML** (`eval`):
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 document.querySelector("[data-legacy-message-id] div.a3s")?.innerHTML
 EOF
 ```
@@ -180,7 +188,7 @@ EOF
 For threads with multiple messages:
 
 ```bash
-browser-cli eval --stdin <<'EOF'
+browser-cli --tab <tabId> eval --stdin <<'EOF'
 JSON.stringify(Array.from(document.querySelectorAll("[data-legacy-message-id]")).map(msg => ({
   messageId: msg.getAttribute("data-legacy-message-id") || "",
   sender: msg.querySelector("span[email]")?.getAttribute("name") || "",
@@ -217,8 +225,8 @@ EOF
 **Return to inbox**:
 
 ```bash
-browser-cli find role 'button' --name 'Back to Inbox' click
-browser-cli wait 2000
+browser-cli --tab <tabId> find role 'button' --name 'Back to Inbox' click
+browser-cli --tab <tabId> wait 2000
 ```
 
 ## Search
@@ -227,14 +235,14 @@ browser-cli wait 2000
 
 ```bash
 # Option 1: Fill the search box
-browser-cli find role 'textbox' --name 'Search mail' click
-browser-cli find role 'textbox' --name 'Search mail' fill '<query>'
-browser-cli press Enter
-browser-cli wait 3000
+browser-cli --tab <tabId> find role 'textbox' --name 'Search mail' click
+browser-cli --tab <tabId> find role 'textbox' --name 'Search mail' fill '<query>'
+browser-cli --tab <tabId> press Enter
+browser-cli --tab <tabId> wait 3000
 
 # Option 2: Navigate directly
-browser-cli navigate 'https://mail.google.com/mail/u/0/#search/<query>'
-browser-cli wait 3000
+browser-cli --tab <tabId> navigate 'https://mail.google.com/mail/u/0/#search/<query>'
+browser-cli --tab <tabId> wait 3000
 ```
 
 **URL pattern**: `https://mail.google.com/mail/u/0/#search/<encoded-query>`
@@ -267,8 +275,8 @@ browser-cli wait 3000
 | Drafts  | `#drafts`  |
 
 ```bash
-browser-cli navigate 'https://mail.google.com/mail/u/0/#sent'
-browser-cli wait 3000
+browser-cli --tab <tabId> navigate 'https://mail.google.com/mail/u/0/#sent'
+browser-cli --tab <tabId> wait 3000
 ```
 
 ## Notes
