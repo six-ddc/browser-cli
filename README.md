@@ -35,7 +35,9 @@ Most browser automation tools (Playwright, Puppeteer, Selenium) rely on CDP or W
 
 ## Features
 
-**Navigation & Pages** — goto, back, forward, reload, markdown extraction, screenshots
+**Navigation & Pages** — goto, back, forward, reload, screenshots
+
+**Markdown Extraction** — Converts any page into clean, readable Markdown using [Defuddle](https://github.com/nickersoft/defuddle), stripping nav, ads, and boilerplate.
 
 **Interaction** — click, fill, type, press, hover, drag & drop, scroll, focus, check/uncheck, select, upload
 
@@ -159,6 +161,7 @@ Once installed, agents can invoke `/browser-cli` directly in Claude Code convers
 
 - Node.js >= 20
 - pnpm >= 10
+- [Bun](https://bun.sh/) (used to build the CLI)
 
 ### Setup
 
