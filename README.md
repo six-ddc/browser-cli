@@ -15,59 +15,42 @@ Most browser automation tools (Playwright, Puppeteer, Selenium) rely on CDP or W
 - **No CDP, no WebDriver** — The extension communicates over WebSocket, with zero dependency on Chrome DevTools Protocol or browser drivers.
 - **Agent-friendly output** — Accessibility snapshots with element refs (`@e1`, `@e2`), semantic locators, structured errors with hints, and `--json` mode.
 
-```bash
-# AI agents use browser-cli as a skill:
-# /browser-cli navigate to hacker news and get the top 3 stories
-```
-
 ## Architecture
 
 ```
-┌─────────┐  Unix socket   ┌────────┐  WebSocket   ┌───────────┐
-│   CLI   │ ──── NDJSON ──→│ Daemon │ ──── JSON ──→│ Extension │
-│(client) │                │(server)│              │(browser)  │
-└─────────┘                └────────┘              └───────────┘
+CLI (client) ── NDJSON / Unix socket ──→ Daemon (server) ── JSON / WebSocket ──→ Extension (browser)
 ```
 
-- **CLI** — Commander.js client that sends commands over a Unix socket
-- **Daemon** — Background process with a WebSocket server (port 9222) + Unix socket server
-- **Extension** — Browser extension (Chrome MV3 + Firefox MV2) that routes commands to chrome APIs or content scripts
+The CLI sends commands to a background daemon, which relays them over WebSocket to a browser extension. The extension executes commands via Chrome APIs or content scripts and returns results through the same path. No CDP, no WebDriver — just a lightweight extension in your real browser.
 
 ## Features
 
-**Navigation & Pages** — goto, back, forward, reload, screenshots
+**Page & Content**
 
-**Markdown Extraction** — Converts any page into clean, readable Markdown using [Defuddle](https://github.com/nickersoft/defuddle), stripping nav, ads, and boilerplate.
+- Navigate (goto, back, forward, reload), take screenshots
+- Extract clean readable Markdown via [Defuddle](https://github.com/nickersoft/defuddle) — strips nav, ads, and boilerplate
+- Accessibility snapshots with element refs (`@e1`, `@e2`) for precise interaction
+- Evaluate JavaScript in page context
 
-**Interaction** — click, fill, type, press, hover, drag & drop, scroll, focus, check/uncheck, select, upload
+**Interaction**
 
-**Semantic Locators** — Find elements by role, text, label, placeholder, alt, title, testid, or xpath
+- Actions — click, fill, type, press, hover, drag & drop, scroll, check/uncheck, select, upload
+- Semantic locators — find elements by role, text, label, placeholder, alt, title, testid, xpath
+- `find` command — locate + act in one step: `find role button click --name "Submit"`
+- Wait for selector, URL, duration, text, load state, or custom function
 
-**Find Command** — Locate + act in one step: `find role button click --name "Submit"`
+**Browser State**
 
-**Snapshots** — Accessibility tree with interactive element refs (`@e1`, `@e2`, ...)
+- Tabs, windows, tab groups; frame switching
+- Cookies, localStorage, sessionStorage
+- Network interception (block, redirect, track)
+- Dialogs (alert/confirm/prompt), console logs
 
-**Data Queries** — get text/html/value/attribute, check element state, count, bounding box
+**Data & Config**
 
-**Wait** — Wait for selector, URL, duration, text, load state, or custom function
-
-**JavaScript** — Evaluate expressions in page context (base64, stdin, MAIN world)
-
-**Tabs & Windows** — Open, list, switch, close tabs and windows; tab groups (Chrome)
-
-**Frames** — Switch between main page and iframes
-
-**State** — Cookies, localStorage, sessionStorage; save/load state snapshots
-
-**Network** — Block or redirect requests, track network activity
-
-**Dialogs & Console** — Handle alert/confirm/prompt, capture console logs and errors
-
-**Browser Config** — Viewport, geolocation, media preferences, custom headers
-
-**Bookmarks & History** — Search and manage bookmarks and browsing history
-
-**Containers** — Firefox container management
+- Query text, HTML, value, attributes, element state, count, bounding box
+- Viewport, geolocation, media preferences, custom headers
+- Bookmarks & history management
 
 ## Site-Specific Guides — Pre-built Automation for Popular Sites
 
@@ -153,7 +136,11 @@ Browser-CLI ships with a [skill definition](skills/browser-cli/SKILL.md) that le
 /plugin install browser-cli@six-ddc/browser-cli
 ```
 
-Once installed, agents can invoke `/browser-cli` directly in Claude Code conversations.
+Once installed, agents can invoke `/browser-cli` directly in Claude Code conversations:
+
+```bash
+# /browser-cli navigate to hacker news and get the top 3 stories
+```
 
 ## Development
 
