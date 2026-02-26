@@ -46,6 +46,12 @@ The CLI sends commands to a background daemon, which relays them over WebSocket 
 - Network interception (block, redirect, track)
 - Dialogs (alert/confirm/prompt), console logs
 
+**Scripting**
+
+- `script` command — run multi-step automation as a single ES module (Node.js process)
+- Browser SDK with 1:1 CLI command mapping (`browser.navigate()`, `browser.click()`, etc.)
+- Supports stdin, file input, CLI arguments, and per-command timeouts
+
 **Data & Config**
 
 - Query text, HTML, value, attributes, element state, count, bounding box

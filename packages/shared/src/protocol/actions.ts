@@ -250,6 +250,8 @@ export interface WaitForUrlResult {
 export type EvaluateParams = z.infer<typeof schemas.evaluateParamsSchema>;
 export interface EvaluateResult {
   value: unknown;
+  /** Console output captured during evaluation (for debugging). */
+  logs?: ConsoleEntry[];
 }
 
 // ─── Console ─────────────────────────────────────────────────────────

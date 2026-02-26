@@ -405,15 +405,20 @@ Evaluates JavaScript in the page context and returns the result. CSP-strict page
 
 Run multi-step browser automation as a single operation. Unlike `eval` (which runs a single JS expression in the page context), `script` runs an ES module in the **CLI process (Node.js)** and dispatches each `browser.xxx()` call through the CLI → Daemon → Extension pipeline. This means scripts can use Node.js APIs, `process.env`, and npm packages.
 
-| Command                        | Description                         |
-| ------------------------------ | ----------------------------------- |
-| `script <file.js>`             | Run script from file                |
-| `script -`                     | Read script from stdin              |
-| `script <file> --timeout <ms>` | Run script with per-command timeout |
-| `script <file> -- [args...]`   | Pass arguments to the script        |
+| Command                                    | Description                               |
+| ------------------------------------------ | ----------------------------------------- |
+| `script <file.js>`                         | Run script from file (default export)     |
+| `script -`                                 | Read script from stdin                    |
+| `script <file> --call <name>`              | Call a named export instead of default    |
+| `script <file> --call <name> -- [args...]` | Call named export with arguments          |
+| `script <file> --list`                     | List all exported functions in the script |
+| `script <file> --timeout <ms>`             | Run script with per-command timeout       |
+| `script <file> -- [args...]`               | Pass arguments to the script              |
 
 | Option               | Description                               |
 | -------------------- | ----------------------------------------- |
+| `-c, --call <name>`  | Call a named export instead of default    |
+| `-l, --list`         | List all exported functions in the script |
 | `-t, --timeout <ms>` | Per-command timeout in milliseconds       |
 | `-- [args...]`       | Pass arguments to the script (after `--`) |
 
@@ -463,6 +468,57 @@ browser-cli script my-flow.mjs -- --name hello --count 3 --verbose
 ```
 
 Arguments after `--` are parsed as `--key value` pairs (string values) and boolean flags (no value → `true`), then passed as the second parameter to the script function.
+
+**Named exports (recipe files)**: Scripts can export multiple named functions. Use `--call` to invoke a specific function, or `--list` to discover available functions:
+
+```js
+// scripts/xhs.mjs — multiple named exports
+export async function detectLogin(browser) {
+  // ... returns { loggedIn, loginModal }
+}
+export async function search(browser, { keyword }) {
+  // ... navigates to search results
+}
+export async function extractSearchResults(browser) {
+  // ... returns [{ title, author, likes, link }]
+}
+// optional default export as full-flow entry point
+export default async function (browser, args) {
+  await detectLogin(browser);
+  if (args.keyword) {
+    await search(browser, { keyword: args.keyword });
+    return await extractSearchResults(browser);
+  }
+}
+```
+
+```bash
+# List available functions
+browser-cli script scripts/xhs.mjs --list
+# → default, detectLogin, search, extractSearchResults
+
+# Call a specific function
+browser-cli --tab 123 script scripts/xhs.mjs --call detectLogin
+
+# Call with arguments
+browser-cli --tab 123 script scripts/xhs.mjs --call search -- --keyword "coffee"
+```
+
+Each named function receives `(browser, args?)` — same signature as default export. Functions can call each other within the module.
+
+**Debugging with console.log**: `console.log/warn/info/debug` in scripts output to stderr in real-time with timestamps and level-aware coloring. This works in both the script body (CLI-side) and inside `browser.evaluate()` expressions (browser-side — captured and returned with the response). Use `console.log` for debugging without polluting stdout results.
+
+```js
+export default async function (browser) {
+  console.log('navigating...'); // CLI-side, real-time stderr
+  await browser.navigate({ url: 'https://example.com' });
+  const title = await browser.evaluate({
+    expression: `console.log('url:', location.href); document.title;`, // browser-side, returned to CLI stderr
+  });
+  console.log('got title:', title); // CLI-side, real-time stderr
+  return title; // → stdout
+}
+```
 
 **Error reporting**: On failure, errors include step number and action name (e.g., "Step 3 (click) failed: ELEMENT_NOT_FOUND"). With `--json`, error output includes `step`, `action`, and `params` fields.
 

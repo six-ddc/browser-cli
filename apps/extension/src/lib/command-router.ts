@@ -395,6 +395,37 @@ async function routeCommand(
         target: { tabId: targetTabId },
         world: 'MAIN',
         func: (expr: string) => {
+          // Capture console output during eval
+          const __logs: Array<{ level: string; args: unknown[]; timestamp: number }> = [];
+          const __origConsole = {
+            log: console.log,
+            warn: console.warn,
+            error: console.error,
+            info: console.info,
+            debug: console.debug,
+          };
+          const __capture =
+            (level: string) =>
+            (...args: unknown[]) => {
+              __logs.push({
+                level,
+                args: args.map((a) => {
+                  try {
+                    return JSON.parse(JSON.stringify(a));
+                  } catch {
+                    return String(a);
+                  }
+                }),
+                timestamp: Date.now(),
+              });
+              (__origConsole as Record<string, (...a: unknown[]) => void>)[level](...args);
+            };
+          console.log = __capture('log');
+          console.warn = __capture('warn');
+          console.error = __capture('error');
+          console.info = __capture('info');
+          console.debug = __capture('debug');
+
           try {
             let __r: unknown;
             // Handle Trusted Types (e.g. Gmail)
@@ -414,21 +445,40 @@ async function routeCommand(
             } else {
               __r = (0, eval)(expr);
             }
-            return { __ok: true, value: __r };
+            return { __ok: true, value: __r, logs: __logs };
           } catch (e: unknown) {
-            return { __ok: false, error: (e as Error).message };
+            return { __ok: false, error: (e as Error).message, logs: __logs };
+          } finally {
+            console.log = __origConsole.log;
+            console.warn = __origConsole.warn;
+            console.error = __origConsole.error;
+            console.info = __origConsole.info;
+            console.debug = __origConsole.debug;
           }
         },
         args: [expression],
       });
 
       const raw = mainWorldResult[0]?.result as
-        | { __ok: true; value: unknown }
-        | { __ok: false; error: string }
+        | {
+            __ok: true;
+            value: unknown;
+            logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
+          }
+        | {
+            __ok: false;
+            error: string;
+            logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
+          }
         | undefined;
 
       if (raw?.__ok) {
-        return { value: raw.value };
+        const result: {
+          value: unknown;
+          logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
+        } = { value: raw.value };
+        if (raw.logs?.length) result.logs = raw.logs;
+        return result;
       }
 
       const evalError = raw?.error ?? 'eval() returned no result';

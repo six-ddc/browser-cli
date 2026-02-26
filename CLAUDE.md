@@ -108,6 +108,11 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - `storage local [key]` / `storage session [key]` — area as subcommand
 - `network route <pattern> --abort` — use --abort (not --block)
 
+### Script Command
+
+- `script <file.js>` / `script -` — run multi-step automation ES module in CLI process (Node.js)
+- Browser SDK maps 1:1 to CLI commands (camelCase: `tab new` → `browser.tabNew()`)
+
 ## Testing
 
 ### Unit Tests

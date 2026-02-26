@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { sendCommand } from './shared.js';
+import { printConsoleLogs } from '../lib/script-runner.js';
 
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -44,6 +45,10 @@ export const evalCommand = new Command('eval')
         },
       });
       if (result) {
+        // Print captured console logs to stderr
+        if (result.logs && Array.isArray(result.logs)) {
+          printConsoleLogs(result.logs);
+        }
         const value = result.value;
         if (typeof value === 'string') {
           console.log(value);
