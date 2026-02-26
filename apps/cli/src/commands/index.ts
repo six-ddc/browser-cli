@@ -68,6 +68,8 @@ import { bookmarkCommand } from './bookmark.js';
 import { historyCommand } from './history.js';
 // Container
 import { containerCommand } from './container.js';
+// Script
+import { scriptCommand } from './script.js';
 
 export function registerCommands(program: Command): void {
   // Lifecycle
@@ -173,4 +175,7 @@ export function registerCommands(program: Command): void {
 
   // Container (Firefox)
   program.addCommand(containerCommand);
+
+  // Script
+  program.addCommand(scriptCommand);
 }

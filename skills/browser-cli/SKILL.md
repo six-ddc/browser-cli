@@ -93,6 +93,21 @@ browser-cli click @e3             # Click element ref
 browser-cli fill @e5 "hello"      # Fill element ref
 ```
 
+### Run a multi-step script
+
+```bash
+# From file
+browser-cli script my-flow.mjs
+
+# Inline via stdin (short scripts)
+browser-cli script - <<'EOF'
+export default async function(browser) {
+  await browser.navigate({ url: 'https://example.com' });
+  return await browser.getTitle();
+}
+EOF
+```
+
 ## Global Options
 
 | Option                  | Description                                                                                                                                                                                        |
@@ -103,7 +118,9 @@ browser-cli fill @e5 "hello"      # Fill element ref
 
 ## Operations Reference
 
-### Navigation
+### Navigation & Waiting
+
+#### Navigation
 
 | Command          | Description                               |
 | ---------------- | ----------------------------------------- |
@@ -112,7 +129,21 @@ browser-cli fill @e5 "hello"      # Fill element ref
 | `forward`        | Go forward in history                     |
 | `reload`         | Reload the page                           |
 
+#### Wait Operations
+
+| Command                  | Description                                                              |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `wait <selector>`        | Wait for element to appear (`--timeout <ms>`, `--hidden`)                |
+| `wait <ms>`              | Wait for duration (auto-detects numeric)                                 |
+| `wait --url <pattern>`   | Wait for URL to match                                                    |
+| `wait --text <text>`     | Wait for text content to appear on page                                  |
+| `wait --load [state]`    | Wait for load state: `load` (default), `domcontentloaded`, `networkidle` |
+| `wait --fn <expression>` | Wait for JS expression to return truthy                                  |
+| `waitforurl <pattern>`   | Alias for `wait --url`                                                   |
+
 ### Element Interaction
+
+#### Basic Interaction
 
 | Command                        | Description                                                                   |
 | ------------------------------ | ----------------------------------------------------------------------------- |
@@ -132,7 +163,7 @@ browser-cli fill @e5 "hello"      # Fill element ref
 | `keydown <key>`                | Press key down without releasing                                              |
 | `keyup <key>`                  | Release a held key                                                            |
 
-### Find Command (Semantic Locate + Act)
+#### Find Command (Semantic Locate + Act)
 
 `find <engine> <value> [action] [action-value]` — locate element and perform action in one step.
 
@@ -154,7 +185,31 @@ browser-cli fill @e5 "hello"      # Fill element ref
 
 Options: `--name <name>` (for role engine), `--exact` (exact text match)
 
-### Snapshot (Accessibility Tree)
+#### Scroll
+
+| Command                     | Description                                                                      |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| `scroll <direction>`        | Scroll page: `up`, `down`, `left`, `right` (`--amount <px>`, `--selector <sel>`) |
+| `scrollintoview <selector>` | Scroll element into view                                                         |
+
+#### Mouse Control (Low-level)
+
+| Command                         | Description               |
+| ------------------------------- | ------------------------- |
+| `mouse move <x> <y>`            | Move mouse to coordinates |
+| `mouse down [button]`           | Press mouse button        |
+| `mouse up [button]`             | Release mouse button      |
+| `mouse wheel <deltaY> [deltaX]` | Scroll mouse wheel        |
+
+#### Element Highlight
+
+```bash
+browser-cli highlight <selector> [--color <color>] [--duration <ms>]
+```
+
+### Page Content & Data
+
+#### Snapshot (Accessibility Tree)
 
 ```bash
 browser-cli snapshot [options]
@@ -170,7 +225,7 @@ browser-cli snapshot [options]
 
 **Best practice**: Use `snapshot -ic` for a concise view of interactive elements. Use element refs (`@e1`, `@e2`) from snapshot output in subsequent commands.
 
-### Markdown (Page Content Extraction)
+#### Markdown (Page Content Extraction)
 
 ```bash
 browser-cli markdown
@@ -178,7 +233,7 @@ browser-cli markdown
 
 Extracts the current page's readable content using Defuddle and converts it to Markdown. Long query strings in URLs are automatically trimmed. Useful for AI agents consuming page content.
 
-### Screenshot
+#### Screenshot
 
 ```bash
 browser-cli screenshot [options]
@@ -191,7 +246,7 @@ browser-cli screenshot [options]
 | `--format <fmt>`   | `png` or `jpeg`                     |
 | `--quality <n>`    | JPEG quality 0-100                  |
 
-### Data Queries (get)
+#### Data Queries (get)
 
 | Command                           | Description                         |
 | --------------------------------- | ----------------------------------- |
@@ -204,7 +259,7 @@ browser-cli screenshot [options]
 | `get count <selector>`            | Count matching elements             |
 | `get box <selector>`              | Bounding box (x, y, width, height)  |
 
-### State Queries (is)
+#### State Queries (is)
 
 | Command                 | Description         |
 | ----------------------- | ------------------- |
@@ -212,19 +267,26 @@ browser-cli screenshot [options]
 | `is enabled <selector>` | Check enabled state |
 | `is checked <selector>` | Check checked state |
 
-### Wait Operations
+#### JavaScript Execution
 
-| Command                  | Description                                                              |
-| ------------------------ | ------------------------------------------------------------------------ |
-| `wait <selector>`        | Wait for element to appear (`--timeout <ms>`, `--hidden`)                |
-| `wait <ms>`              | Wait for duration (auto-detects numeric)                                 |
-| `wait --url <pattern>`   | Wait for URL to match                                                    |
-| `wait --text <text>`     | Wait for text content to appear on page                                  |
-| `wait --load [state]`    | Wait for load state: `load` (default), `domcontentloaded`, `networkidle` |
-| `wait --fn <expression>` | Wait for JS expression to return truthy                                  |
-| `waitforurl <pattern>`   | Alias for `wait --url`                                                   |
+```bash
+browser-cli eval '<expression>'
+browser-cli eval -b/--base64 '<base64-encoded-expression>'  # decode from base64
+echo '<expression>' | browser-cli eval --stdin       # read from stdin
+```
 
-### Tab Management
+Evaluates JavaScript in the page context and returns the result. CSP-strict pages (Gmail, GitHub, etc.) are handled automatically with platform-specific fallbacks.
+
+#### Console & Errors
+
+| Command   | Description                                                         |
+| --------- | ------------------------------------------------------------------- |
+| `console` | Get console output (`--level log/warn/error/info/debug`, `--clear`) |
+| `errors`  | Get page errors                                                     |
+
+### Tabs, Windows & Frames
+
+#### Tab Management
 
 | Command                                                                  | Description                                      |
 | ------------------------------------------------------------------------ | ------------------------------------------------ |
@@ -240,7 +302,26 @@ browser-cli screenshot [options]
 
 **Tab group colors**: `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`
 
-### Container Management (Firefox only)
+#### Window Management
+
+| Command                   | Description                          |
+| ------------------------- | ------------------------------------ |
+| `window`                  | List windows                         |
+| `window new [url]`        | Open new window                      |
+| `window list`             | List windows                         |
+| `window close [windowId]` | Close window                         |
+| `window focus [windowId]` | Focus a window (defaults to current) |
+
+#### Frame Management (iframe)
+
+| Command            | Description               |
+| ------------------ | ------------------------- |
+| `frame <selector>` | Switch to iframe          |
+| `frame main`       | Switch back to main frame |
+| `frame list`       | List all frames           |
+| `frame current`    | Show current frame info   |
+
+#### Container Management (Firefox only)
 
 | Command                                      | Description                 |
 | -------------------------------------------- | --------------------------- |
@@ -254,16 +335,9 @@ browser-cli screenshot [options]
 
 > On Chrome, container commands output a warning and exit 0 — containers are a Firefox-only feature.
 
-### Frame Management (iframe)
+### Browser State & Configuration
 
-| Command            | Description               |
-| ------------------ | ------------------------- |
-| `frame <selector>` | Switch to iframe          |
-| `frame main`       | Switch back to main frame |
-| `frame list`       | List all frames           |
-| `frame current`    | Show current frame info   |
-
-### Cookies
+#### Cookies
 
 | Command                      | Description                                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------------------------- |
@@ -272,7 +346,7 @@ browser-cli screenshot [options]
 | `cookies set <name> <value>` | Set cookie (`--url` required, `--domain`, `--path`, `--secure`, `--httponly`, `--samesite`) |
 | `cookies clear`              | Clear cookies (`--url`, `--domain`)                                                         |
 
-### Storage (localStorage / sessionStorage)
+#### Storage (localStorage / sessionStorage)
 
 | Command                             | Description                 |
 | ----------------------------------- | --------------------------- |
@@ -283,7 +357,7 @@ browser-cli screenshot [options]
 | `storage session set <key> <value>` | Set sessionStorage          |
 | `storage session clear`             | Clear sessionStorage        |
 
-### Network Interception
+#### Network Interception
 
 | Command                                    | Description                                                          |
 | ------------------------------------------ | -------------------------------------------------------------------- |
@@ -294,63 +368,14 @@ browser-cli screenshot [options]
 | `network requests`                         | List tracked requests (`--pattern`, `--tab`, `--blocked`, `--limit`) |
 | `network clear`                            | Clear tracked requests                                               |
 
-### Scroll Operations
-
-| Command                     | Description                                                                      |
-| --------------------------- | -------------------------------------------------------------------------------- |
-| `scroll <direction>`        | Scroll page: `up`, `down`, `left`, `right` (`--amount <px>`, `--selector <sel>`) |
-| `scrollintoview <selector>` | Scroll element into view                                                         |
-
-### JavaScript Execution
-
-```bash
-browser-cli eval '<expression>'
-browser-cli eval -b/--base64 '<base64-encoded-expression>'  # decode from base64
-echo '<expression>' | browser-cli eval --stdin       # read from stdin
-```
-
-Evaluates JavaScript in the page context and returns the result. CSP-strict pages (Gmail, GitHub, etc.) are handled automatically with platform-specific fallbacks.
-
-### Console & Errors
-
-| Command   | Description                                                         |
-| --------- | ------------------------------------------------------------------- |
-| `console` | Get console output (`--level log/warn/error/info/debug`, `--clear`) |
-| `errors`  | Get page errors                                                     |
-
-### Dialog Handling
+#### Dialog Handling
 
 | Command                | Description                                    |
 | ---------------------- | ---------------------------------------------- |
 | `dialog accept [text]` | Auto-accept next dialog (optional prompt text) |
 | `dialog dismiss`       | Auto-dismiss next dialog                       |
 
-### Element Highlight
-
-```bash
-browser-cli highlight <selector> [--color <color>] [--duration <ms>]
-```
-
-### Mouse Control (Low-level)
-
-| Command                         | Description               |
-| ------------------------------- | ------------------------- |
-| `mouse move <x> <y>`            | Move mouse to coordinates |
-| `mouse down [button]`           | Press mouse button        |
-| `mouse up [button]`             | Release mouse button      |
-| `mouse wheel <deltaY> [deltaX]` | Scroll mouse wheel        |
-
-### Window Management
-
-| Command                   | Description                          |
-| ------------------------- | ------------------------------------ |
-| `window`                  | List windows                         |
-| `window new [url]`        | Open new window                      |
-| `window list`             | List windows                         |
-| `window close [windowId]` | Close window                         |
-| `window focus [windowId]` | Focus a window (defaults to current) |
-
-### Browser Configuration
+#### Browser Configuration
 
 | Command                         | Description                             |
 | ------------------------------- | --------------------------------------- |
@@ -359,7 +384,7 @@ browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 | `set media <colorScheme>`       | Override media preference (dark/light)  |
 | `set headers <json>`            | Set extra HTTP headers                  |
 
-### Bookmarks
+#### Bookmarks
 
 | Command                      | Description                         |
 | ---------------------------- | ----------------------------------- |
@@ -367,19 +392,97 @@ browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 | `bookmark add <url> [title]` | Add a bookmark                      |
 | `bookmark remove <id>`       | Remove a bookmark by ID             |
 
-### History
+#### History
 
 | Command                 | Description                                       |
 | ----------------------- | ------------------------------------------------- |
 | `history [--limit N]`   | List recent browser history (default: 20 entries) |
 | `history search <text>` | Search browser history by text (`--limit N`)      |
 
-### State Management (Save/Load)
+#### State Management (Save/Load)
 
 | Command             | Description                                                 |
 | ------------------- | ----------------------------------------------------------- |
 | `state save <path>` | Export cookies + localStorage + sessionStorage to JSON file |
 | `state load <path>` | Import cookies + storage from JSON file                     |
+
+### Script Execution (multi-step)
+
+Run multi-step browser automation as a single operation. Unlike `eval` (which runs a single JS expression in the page context), `script` runs an ES module in the **CLI process (Node.js)** and dispatches each `browser.xxx()` call through the CLI → Daemon → Extension pipeline. This means scripts can use Node.js APIs, `process.env`, and npm packages.
+
+| Command                        | Description                         |
+| ------------------------------ | ----------------------------------- |
+| `script <file.js>`             | Run script from file                |
+| `script -`                     | Read script from stdin              |
+| `script <file> --timeout <ms>` | Run script with per-command timeout |
+| `script <file> -- [args...]`   | Pass arguments to the script        |
+
+| Option               | Description                               |
+| -------------------- | ----------------------------------------- |
+| `-t, --timeout <ms>` | Per-command timeout in milliseconds       |
+| `-- [args...]`       | Pass arguments to the script (after `--`) |
+
+**Script format** (ES module with default export):
+
+```js
+export default async function (browser, args) {
+  await browser.navigate({ url: 'https://example.com' });
+  await browser.fill({ selector: '#search', value: args.query || 'hello' });
+  await browser.click({ selector: '#submit' });
+  const snap = await browser.snapshot({ compact: true });
+  return snap;
+}
+```
+
+The `browser` SDK methods map 1:1 to the CLI commands documented above. Method names are the camelCase action names (e.g., `tab new` → `browser.tabNew()`, `cookies get` → `browser.cookiesGet()`), and parameters are passed as an object (e.g., `browser.fill({ selector: '#email', value: 'test' })`). Every command listed above is available in scripts.
+
+**Typical usage — write script to a temp file, then run it:**
+
+```bash
+# Write to temp file and execute
+TMP=$(mktemp /tmp/bcli-XXXX.mjs)
+cat > "$TMP" <<'EOF'
+export default async function(browser) {
+  await browser.navigate({ url: 'https://example.com' });
+  return await browser.getTitle();
+}
+EOF
+browser-cli script "$TMP"
+```
+
+**Short scripts — use stdin (`-`) with heredoc:**
+
+```bash
+browser-cli script - <<'EOF'
+export default async function(browser) {
+  await browser.navigate({ url: 'https://example.com' });
+  return await browser.getTitle();
+}
+EOF
+```
+
+**Passing arguments:**
+
+```bash
+browser-cli script my-flow.mjs -- --name hello --count 3 --verbose
+```
+
+Arguments after `--` are parsed as `--key value` pairs (string values) and boolean flags (no value → `true`), then passed as the second parameter to the script function.
+
+**Error reporting**: On failure, errors include step number and action name (e.g., "Step 3 (click) failed: ELEMENT_NOT_FOUND"). With `--json`, error output includes `step`, `action`, and `params` fields.
+
+**Example — login flow:**
+
+```js
+export default async function (browser) {
+  await browser.navigate({ url: 'https://app.example.com/login' });
+  await browser.fill({ selector: '#username', value: 'admin' });
+  await browser.fill({ selector: '#password', value: 'secret' });
+  await browser.click({ selector: 'button[type="submit"]' });
+  const { url } = await browser.getUrl();
+  return { url };
+}
+```
 
 ## Selector Types
 
