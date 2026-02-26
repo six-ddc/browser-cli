@@ -21,6 +21,8 @@ async function main() {
       daemon: { type: 'boolean', default: false },
       port: { type: 'string', default: String(DEFAULT_WS_PORT) },
       host: { type: 'string', default: DEFAULT_WS_HOST },
+      auth: { type: 'boolean', default: false },
+      token: { type: 'string' },
     },
     strict: false,
   });
@@ -31,16 +33,29 @@ async function main() {
 
   logger.info(`Starting daemon (wsHost=${wsHost}, wsPort=${wsPort})`);
 
-  // Generate auth token for non-loopback hosts
+  // Auth decision:
+  //   --token <value>  → use that exact token
+  //   --auth           → generate random token
+  //   non-loopback     → generate random token (existing behavior)
+  //   otherwise        → no auth
   let authToken: string | null = null;
-  if (isNonLoopback(wsHost)) {
+  if (values.token) {
+    authToken = String(values.token);
+    writeAuthToken(authToken);
+    logger.info(`Using provided auth token`);
+    logger.info(`Token saved to ~/.browser-cli/auth-token`);
+  } else if (values.auth || isNonLoopback(wsHost)) {
     authToken = generateAuthToken();
     writeAuthToken(authToken);
-    logger.warn(`Non-loopback host detected — auth token required for extension connections`);
+    if (isNonLoopback(wsHost)) {
+      logger.warn(`Non-loopback host detected — auth token required for extension connections`);
+    } else {
+      logger.info(`Auth enabled — token required for extension connections`);
+    }
     logger.info(`Auth token: ${authToken}`);
     logger.info(`Token saved to ~/.browser-cli/auth-token`);
   } else {
-    // Clean up stale token file when running in loopback mode
+    // Clean up stale token file when running without auth
     cleanupAuthToken();
   }
 

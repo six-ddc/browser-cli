@@ -1,5 +1,5 @@
 import { WsClient } from '../lib/ws-client';
-import { getHost, getPort, getToken, getEnabled, setState } from '../lib/state';
+import { getUrl, getToken, getEnabled, setState } from '../lib/state';
 import type { RequestMessage, ResponseMessage, ProtocolError } from '@browser-cli/shared';
 import { ErrorCode } from '@browser-cli/shared';
 import { classifyError } from '../lib/error-classifier';
@@ -171,16 +171,10 @@ async function ensureInitialized(): Promise<void> {
 
     networkManager = new NetworkManager();
 
-    const [host, port, token, clientId] = await Promise.all([
-      getHost(),
-      getPort(),
-      getToken(),
-      getOrCreateClientId(),
-    ]);
+    const [url, token, clientId] = await Promise.all([getUrl(), getToken(), getOrCreateClientId()]);
 
     wsClient = new WsClient({
-      host,
-      port,
+      url,
       token,
       clientId,
       messageHandler: handleCommand,
@@ -425,35 +419,19 @@ browser.storage.onChanged.addListener((changes) => {
       }
     }
 
-    // Handle host change
-    const newHost = newState.host;
-    const oldHost = oldState.host;
-    if (typeof newHost === 'string' && typeof oldHost === 'string' && newHost !== oldHost) {
+    // Handle URL change
+    const newUrl = newState.url;
+    const oldUrl = oldState.url;
+    if (typeof newUrl === 'string' && typeof oldUrl === 'string' && newUrl !== oldUrl) {
       ensureInitialized()
         .then(() => {
           if (wsClient) {
-            console.log(`[browser-cli] Host changed: ${oldHost} → ${newHost}`);
-            wsClient.updateHost(newHost);
+            console.log(`[browser-cli] URL changed: ${oldUrl} → ${newUrl}`);
+            wsClient.updateUrl(newUrl);
           }
         })
         .catch((err: unknown) => {
-          console.error('[browser-cli] Failed to initialize after host change:', err);
-        });
-    }
-
-    // Handle port change
-    const newPort = newState.port;
-    const oldPort = oldState.port;
-    if (typeof newPort === 'number' && typeof oldPort === 'number' && newPort !== oldPort) {
-      ensureInitialized()
-        .then(() => {
-          if (wsClient) {
-            console.log(`[browser-cli] Port changed: ${oldPort} → ${newPort}`);
-            wsClient.updatePort(newPort);
-          }
-        })
-        .catch((err: unknown) => {
-          console.error('[browser-cli] Failed to initialize after port change:', err);
+          console.error('[browser-cli] Failed to initialize after URL change:', err);
         });
     }
   }

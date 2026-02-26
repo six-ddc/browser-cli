@@ -4,7 +4,7 @@
  */
 
 import { PROTOCOL_VERSION, schemas } from '@browser-cli/shared';
-import { CONFIGURED_WS_HOST, CONFIGURED_WS_PORT } from './state';
+import { CONFIGURED_WS_URL } from './state';
 import type {
   WsMessage,
   RequestMessage,
@@ -16,8 +16,7 @@ import type {
 export type MessageHandler = (msg: RequestMessage) => Promise<ResponseMessage>;
 
 export interface WsClientOptions {
-  host?: string;
-  port?: number;
+  url?: string;
   /** Persistent client ID for stable session assignment across reconnections */
   clientId?: string;
   /** Auth token for non-loopback daemon connections */
@@ -41,8 +40,7 @@ const HEARTBEAT_ALARM_NAME = 'browser-cli-heartbeat';
 
 export class WsClient {
   private ws: WebSocket | null = null;
-  private host: string;
-  private port: number;
+  private url: string;
   private token: string;
   private backoff = INITIAL_BACKOFF_MS;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -58,8 +56,7 @@ export class WsClient {
   private pendingEvents: string[] = [];
 
   constructor(options: WsClientOptions = {}) {
-    this.host = options.host ?? CONFIGURED_WS_HOST;
-    this.port = options.port ?? CONFIGURED_WS_PORT;
+    this.url = options.url ?? CONFIGURED_WS_URL;
     this.token = options.token ?? '';
     this.options = options;
   }
@@ -90,8 +87,8 @@ export class WsClient {
     this.cleanup();
   }
 
-  updateHost(host: string): void {
-    this.host = host;
+  updateUrl(url: string): void {
+    this.url = url;
     this.cleanup();
     this.stopped = false;
     this.backoff = INITIAL_BACKOFF_MS;
@@ -107,14 +104,6 @@ export class WsClient {
       this.backoff = INITIAL_BACKOFF_MS;
       this.connect();
     }
-  }
-
-  updatePort(port: number): void {
-    this.port = port;
-    this.cleanup();
-    this.stopped = false;
-    this.backoff = INITIAL_BACKOFF_MS;
-    this.connect();
   }
 
   /** Called by alarm handler when 'browser-cli-reconnect' fires */
@@ -161,10 +150,10 @@ export class WsClient {
     if (this.stopped) return;
 
     const gen = ++this.generation;
-    console.log(`[browser-cli] Connecting to ws://${this.host}:${this.port}...`);
+    console.log(`[browser-cli] Connecting to ${this.url}...`);
 
     try {
-      this.ws = new WebSocket(`ws://${this.host}:${this.port}`);
+      this.ws = new WebSocket(this.url);
     } catch (err) {
       console.error('[browser-cli] Failed to create WebSocket:', err);
       this.scheduleReconnect();

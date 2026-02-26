@@ -1,15 +1,6 @@
 import { useState, useEffect } from 'react';
 import { APP_NAME } from '@browser-cli/shared';
-import {
-  getState,
-  setState,
-  setHost,
-  setPort,
-  setToken,
-  getToken,
-  CONFIGURED_WS_HOST,
-  CONFIGURED_WS_PORT,
-} from '../../lib/state';
+import { getState, setState, setUrl, setToken, getToken, CONFIGURED_WS_URL } from '../../lib/state';
 import type { ConnectionState } from '../../lib/state';
 import './App.css';
 
@@ -50,38 +41,39 @@ export default function App() {
     enabled: true,
     connected: false,
     sessionId: null,
-    host: CONFIGURED_WS_HOST,
-    port: CONFIGURED_WS_PORT,
+    url: CONFIGURED_WS_URL,
     lastConnected: null,
     lastDisconnected: null,
     reconnecting: false,
     nextRetryIn: null,
     authFailed: false,
   });
-  const [hostInput, setHostInput] = useState(CONFIGURED_WS_HOST);
-  const [portInput, setPortInput] = useState(String(CONFIGURED_WS_PORT));
+  const [urlInput, setUrlInput] = useState(CONFIGURED_WS_URL);
   const [tokenInput, setTokenInput] = useState('');
   const [savedToken, setSavedToken] = useState('');
   const [copied, setCopied] = useState(false);
   const [sessionCopied, setSessionCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  /** Whether the current host is non-loopback (auto-show token field) */
-  const isNonLoopback = !['127.0.0.1', 'localhost', '::1'].includes(state.host);
+  /** Whether the current URL points to a non-loopback host (auto-show token field) */
+  const isNonLoopback = (() => {
+    try {
+      const hostname = new URL(state.url).hostname;
+      return !['127.0.0.1', 'localhost', '::1'].includes(hostname);
+    } catch {
+      return false;
+    }
+  })();
   const [showToken, setShowToken] = useState(false);
 
   /** Track whether any settings have been modified */
-  const isDirty =
-    hostInput.trim() !== state.host ||
-    portInput.trim() !== String(state.port) ||
-    tokenInput.trim() !== savedToken;
+  const isDirty = urlInput.trim() !== state.url || tokenInput.trim() !== savedToken;
 
   useEffect(() => {
     void getState().then((s) => {
       console.log('[browser-cli] Popup initial state:', s);
       setStateLocal(s);
-      setHostInput(s.host);
-      setPortInput(String(s.port));
+      setUrlInput(s.url);
     });
     void getToken().then((t) => {
       setTokenInput(t);
@@ -116,13 +108,9 @@ export default function App() {
   }, []);
 
   const handleSaveAll = () => {
-    const h = hostInput.trim();
-    if (h && h !== state.host) {
-      void setHost(h);
-    }
-    const p = parseInt(portInput, 10);
-    if (p && p > 0 && p < 65536 && p !== state.port) {
-      void setPort(p);
+    const u = urlInput.trim();
+    if (u && (u.startsWith('ws://') || u.startsWith('wss://')) && u !== state.url) {
+      void setUrl(u);
     }
     const t = tokenInput.trim();
     if (t !== savedToken) {
@@ -244,13 +232,13 @@ export default function App() {
       <details className="settings-details">
         <summary className="settings-summary">Settings</summary>
         <div className="settings">
-          <label className="settings-label">Daemon Host</label>
+          <label className="settings-label">Daemon URL</label>
           <input
             type="text"
             className="input-field"
-            value={hostInput}
-            onChange={(e) => setHostInput(e.target.value)}
-            placeholder="127.0.0.1"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="ws://127.0.0.1:9222"
             onKeyDown={(e) => e.key === 'Enter' && isDirty && handleSaveAll()}
           />
           {isNonLoopback || showToken || state.authFailed ? (
@@ -276,17 +264,6 @@ export default function App() {
               Set auth token...
             </button>
           )}
-          <label className="settings-label" style={{ marginTop: 4 }}>
-            WebSocket Port
-          </label>
-          <input
-            type="text"
-            className="input-field"
-            value={portInput}
-            onChange={(e) => setPortInput(e.target.value)}
-            placeholder="9222"
-            onKeyDown={(e) => e.key === 'Enter' && isDirty && handleSaveAll()}
-          />
           {(isDirty || saved) && (
             <button
               className={`btn btn--save-all ${saved ? 'btn--tonal-success' : 'btn--primary'}`}

@@ -3,27 +3,26 @@
  * Uses a serial queue to prevent concurrent read-modify-write races.
  */
 
-import { DEFAULT_WS_HOST, DEFAULT_WS_PORT } from '@browser-cli/shared';
+import { DEFAULT_WS_URL } from '@browser-cli/shared';
 
 /**
- * WS host configured at build time via VITE_WS_HOST env var.
- * Defaults to DEFAULT_WS_HOST (127.0.0.1). E2E builds override this.
+ * WS URL configured at build time via VITE_WS_URL env var.
+ * Backward compat: if VITE_WS_URL is not set but VITE_WS_PORT is,
+ * construct ws://127.0.0.1:${VITE_WS_PORT} (used by E2E tests).
  */
-export const CONFIGURED_WS_HOST: string =
-  (import.meta.env.VITE_WS_HOST as string) || DEFAULT_WS_HOST;
-
-/**
- * WS port configured at build time via VITE_WS_PORT env var.
- * Defaults to DEFAULT_WS_PORT (9222). E2E builds override this.
- */
-export const CONFIGURED_WS_PORT: number = Number(import.meta.env.VITE_WS_PORT) || DEFAULT_WS_PORT;
+export const CONFIGURED_WS_URL: string = (() => {
+  const envUrl = import.meta.env.VITE_WS_URL as string | undefined;
+  if (envUrl) return envUrl;
+  const envPort = import.meta.env.VITE_WS_PORT as string | undefined;
+  if (envPort) return `ws://127.0.0.1:${envPort}`;
+  return DEFAULT_WS_URL;
+})();
 
 export interface ConnectionState {
   enabled: boolean;
   connected: boolean;
   sessionId: string | null;
-  host: string;
-  port: number;
+  url: string;
   lastConnected: number | null;
   lastDisconnected: number | null;
   reconnecting: boolean;
@@ -35,8 +34,7 @@ const DEFAULT_STATE: ConnectionState = {
   enabled: true,
   connected: false,
   sessionId: null,
-  host: CONFIGURED_WS_HOST,
-  port: CONFIGURED_WS_PORT,
+  url: CONFIGURED_WS_URL,
   lastConnected: null,
   lastDisconnected: null,
   reconnecting: false,
@@ -54,8 +52,7 @@ export function isValidState(raw: unknown): raw is ConnectionState {
     typeof obj.enabled === 'boolean' &&
     typeof obj.connected === 'boolean' &&
     (typeof obj.sessionId === 'string' || obj.sessionId === null) &&
-    typeof obj.host === 'string' &&
-    typeof obj.port === 'number' &&
+    typeof obj.url === 'string' &&
     (typeof obj.lastConnected === 'number' || obj.lastConnected === null) &&
     (typeof obj.lastDisconnected === 'number' || obj.lastDisconnected === null) &&
     typeof obj.reconnecting === 'boolean' &&
@@ -76,9 +73,16 @@ export async function getState(): Promise<ConnectionState> {
     // Migrate legacy state missing fields
     const obj = raw as Record<string, unknown>;
     if (typeof obj.connected === 'boolean') {
+      // Migrate old host+port fields to url
+      if (typeof obj.host === 'string' && typeof obj.port === 'number' && !obj.url) {
+        obj.url = `ws://${obj.host}:${obj.port}`;
+        delete obj.host;
+        delete obj.port;
+        console.log('[browser-cli] Migrated host+port → url:', obj.url);
+      }
       const migrated = { ...DEFAULT_STATE, ...obj };
       if (obj.enabled === undefined) migrated.enabled = true;
-      if (obj.host === undefined) migrated.host = CONFIGURED_WS_HOST;
+      if (obj.url === undefined) migrated.url = CONFIGURED_WS_URL;
       if (obj.authFailed === undefined) migrated.authFailed = false;
       if (isValidState(migrated)) {
         console.log('[browser-cli] Migrated stored state (added missing fields)');
@@ -104,22 +108,13 @@ export function setState(updates: Partial<ConnectionState>): Promise<void> {
   return pending;
 }
 
-export async function getHost(): Promise<string> {
+export async function getUrl(): Promise<string> {
   const state = await getState();
-  return state.host;
+  return state.url;
 }
 
-export async function setHost(host: string): Promise<void> {
-  await setState({ host });
-}
-
-export async function getPort(): Promise<number> {
-  const state = await getState();
-  return state.port;
-}
-
-export async function setPort(port: number): Promise<void> {
-  await setState({ port });
+export async function setUrl(url: string): Promise<void> {
+  await setState({ url });
 }
 
 export async function getEnabled(): Promise<boolean> {

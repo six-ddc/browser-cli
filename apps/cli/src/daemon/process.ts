@@ -126,8 +126,17 @@ export interface StartDaemonResult {
   info: DaemonStartupInfo;
 }
 
+export interface DaemonAuthOpts {
+  auth?: boolean;
+  token?: string;
+}
+
 /** Start the daemon as a detached child process */
-export async function startDaemon(wsPort?: number, wsHost?: string): Promise<StartDaemonResult> {
+export async function startDaemon(
+  wsPort?: number,
+  wsHost?: string,
+  opts?: DaemonAuthOpts,
+): Promise<StartDaemonResult> {
   const existing = getDaemonPid();
   if (existing) {
     logger.info(`Daemon already running (PID ${existing})`);
@@ -141,6 +150,8 @@ export async function startDaemon(wsPort?: number, wsHost?: string): Promise<Sta
   const args = ['--daemon'];
   if (wsPort) args.push('--port', String(wsPort));
   if (wsHost) args.push('--host', wsHost);
+  if (opts?.token) args.push('--token', opts.token);
+  else if (opts?.auth) args.push('--auth');
 
   // Normal JS build: daemon file exists on disk → spawn node + script
   // Compiled binary: daemon file not on disk → spawn self with --daemon flag
@@ -212,8 +223,12 @@ export async function stopDaemon(): Promise<boolean> {
 }
 
 /** Ensure the daemon is running, starting it if necessary */
-export async function ensureDaemon(wsPort?: number, wsHost?: string): Promise<StartDaemonResult> {
+export async function ensureDaemon(
+  wsPort?: number,
+  wsHost?: string,
+  opts?: DaemonAuthOpts,
+): Promise<StartDaemonResult> {
   const existing = getDaemonPid();
   if (existing) return { pid: existing, info: {} };
-  return startDaemon(wsPort, wsHost);
+  return startDaemon(wsPort, wsHost, opts);
 }

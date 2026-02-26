@@ -15,8 +15,7 @@ describe('isValidState', () => {
         enabled: true,
         connected: true,
         sessionId: 'abc-123',
-        host: '127.0.0.1',
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
         lastConnected: 1700000000000,
         lastDisconnected: 1699999999000,
         reconnecting: false,
@@ -32,8 +31,7 @@ describe('isValidState', () => {
         enabled: true,
         connected: false,
         sessionId: null,
-        host: '127.0.0.1',
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
@@ -49,8 +47,7 @@ describe('isValidState', () => {
         enabled: true,
         connected: true,
         sessionId: 'abc',
-        host: '127.0.0.1',
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
@@ -67,8 +64,23 @@ describe('isValidState', () => {
         enabled: false,
         connected: false,
         sessionId: null,
-        host: '127.0.0.1',
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
+        lastConnected: null,
+        lastDisconnected: null,
+        reconnecting: false,
+        nextRetryIn: null,
+        authFailed: false,
+      }),
+    ).toBe(true);
+  });
+
+  it('accepts state with wss:// URL', () => {
+    expect(
+      isValidState({
+        enabled: true,
+        connected: true,
+        sessionId: 'abc',
+        url: 'wss://my-tunnel.example.com',
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
@@ -111,7 +123,7 @@ describe('isValidState', () => {
       isValidState({
         connected: true,
         sessionId: null,
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
@@ -126,7 +138,7 @@ describe('isValidState', () => {
         enabled: 'yes',
         connected: true,
         sessionId: null,
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
@@ -141,7 +153,7 @@ describe('isValidState', () => {
         enabled: true,
         connected: 'yes',
         sessionId: null,
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
@@ -150,13 +162,13 @@ describe('isValidState', () => {
     ).toBe(false);
   });
 
-  it('rejects when port is wrong type (string instead of number)', () => {
+  it('rejects when url is wrong type (number instead of string)', () => {
     expect(
       isValidState({
         enabled: true,
         connected: true,
         sessionId: null,
-        port: '9222',
+        url: 9222,
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
@@ -171,7 +183,7 @@ describe('isValidState', () => {
         enabled: true,
         connected: true,
         sessionId: 123,
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: false,
@@ -186,7 +198,7 @@ describe('isValidState', () => {
         enabled: true,
         connected: true,
         sessionId: null,
-        port: 9222,
+        url: 'ws://127.0.0.1:9222',
         lastConnected: null,
         lastDisconnected: null,
         reconnecting: 'false',

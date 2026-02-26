@@ -9,31 +9,38 @@ export const startCommand = new Command('start')
   .description('Start the browser-cli daemon')
   .option('--port <port>', 'WebSocket server port', String(DEFAULT_WS_PORT))
   .option('--host <host>', 'WebSocket server host', DEFAULT_WS_HOST)
-  .action(async (opts: { port: string; host: string }, cmd: Command) => {
-    const rootOpts = getRootOpts(cmd);
-    const wsPort = parseInt(opts.port, 10);
-    const wsHost = opts.host;
-    try {
-      const { pid, info } = await startDaemon(wsPort, wsHost);
-      if (rootOpts.json) {
-        console.log(JSON.stringify({ success: true, pid, ...info }));
-      } else {
-        logger.success(`Daemon started (PID ${pid})`);
-        if (info.authToken) {
-          logger.warn(`Non-loopback host — auth token required for extension connections`);
-          logger.info(`Auth token: ${info.authToken}`);
-          logger.info(`Token saved to ~/.browser-cli/auth-token`);
+  .option('--auth', 'Require auth token for extension connections')
+  .option('--token <value>', 'Use a specific auth token (implies --auth)')
+  .action(
+    async (opts: { port: string; host: string; auth?: boolean; token?: string }, cmd: Command) => {
+      const rootOpts = getRootOpts(cmd);
+      const wsPort = parseInt(opts.port, 10);
+      const wsHost = opts.host;
+      try {
+        const { pid, info } = await startDaemon(wsPort, wsHost, {
+          auth: opts.auth,
+          token: opts.token,
+        });
+        if (rootOpts.json) {
+          console.log(JSON.stringify({ success: true, pid, ...info }));
+        } else {
+          logger.success(`Daemon started (PID ${pid})`);
+          if (info.authToken) {
+            logger.warn(`Auth token required for extension connections`);
+            logger.info(`Auth token: ${info.authToken}`);
+            logger.info(`Token saved to ~/.browser-cli/auth-token`);
+          }
         }
-      }
-    } catch (err) {
-      if (rootOpts.json) {
-        console.log(JSON.stringify({ success: false, error: (err as Error).message }));
+      } catch (err) {
+        if (rootOpts.json) {
+          console.log(JSON.stringify({ success: false, error: (err as Error).message }));
+          process.exit(1);
+        }
+        logger.error(`Failed to start daemon: ${(err as Error).message}`);
         process.exit(1);
       }
-      logger.error(`Failed to start daemon: ${(err as Error).message}`);
-      process.exit(1);
-    }
-  });
+    },
+  );
 
 export const stopCommand = new Command('stop')
   .description('Stop the browser-cli daemon')
