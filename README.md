@@ -76,40 +76,15 @@ Each guide includes ready-to-use `browser-cli eval` scripts, key selectors, pagi
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js >= 20
-- Chrome / Chromium or Firefox
-
-### Install
-
 ```bash
 npm install -g @browser-cli/cli
 ```
 
-### Load the Extension
-
-The browser extension is required for Browser-CLI to communicate with the browser. Download the latest extension from [GitHub Releases](https://github.com/six-ddc/browser-cli/releases).
-
-**Chrome:**
-
-1. Open `chrome://extensions` in Chrome
-2. Enable **Developer mode**
-3. Click **Load unpacked** and select the extracted extension folder
-
-**Firefox:**
-
-1. Open `about:debugging#/runtime/this-firefox` in Firefox
-2. Click **Load Temporary Add-on**
-3. Select the extension zip file
-
-### Usage
+Then install the browser extension from [GitHub Releases](https://github.com/six-ddc/browser-cli/releases) and load it into Chrome or Firefox. For detailed steps (extension loading, daemon connection, troubleshooting), see the **[Setup Guide](skills/browser-cli/references/SETUP.md)**.
 
 ```bash
-# Start the daemon
+# Start the daemon and verify connection
 browser-cli start
-
-# Check connection status
 browser-cli status
 
 # Navigate and inspect
