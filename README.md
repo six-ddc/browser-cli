@@ -3,16 +3,16 @@
 [![npm version](https://img.shields.io/npm/v/@browser-cli/cli.svg)](https://www.npmjs.com/package/@browser-cli/cli)
 [![license](https://img.shields.io/npm/l/@browser-cli/cli.svg)](LICENSE)
 
-Skill-powered browser automation CLI for AI agents — real browser extensions, no CDP or Playwright.
+Skill-powered browser automation CLI for AI agents — real browser extensions, optional CDP, no Playwright.
 
 ## Why Browser-CLI?
 
 Most browser automation tools (Playwright, Puppeteer, Selenium) rely on CDP or WebDriver protocols — running a headless or debug-mode browser that doesn't behave like a real user's browser. Browser-CLI takes a different approach:
 
-- **Real browser, zero fingerprint** — Runs inside your actual Chrome/Firefox via a lightweight extension. No `navigator.webdriver`, no headless flags, no CDP traces — behaves exactly like a human user, minimizing the risk of triggering anti-bot detection.
+- **Real browser, zero fingerprint** — Runs inside your actual Chrome/Firefox via a lightweight extension. No `navigator.webdriver`, no headless flags, no CDP traces by default — behaves exactly like a human user, minimizing the risk of triggering anti-bot detection.
 - **Same session, same identity** — Operates in your existing browser with all your cookies, login state, and extensions intact. No separate browser profile or cold start.
 - **Skill-first design** — Ships with a [skill definition](skills/browser-cli/SKILL.md) so AI agents (Claude Code, etc.) can call `/browser-cli` as a tool and automate tasks autonomously.
-- **No CDP, no WebDriver** — The extension communicates over WebSocket, with zero dependency on Chrome DevTools Protocol or browser drivers.
+- **CDP-free by default** — The extension communicates over WebSocket, with no dependency on browser drivers. Opt-in `--debugger` flag uses CDP for trusted (`isTrusted=true`) input events when needed.
 - **Agent-friendly output** — Accessibility snapshots with element refs (`@e1`, `@e2`), semantic locators, structured errors with hints, and `--json` mode.
 
 ## Architecture
@@ -21,7 +21,7 @@ Most browser automation tools (Playwright, Puppeteer, Selenium) rely on CDP or W
 CLI (client) ── NDJSON / Unix socket ──→ Daemon (server) ── JSON / WebSocket ──→ Extension (browser)
 ```
 
-The CLI sends commands to a background daemon, which relays them over WebSocket to a browser extension. The extension executes commands via Chrome APIs or content scripts and returns results through the same path. No CDP, no WebDriver — just a lightweight extension in your real browser.
+The CLI sends commands to a background daemon, which relays them over WebSocket to a browser extension. The extension executes commands via Chrome APIs or content scripts and returns results through the same path. CDP-free by default — just a lightweight extension in your real browser. Opt-in `--debugger` flag uses CDP for trusted input events when needed.
 
 ## Features
 

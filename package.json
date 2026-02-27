@@ -2,7 +2,7 @@
   "name": "@browser-cli/root",
   "private": true,
   "type": "module",
-  "description": "Skill-powered browser automation CLI for AI agents — real browser extensions, no CDP or Playwright",
+  "description": "Skill-powered browser automation CLI for AI agents — real browser extensions, optional CDP, no Playwright",
   "author": "six-ddc",
   "license": "MIT",
   "repository": {

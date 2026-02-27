@@ -191,33 +191,30 @@ test.describe('eval --stdin', () => {
 // ---- eval -- error handling ----
 
 test.describe('eval error handling', () => {
-  test('invalid JavaScript returns null (errors caught)', async ({ bcli, navigateAndWait }) => {
+  test('invalid JavaScript returns error', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
     const r = bcli('eval', 'this is not valid javascript {{{');
-    // eval catches errors and returns null with exit 0
-    expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('null');
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain('Unexpected identifier');
   });
 
-  test('referencing undefined variable returns null', async ({ bcli, navigateAndWait }) => {
+  test('referencing undefined variable returns error', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
     const r = bcli('eval', 'nonExistentVariable12345');
-    // Undefined variable ReferenceError is caught, returns null
-    expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('null');
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain('is not defined');
   });
 });
 
 // ---- eval -- integration tests ----
 
 test.describe('eval integration', () => {
-  test('top-level await not supported (returns null)', async ({ bcli, navigateAndWait }) => {
+  test('top-level await not supported (returns error)', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
     // Top-level await is not supported by chrome.scripting.executeScript
-    // The await keyword causes a syntax error, which is caught and returns null
     const r = bcli('eval', 'await new Promise(r => setTimeout(r, 100)); "async done"');
-    expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('null');
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain('await');
   });
 
   test('interact with page after eval modification', async ({ bcli, navigateAndWait }) => {

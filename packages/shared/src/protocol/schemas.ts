@@ -37,10 +37,12 @@ export const clickParamsSchema = z.object({
 });
 export const dblclickParamsSchema = z.object({
   selector: z.string(),
+  debugger: z.boolean().optional(),
   position: positionSchema,
 });
 export const hoverParamsSchema = z.object({
   selector: z.string(),
+  debugger: z.boolean().optional(),
   position: positionSchema,
 });
 export const fillParamsSchema = z.object({

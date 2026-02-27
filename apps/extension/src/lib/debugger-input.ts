@@ -168,6 +168,53 @@ function getWindowsVirtualKeyCode(key: string): number {
 
 // ─── CDP input actions ──────────────────────────────────────────────
 
+/** CDP hover: mouseMoved at (x, y) to trigger CSS :hover */
+async function debuggerHover(target: ChromeDebuggerDebuggee, x: number, y: number): Promise<void> {
+  await cdpSend(target, 'Input.dispatchMouseEvent', {
+    type: 'mouseMoved',
+    x,
+    y,
+  });
+}
+
+/** CDP dblclick: two mousePressed/mouseReleased sequences, second with clickCount:2 */
+async function debuggerDblClick(
+  target: ChromeDebuggerDebuggee,
+  x: number,
+  y: number,
+): Promise<void> {
+  // First click
+  await cdpSend(target, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x,
+    y,
+    button: 'left',
+    clickCount: 1,
+  });
+  await cdpSend(target, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x,
+    y,
+    button: 'left',
+    clickCount: 1,
+  });
+  // Second click with clickCount: 2
+  await cdpSend(target, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x,
+    y,
+    button: 'left',
+    clickCount: 2,
+  });
+  await cdpSend(target, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x,
+    y,
+    button: 'left',
+    clickCount: 2,
+  });
+}
+
 /** CDP click: mousePressed + mouseReleased at (x, y) */
 async function debuggerClick(
   target: ChromeDebuggerDebuggee,
@@ -394,10 +441,17 @@ async function getElementCenter(
 
 // ─── Top-level dispatcher ───────────────────────────────────────────
 
-type DebuggerAction = 'click' | 'fill' | 'type' | 'press';
+type DebuggerAction = 'click' | 'dblclick' | 'hover' | 'fill' | 'type' | 'press';
 
 /** Set of actions that support --debugger */
-export const DEBUGGER_ACTIONS = new Set<string>(['click', 'fill', 'type', 'press']);
+export const DEBUGGER_ACTIONS = new Set<string>([
+  'click',
+  'dblclick',
+  'hover',
+  'fill',
+  'type',
+  'press',
+]);
 
 /** Check if the chrome.debugger API is available (Chrome only) */
 export function isDebuggerAvailable(): boolean {
@@ -423,6 +477,24 @@ export async function handleDebuggerCommand(
         const { x, y } = await getElementCenter(tabId, selector);
         await withDebugger(tabId, async (target) => {
           await debuggerClick(target, x, y, button);
+        });
+        return { success: true };
+      }
+
+      case 'dblclick': {
+        const selector = params.selector as string;
+        const { x, y } = await getElementCenter(tabId, selector);
+        await withDebugger(tabId, async (target) => {
+          await debuggerDblClick(target, x, y);
+        });
+        return { success: true };
+      }
+
+      case 'hover': {
+        const selector = params.selector as string;
+        const { x, y } = await getElementCenter(tabId, selector);
+        await withDebugger(tabId, async (target) => {
+          await debuggerHover(target, x, y);
         });
         return { success: true };
       }

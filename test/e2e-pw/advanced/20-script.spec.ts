@@ -137,7 +137,7 @@ test.describe('script errors', () => {
   test('no default export shows error', async ({ baseURL }) => {
     const r = runScript('no-default-export.mjs', baseURL, PAGES.HOME);
     expect(r.exitCode).not.toBe(0);
-    expect(r.stderr).toContain('default function');
+    expect(r.stderr).toContain('is not a function');
   });
 });
 

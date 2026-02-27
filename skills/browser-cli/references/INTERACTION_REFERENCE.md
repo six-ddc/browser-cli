@@ -53,7 +53,7 @@ browser-cli dblclick 'text=Edit'
 browser-cli hover <selector>
 ```
 
-Moves the mouse over the element, triggering hover effects, tooltips, or dropdown menus.
+Moves the mouse over the element, triggering hover effects, tooltips, or dropdown menus. By default, uses JS `dispatchEvent` which fires JS listeners but does **not** activate CSS `:hover`. Add `--debugger` to send a real CDP mouse event that triggers CSS `:hover` (Chrome only).
 
 **Examples:**
 

@@ -118,8 +118,8 @@ browser-cli fill @e2 hello   # Fill by ref
 | Command                        | Description                                                                                 |
 | ------------------------------ | ------------------------------------------------------------------------------------------- |
 | `click <selector>`             | Click element (`--button left/right/middle`, `--debugger`)                                  |
-| `dblclick <selector>`          | Double-click element                                                                        |
-| `hover <selector>`             | Hover over element                                                                          |
+| `dblclick <selector>`          | Double-click element (`--debugger`)                                                         |
+| `hover <selector>`             | Hover over element (`--debugger` for CSS `:hover`)                                          |
 | `fill <selector> <value>`      | Fill input (replaces content) (`--debugger`)                                                |
 | `type <selector> <text>`       | Type text character-by-character (`--delay <ms>`, `--debugger`)                             |
 | `press <key>`                  | Press key at page level (alias: `key`, `--debugger`). Examples: `Enter`, `Tab`, `Control+a` |
@@ -621,6 +621,8 @@ Add `--debugger` to use the Chrome DevTools Protocol for trusted input (`isTrust
 
 ```bash
 browser-cli click '#button' --debugger
+browser-cli dblclick '.cell' --debugger
+browser-cli hover '.menu' --debugger          # triggers CSS :hover
 browser-cli fill '#input' 'hello' --debugger
 browser-cli type '#input' 'world' --debugger
 browser-cli press Enter --debugger
@@ -632,13 +634,21 @@ browser-cli press Enter --debugger
 
 - Chrome only. On Firefox, `--debugger` prints a warning and falls back to the default JS dispatch.
 - Cannot be used while Chrome DevTools is open on the target tab (only one debugger can attach at a time).
-- Not supported for `dblclick`, `hover`, `check`, `uncheck`, `select`, `upload`.
+- Not supported for `check`, `uncheck`, `select`, `upload`.
 
 ### Hover limitation
 
-`hover` and `mouse move` use JS `dispatchEvent` to synthesize mouse events. These fire JS event listeners (`mouseenter`, `mouseover`, etc.) but **do not activate the CSS `:hover` pseudo-class** — only real OS-level mouse input does. Hover menus/dropdowns that rely on CSS `:hover` will not appear.
+By default, `hover` and `mouse move` use JS `dispatchEvent` to synthesize mouse events. These fire JS event listeners (`mouseenter`, `mouseover`, etc.) but **do not activate the CSS `:hover` pseudo-class** — only real OS-level mouse input does.
 
-**Workaround**: use `eval` to directly manipulate the hidden element's style:
+**Solution**: Use `--debugger` to send a real CDP `mouseMoved` event that triggers CSS `:hover`:
+
+```bash
+browser-cli hover '.dropdown-trigger' --debugger
+browser-cli wait '.dropdown-menu'
+browser-cli click '.dropdown-menu a:first-child'
+```
+
+**Fallback** (without `--debugger`): use `eval` to directly manipulate the hidden element's style:
 
 ```bash
 browser-cli eval --stdin <<'EOF'

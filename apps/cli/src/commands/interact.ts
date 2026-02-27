@@ -21,16 +21,24 @@ export const clickCommand = new Command('click')
 export const dblclickCommand = new Command('dblclick')
   .description('Double-click an element')
   .argument('<selector>', 'CSS selector or @ref')
-  .action(async (selector: string, _opts: unknown, cmd: Command) => {
-    await sendCommand(cmd, { action: 'dblclick', params: { selector } });
+  .option('--debugger', 'Use Chrome DevTools Protocol for trusted events (isTrusted=true)')
+  .action(async (selector: string, opts: { debugger?: true }, cmd: Command) => {
+    await sendCommand(cmd, {
+      action: 'dblclick',
+      params: { selector, debugger: opts.debugger || undefined },
+    });
     console.log('Double-clicked');
   });
 
 export const hoverCommand = new Command('hover')
   .description('Hover over an element')
   .argument('<selector>', 'CSS selector or @ref')
-  .action(async (selector: string, _opts: unknown, cmd: Command) => {
-    await sendCommand(cmd, { action: 'hover', params: { selector } });
+  .option('--debugger', 'Use Chrome DevTools Protocol for trusted events (isTrusted=true)')
+  .action(async (selector: string, opts: { debugger?: true }, cmd: Command) => {
+    await sendCommand(cmd, {
+      action: 'hover',
+      params: { selector, debugger: opts.debugger || undefined },
+    });
     console.log('Hovered');
   });
 

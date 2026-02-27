@@ -108,7 +108,7 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - `cookies set <name> <value> --url <url>` — positional args for cookie set
 - `storage local [key]` / `storage session [key]` — area as subcommand
 - `network route <pattern> --abort` — use --abort (not --block)
-- `--debugger` flag on `click`, `fill`, `type`, `press` — uses CDP `Input.dispatch*` for `isTrusted=true` events (Chrome only, falls back on Firefox)
+- `--debugger` flag on `click`, `dblclick`, `hover`, `fill`, `type`, `press` — uses CDP `Input.dispatch*` for `isTrusted=true` events (Chrome only, falls back on Firefox). For `hover`, this also activates CSS `:hover` pseudo-class.
 
 ### Script Command
 
