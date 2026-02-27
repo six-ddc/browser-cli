@@ -26,7 +26,7 @@ function getChromeDebugger(): ChromeDebuggerAPI | undefined {
 
 function getChromeLastError(): { message?: string } | undefined {
   if (typeof chrome === 'undefined') return undefined;
-  return chrome.runtime?.lastError;
+  return chrome.runtime.lastError;
 }
 
 // ─── CDP helpers ────────────────────────────────────────────────────
@@ -39,7 +39,10 @@ function cdpSend(
 ): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const dbg = getChromeDebugger();
-    if (!dbg) return reject(new Error('chrome.debugger API not available'));
+    if (!dbg) {
+      reject(new Error('chrome.debugger API not available'));
+      return;
+    }
     dbg.sendCommand(target, method, params, (result: unknown) => {
       const lastError = getChromeLastError();
       if (lastError) {
@@ -473,7 +476,7 @@ export async function handleDebuggerCommand(
     switch (action) {
       case 'click': {
         const selector = params.selector as string;
-        const button = (params.button as 'left' | 'right' | 'middle') || 'left';
+        const button = (params.button as 'left' | 'right' | 'middle' | undefined) ?? 'left';
         const { x, y } = await getElementCenter(tabId, selector);
         await withDebugger(tabId, async (target) => {
           await debuggerClick(target, x, y, button);

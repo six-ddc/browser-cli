@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { writeFileSync, unlinkSync, mkdtempSync } from 'node:fs';
+import { writeFileSync, rmSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -32,7 +32,6 @@ beforeAll(() => {
 afterAll(() => {
   // Clean up temp dir (best-effort)
   try {
-    const { rmSync } = require('node:fs');
     rmSync(tempDir, { recursive: true });
   } catch {
     /* ignore */

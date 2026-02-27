@@ -126,7 +126,7 @@ function createBrowserSDK(client: SocketClient, options: ScriptOptions): Browser
         if (action === 'evaluate' && data && 'value' in data) {
           const raw = data.value as string;
           try {
-            return JSON.parse(raw);
+            return JSON.parse(raw) as unknown;
           } catch {
             return raw;
           }
