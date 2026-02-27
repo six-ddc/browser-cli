@@ -170,7 +170,7 @@ describe('--json: daemon-routed commands', () => {
     mockSocketClient.sendCommand.mockResolvedValue({
       id: 'r5',
       success: false,
-      error: { code: 'ELEMENT_NOT_FOUND', message: 'not found', hint: 'check selector' },
+      error: { message: 'Element not found: check selector' },
     });
 
     const { lines, exitCode } = await runCli('--json', 'click', '#missing');
@@ -179,7 +179,7 @@ describe('--json: daemon-routed commands', () => {
     expect(lines).toHaveLength(1);
     const json = JSON.parse(lines[0]);
     expect(json.success).toBe(false);
-    expect(json.error.code).toBe('ELEMENT_NOT_FOUND');
+    expect(json.error.message).toBe('Element not found: check selector');
   });
 
   it('--json after subcommand args also works', async () => {

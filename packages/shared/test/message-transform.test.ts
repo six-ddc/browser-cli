@@ -77,31 +77,29 @@ describe('ResponseMessage → DaemonResponse transform', () => {
       id: 'res-2',
       type: 'response',
       success: false,
-      error: { code: 'ELEMENT_NOT_FOUND', message: 'not found' },
+      error: { message: 'Element not found' },
     });
 
     const { type: _, ...rest } = responseMsg;
     const daemonRes = daemonResponseSchema.parse(rest);
 
     expect(daemonRes.success).toBe(false);
-    expect(daemonRes.error?.code).toBe('ELEMENT_NOT_FOUND');
+    expect(daemonRes.error?.message).toBe('Element not found');
   });
 
-  it('error hint preserved through ResponseMessage → DaemonResponse', () => {
+  it('error message preserved through ResponseMessage → DaemonResponse', () => {
     const responseMsg = responseMessageSchema.parse({
       id: 'res-3',
       type: 'response',
       success: false,
       error: {
-        code: 'TIMEOUT',
-        message: 'timed out',
-        hint: 'Try increasing the timeout',
+        message: 'Timed out. Try increasing the timeout.',
       },
     });
 
     const { type: _, ...rest } = responseMsg;
     const daemonRes = daemonResponseSchema.parse(rest);
 
-    expect(daemonRes.error?.hint).toBe('Try increasing the timeout');
+    expect(daemonRes.error?.message).toBe('Timed out. Try increasing the timeout.');
   });
 });

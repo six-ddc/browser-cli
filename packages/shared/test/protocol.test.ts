@@ -5,7 +5,6 @@ import {
   DEFAULT_WS_PORT,
   HEARTBEAT_INTERVAL_MS,
 } from '../src/protocol/constants.js';
-import { ErrorCode, createError } from '../src/protocol/errors.js';
 import {
   commandSchema,
   requestMessageSchema,
@@ -49,26 +48,6 @@ describe('constants', () => {
     expect(PROTOCOL_VERSION).toBe('1.0.0');
     expect(DEFAULT_WS_PORT).toBe(9222);
     expect(HEARTBEAT_INTERVAL_MS).toBe(5000);
-  });
-});
-
-describe('errors', () => {
-  it('creates errors', () => {
-    const err = createError(ErrorCode.ELEMENT_NOT_FOUND, 'not found');
-    expect(err.code).toBe('ELEMENT_NOT_FOUND');
-    expect(err.message).toBe('not found');
-    expect(err.details).toBeUndefined();
-  });
-
-  it('creates errors with details', () => {
-    const err = createError(ErrorCode.TIMEOUT, 'timed out', undefined, { ms: 5000 });
-    expect(err.details).toEqual({ ms: 5000 });
-  });
-
-  it('creates errors with hint', () => {
-    const err = createError(ErrorCode.TIMEOUT, 'timed out', 'Try increasing the timeout');
-    expect(err.hint).toBe('Try increasing the timeout');
-    expect(err.details).toBeUndefined();
   });
 });
 
@@ -475,7 +454,7 @@ describe('schemas - messages', () => {
       id: 'uuid-1',
       type: 'response',
       success: false,
-      error: { code: 'ELEMENT_NOT_FOUND', message: 'not found' },
+      error: { message: 'Element not found' },
     };
     expect(responseMessageSchema.parse(msg)).toEqual(msg);
   });

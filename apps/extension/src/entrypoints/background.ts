@@ -1,10 +1,10 @@
 import { WsClient } from '../lib/ws-client';
 import { getUrl, getToken, getEnabled, setState } from '../lib/state';
 import type { RequestMessage, ResponseMessage, ProtocolError } from '@browser-cli/shared';
-import { ErrorCode } from '@browser-cli/shared';
 import { classifyError } from '../lib/error-classifier';
 import { NetworkManager } from '../lib/network-manager';
 import { frameManager } from '../lib/frame-manager';
+import { sendToContentScript } from '../lib/send-to-content-script';
 
 let wsClient: WsClient | null = null;
 let networkManager: NetworkManager | null = null;
@@ -223,34 +223,6 @@ async function ensureInitialized(): Promise<void> {
   }
 }
 
-/** Send a message to a content script with retry on "Receiving end does not exist" */
-async function sendToContentScript(
-  tabId: number,
-  message: { type: string; id: string; command: unknown },
-  maxRetries = 3,
-  delayMs = 500,
-): Promise<{ success: boolean; data?: unknown; error?: unknown }> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      // Always target the main frame (frameId: 0) to avoid iframe content scripts
-      // responding first. The main frame's content script handles iframe routing
-      // via frame-bridge when a frame switch is active.
-      return await browser.tabs.sendMessage(tabId, message, { frameId: 0 });
-    } catch (err) {
-      const msg = (err as Error).message || '';
-      const isReceivingEndError =
-        msg.includes('Receiving end does not exist') ||
-        msg.includes('Could not establish connection');
-      if (!isReceivingEndError || attempt === maxRetries) {
-        throw err;
-      }
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-  // Unreachable, but TypeScript needs it
-  throw new Error('Content script not reachable');
-}
-
 async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
   const { id, command } = msg;
 
@@ -272,6 +244,32 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
         result,
       );
       return result;
+    }
+
+    // Debugger-based input: intercept click/fill/type/press with params.debugger=true
+    const params = command.params as Record<string, unknown>;
+    if (params.debugger) {
+      const { DEBUGGER_ACTIONS, isDebuggerAvailable, handleDebuggerCommand } =
+        await import('../lib/debugger-input');
+      if (DEBUGGER_ACTIONS.has(command.action)) {
+        if (!isDebuggerAvailable()) {
+          console.warn(
+            '[browser-cli] --debugger not available on this browser, falling back to content script',
+          );
+        } else {
+          console.log(
+            `[browser-cli] Routing to debugger handler: ${command.action} on tab ${targetTabId}`,
+          );
+          const result = await handleDebuggerCommand(command, targetTabId);
+          return {
+            id,
+            type: 'response',
+            success: result.success,
+            data: result.data,
+            error: result.error as ProtocolError | undefined,
+          };
+        }
+      }
     }
 
     // Forward to content script (with retry)
@@ -303,7 +301,7 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
       id,
       type: 'response',
       success: false,
-      error: classifyError(err, ErrorCode.CONTENT_SCRIPT_ERROR),
+      error: classifyError(err),
     };
   }
 }

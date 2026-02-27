@@ -1,106 +1,89 @@
 /**
  * Tests for error-classifier: classifyError maps raw browser errors
- * to structured ProtocolErrors with codes and hints.
+ * to structured ProtocolErrors with actionable messages.
  */
 
 import { describe, it, expect } from 'vitest';
 import { classifyError } from '../src/lib/error-classifier';
-import { ErrorCode } from '@browser-cli/shared';
 
 // ─── Pattern matching ───────────────────────────────────────────────
 
 describe('classifyError', () => {
-  it('matches "Receiving end does not exist" → CONTENT_SCRIPT_NOT_READY', () => {
+  it('matches "Receiving end does not exist"', () => {
     const result = classifyError('Could not establish connection. Receiving end does not exist');
-    expect(result.code).toBe(ErrorCode.CONTENT_SCRIPT_NOT_READY);
-    expect(result.hint).toBeDefined();
+    expect(result.message).toContain('target tab is not reachable');
+    expect(result.message).toContain('tabList');
   });
 
-  it('matches "No tab with id: 42" → TAB_NOT_FOUND', () => {
+  it('matches "No tab with id: 42"', () => {
     const result = classifyError('No tab with id: 42');
-    expect(result.code).toBe(ErrorCode.TAB_NOT_FOUND);
-    expect(result.hint).toBeDefined();
+    expect(result.message).toContain('tab no longer exists');
+    expect(result.message).toContain('tabList');
   });
 
-  it('matches "Cannot access a chrome:// URL" → CONTENT_SCRIPT_NOT_READY', () => {
+  it('matches "Cannot access a chrome:// URL"', () => {
     const result = classifyError('Cannot access a chrome:// URL');
-    expect(result.code).toBe(ErrorCode.CONTENT_SCRIPT_NOT_READY);
+    expect(result.message).toContain('privileged browser pages');
   });
 
-  it('matches "Cannot access contents of url" → CONTENT_SCRIPT_NOT_READY', () => {
+  it('matches "Cannot access contents of url"', () => {
     const result = classifyError('Cannot access contents of url "https://example.com"');
-    expect(result.code).toBe(ErrorCode.CONTENT_SCRIPT_NOT_READY);
+    expect(result.message).toContain('Cannot access this page');
   });
 
-  it('matches "No active tab found" → NO_ACTIVE_TAB', () => {
+  it('matches "No active tab found"', () => {
     const result = classifyError('No active tab found');
-    expect(result.code).toBe(ErrorCode.NO_ACTIVE_TAB);
-    expect(result.hint).toContain('tabNew');
+    expect(result.message).toContain('No active tab found');
+    expect(result.message).toContain('tabNew');
   });
 
-  it('matches "No window with id" → TAB_NOT_FOUND', () => {
+  it('matches "No window with id"', () => {
     const result = classifyError('No window with id: 7');
-    expect(result.code).toBe(ErrorCode.TAB_NOT_FOUND);
+    expect(result.message).toContain('window no longer exists');
   });
 
-  it('matches "Cannot find a next page in history" → NAVIGATION_FAILED', () => {
+  it('matches "Cannot find a next page in history"', () => {
     const result = classifyError('Cannot find a next page in history');
-    expect(result.code).toBe(ErrorCode.NAVIGATION_FAILED);
+    expect(result.message).toContain('No page in browser history');
   });
 
-  it('matches "Cannot find a previous page in history" → NAVIGATION_FAILED', () => {
+  it('matches "Cannot find a previous page in history"', () => {
     const result = classifyError('Cannot find a previous page in history');
-    expect(result.code).toBe(ErrorCode.NAVIGATION_FAILED);
+    expect(result.message).toContain('No page in browser history');
   });
 
   // ─── Case insensitivity ────────────────────────────────────────────
 
   it('matches case-insensitively: "NO ACTIVE TAB FOUND"', () => {
     const result = classifyError('NO ACTIVE TAB FOUND');
-    expect(result.code).toBe(ErrorCode.NO_ACTIVE_TAB);
+    expect(result.message).toContain('No active tab found');
   });
 
   // ─── Fallback behavior ────────────────────────────────────────────
 
-  it('returns UNKNOWN with raw message for unrecognized error string', () => {
+  it('returns raw message for unrecognized error string', () => {
     const result = classifyError('Something completely unexpected happened');
-    expect(result.code).toBe(ErrorCode.UNKNOWN);
     expect(result.message).toBe('Something completely unexpected happened');
-  });
-
-  it('uses custom fallback code when provided', () => {
-    const result = classifyError('Unrecognized error', ErrorCode.CONTENT_SCRIPT_ERROR);
-    expect(result.code).toBe(ErrorCode.CONTENT_SCRIPT_ERROR);
-    expect(result.message).toBe('Unrecognized error');
-  });
-
-  it('does not include hint in fallback errors', () => {
-    const result = classifyError('Some random error');
-    expect(result.hint).toBeUndefined();
   });
 
   // ─── Input types ──────────────────────────────────────────────────
 
   it('extracts message from Error objects', () => {
     const result = classifyError(new Error('No active tab found'));
-    expect(result.code).toBe(ErrorCode.NO_ACTIVE_TAB);
+    expect(result.message).toContain('No active tab found');
+    expect(result.message).toContain('tabNew');
   });
 
   it('converts non-Error non-string values via String()', () => {
     const result = classifyError(12345);
-    expect(result.code).toBe(ErrorCode.UNKNOWN);
     expect(result.message).toBe('12345');
   });
 
   // ─── Return structure ─────────────────────────────────────────────
 
-  it('returns {code, message, hint} for matched patterns', () => {
+  it('returns {message} for matched patterns', () => {
     const result = classifyError('No active tab found');
-    expect(result).toHaveProperty('code');
     expect(result).toHaveProperty('message');
-    expect(result).toHaveProperty('hint');
-    expect(typeof result.code).toBe('string');
     expect(typeof result.message).toBe('string');
-    expect(typeof result.hint).toBe('string');
   });
 });

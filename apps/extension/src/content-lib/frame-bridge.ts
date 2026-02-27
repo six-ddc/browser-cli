@@ -4,7 +4,7 @@
  */
 
 import type { Command } from '@browser-cli/shared';
-import { ErrorCode, createError, COMMAND_TIMEOUT_MS } from '@browser-cli/shared';
+import { COMMAND_TIMEOUT_MS } from '@browser-cli/shared';
 
 export interface FrameInfo {
   index: number;
@@ -141,15 +141,15 @@ export async function executeInFrame(
 
   if (!isSameOrigin) {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is a structured error object, not an Error instance
-    throw createError(
-      ErrorCode.FRAME_ERROR,
-      'Cross-origin iframe access not supported. Only same-origin iframes can be automated.',
-    );
+    throw {
+      message:
+        'Cross-origin iframe access not supported. Only same-origin iframes can be automated.',
+    };
   }
 
   if (!iframe.contentWindow) {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is a structured error object, not an Error instance
-    throw createError(ErrorCode.FRAME_ERROR, 'Iframe contentWindow not accessible');
+    throw { message: 'Iframe contentWindow not accessible.' };
   }
 
   // For same-origin iframes, we need to inject our content script code
@@ -165,7 +165,7 @@ export async function executeInFrame(
     const timeout = setTimeout(() => {
       window.removeEventListener('message', handler);
       // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- ProtocolError is a structured error object
-      reject(createError(ErrorCode.TIMEOUT, 'Frame command timeout'));
+      reject({ message: 'Frame command timeout.' });
     }, COMMAND_TIMEOUT_MS);
 
     const handler = (

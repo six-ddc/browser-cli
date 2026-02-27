@@ -31,6 +31,7 @@ export default defineConfig({
             'webRequest',
             'userScripts',
             'tabGroups', // Chrome-only: tab group management
+            'debugger', // Chrome-only: CDP input for --debugger flag
           ]
         : ['webRequest', 'webRequestBlocking', 'contextualIdentities']),
     ],

@@ -1,7 +1,7 @@
 import type { Server, Socket } from 'node:net';
 import { createServer } from 'node:net';
 import { unlinkSync, existsSync } from 'node:fs';
-import { schemas, ErrorCode } from '@browser-cli/shared';
+import { schemas } from '@browser-cli/shared';
 import type { DaemonRequest, DaemonResponse } from '@browser-cli/shared';
 import { logger } from '../util/logger.js';
 
@@ -96,7 +96,6 @@ export class SocketServer {
         id: 'unknown',
         success: false,
         error: {
-          code: ErrorCode.PROTOCOL_ERROR,
           message: (err as Error).message,
         },
       };

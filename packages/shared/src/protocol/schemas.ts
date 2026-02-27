@@ -3,7 +3,6 @@
  */
 
 import { z } from 'zod';
-import { ErrorCode } from './errors.js';
 
 // ─── Element Ref ─────────────────────────────────────────────────────
 
@@ -12,10 +11,7 @@ export const elementRefSchema = z.string().regex(/^@e\d+$/);
 // ─── Error ───────────────────────────────────────────────────────────
 
 export const protocolErrorSchema = z.object({
-  code: z.enum(ErrorCode),
   message: z.string(),
-  hint: z.string().optional(),
-  details: z.unknown().optional(),
 });
 
 // ─── Action Params ───────────────────────────────────────────────────

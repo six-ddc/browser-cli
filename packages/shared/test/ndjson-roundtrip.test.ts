@@ -45,28 +45,12 @@ describe('NDJSON roundtrip - DaemonResponse', () => {
     expect(roundtripped).toEqual(original);
   });
 
-  it('error with code, message, and hint survives roundtrip', () => {
+  it('error with message survives roundtrip', () => {
     const original = {
       id: 'res-2',
       success: false,
       error: {
-        code: 'ELEMENT_NOT_FOUND',
-        message: 'Element not found',
-        hint: 'Check the selector is correct',
-      },
-    };
-    const roundtripped = daemonResponseSchema.parse(JSON.parse(JSON.stringify(original)));
-    expect(roundtripped).toEqual(original);
-  });
-
-  it('error with details survives roundtrip', () => {
-    const original = {
-      id: 'res-3',
-      success: false,
-      error: {
-        code: 'TIMEOUT',
-        message: 'Timed out',
-        details: { elapsed: 30000, action: 'click' },
+        message: 'Element not found. Check the selector is correct.',
       },
     };
     const roundtripped = daemonResponseSchema.parse(JSON.parse(JSON.stringify(original)));

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Trusted Events Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      button,
+      input {
+        display: block;
+        margin: 10px 0;
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      input {
+        width: 300px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      #log {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        min-height: 60px;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>Trusted Events Test</h3>
+    <p>This page logs <code>event.isTrusted</code> for click, input, and keydown events.</p>
+
+    <button id="btn">Click Me</button>
+    <input id="input" type="text" placeholder="Type here" />
+    <div id="log"></div>
+
+    <script>
+      const log = document.getElementById('log');
+      function record(name, isTrusted) {
+        const line = name + ':' + (isTrusted ? 'trusted' : 'untrusted');
+        log.textContent = (log.textContent ? log.textContent + '\n' : '') + line;
+      }
+
+      document.getElementById('btn').addEventListener('click', (e) => {
+        record('click', e.isTrusted);
+      });
+
+      document.getElementById('input').addEventListener('input', (e) => {
+        record('input', e.isTrusted);
+      });
+
+      document.addEventListener('keydown', (e) => {
+        // Ignore modifier-only keys to reduce noise
+        if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+        record('keydown:' + e.key, e.isTrusted);
+      });
+    </script>
+  </body>
+</html>

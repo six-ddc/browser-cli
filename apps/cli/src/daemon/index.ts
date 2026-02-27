@@ -84,6 +84,7 @@ async function main() {
       pid: process.pid,
       wsHost,
       wsPort,
+      authEnabled: authToken !== null,
     }),
   );
 

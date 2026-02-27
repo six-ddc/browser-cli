@@ -83,10 +83,7 @@ export async function sendCommand<A extends ActionType>(
     }
 
     if (!response.success) {
-      const errMsg = response.error?.message || 'Unknown error';
-      const errCode = response.error?.code || 'UNKNOWN';
-      const hint = response.error?.hint;
-      logger.error(`[${errCode}] ${errMsg}${hint ? ` Hint: ${hint}` : ''}`);
+      logger.error(response.error?.message || 'Unknown error');
       process.exit(1);
     }
 

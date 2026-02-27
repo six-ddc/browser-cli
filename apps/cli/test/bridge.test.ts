@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Bridge } from '../src/daemon/bridge.js';
 import type { WsServer } from '../src/daemon/ws-server.js';
-import { ErrorCode } from '@browser-cli/shared';
 import type { DaemonRequest } from '@browser-cli/shared';
 
 vi.mock('../src/util/logger.js', () => ({
@@ -28,7 +27,7 @@ describe('Bridge', () => {
     vi.clearAllMocks();
   });
 
-  it('returns EXTENSION_NOT_CONNECTED error when not connected', async () => {
+  it('returns error when not connected', async () => {
     const ws = createMockWsServer(false);
     const bridge = new Bridge(ws);
     const req = makeRequest();
@@ -36,7 +35,7 @@ describe('Bridge', () => {
     const res = await bridge.handleRequest(req);
 
     expect(res.success).toBe(false);
-    expect(res.error?.code).toBe(ErrorCode.EXTENSION_NOT_CONNECTED);
+    expect(res.error?.message).toContain('Extension is not connected');
     expect(ws.sendRequest).not.toHaveBeenCalled();
   });
 
@@ -80,19 +79,17 @@ describe('Bridge', () => {
     ws.sendRequest.mockResolvedValue({
       id: 'test-id-1',
       success: false,
-      error: { code: ErrorCode.ELEMENT_NOT_FOUND, message: 'not found', hint: 'check selector' },
+      error: { message: 'Element not found: check selector' },
     });
     const bridge = new Bridge(ws);
 
     const res = await bridge.handleRequest(makeRequest());
 
     expect(res.success).toBe(false);
-    expect(res.error?.code).toBe(ErrorCode.ELEMENT_NOT_FOUND);
-    expect(res.error?.message).toBe('not found');
-    expect(res.error?.hint).toBe('check selector');
+    expect(res.error?.message).toBe('Element not found: check selector');
   });
 
-  it('returns TIMEOUT error when sendRequest throws', async () => {
+  it('returns error when sendRequest throws', async () => {
     const ws = createMockWsServer(true);
     ws.sendRequest.mockRejectedValue(new Error('Request timed out after 30000ms'));
     const bridge = new Bridge(ws);
@@ -100,7 +97,6 @@ describe('Bridge', () => {
     const res = await bridge.handleRequest(makeRequest());
 
     expect(res.success).toBe(false);
-    expect(res.error?.code).toBe(ErrorCode.TIMEOUT);
     expect(res.error?.message).toBe('Request timed out after 30000ms');
   });
 

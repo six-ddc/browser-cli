@@ -1,4 +1,4 @@
-import { COMMAND_TIMEOUT_MS, ErrorCode, createError } from '@browser-cli/shared';
+import { COMMAND_TIMEOUT_MS } from '@browser-cli/shared';
 import type { DaemonRequest, DaemonResponse, RequestMessage } from '@browser-cli/shared';
 import type { WsServer } from './ws-server.js';
 import { logger } from '../util/logger.js';
@@ -20,22 +20,19 @@ export class Bridge {
         return {
           id: req.id,
           success: false,
-          error: createError(
-            ErrorCode.EXTENSION_NOT_CONNECTED,
-            `Browser session '${req.sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'}`,
-            "Run 'browser-cli status' to see connected browsers, then use --session <sessionId> to target one.",
-          ),
+          error: {
+            message: `Browser session '${req.sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'} Run 'browser-cli status' to see connected browsers, then use --session <sessionId> to target one.`,
+          },
         };
       }
     } else if (!this.wsServer.isConnected) {
       return {
         id: req.id,
         success: false,
-        error: createError(
-          ErrorCode.EXTENSION_NOT_CONNECTED,
-          'Extension is not connected. Please ensure the Browser-CLI extension is installed and enabled.',
-          "Check that the Browser-CLI extension is installed, enabled, and the browser is open. Run 'browser-cli status' to verify.",
-        ),
+        error: {
+          message:
+            "Extension is not connected. Please ensure the Browser-CLI extension is installed and enabled. Check that the Browser-CLI extension is installed, enabled, and the browser is open. Run 'browser-cli status' to verify.",
+        },
       };
     }
 
@@ -61,14 +58,10 @@ export class Bridge {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error(`Command ${req.command.action} failed:`, msg);
-      const code =
-        msg.includes('disconnected') || msg.includes('not connected')
-          ? ErrorCode.EXTENSION_NOT_CONNECTED
-          : ErrorCode.TIMEOUT;
       return {
         id: req.id,
         success: false,
-        error: createError(code, msg),
+        error: { message: msg },
       };
     }
   }

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { DEFAULT_WS_PORT, DEFAULT_WS_HOST } from '@browser-cli/shared';
 import { startDaemon, stopDaemon, getDaemonPid } from '../daemon/process.js';
-import { getSocketPath, getWsPort, getWsHost } from '../util/paths.js';
+import { getSocketPath, getWsPort, getWsHost, getAuthTokenPath } from '../util/paths.js';
 import { logger } from '../util/logger.js';
 import { getRootOpts } from './shared.js';
 
@@ -109,15 +109,21 @@ export const statusCommand = new Command('status')
           uptime: number;
           wsHost?: string;
           wsPort?: number;
+          authEnabled?: boolean;
         };
         status.extension = data;
 
         if (data.wsHost) status.wsHost = data.wsHost;
         if (data.wsPort) status.wsPort = data.wsPort;
+        if (data.authEnabled !== undefined) {
+          status.authEnabled = data.authEnabled;
+          if (data.authEnabled) status.authTokenFile = getAuthTokenPath();
+        }
 
         if (!rootOpts.json) {
           if (data.wsHost) console.log(`WebSocket host: ${data.wsHost}`);
           if (data.wsPort) console.log(`WebSocket port: ${data.wsPort}`);
+          if (data.authEnabled) console.log(`Auth token: ${getAuthTokenPath()}`);
           if (data.connections.length === 0) {
             console.log('Extension: not connected');
           } else {

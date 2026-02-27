@@ -1,97 +1,12 @@
 /**
  * Tests for exported helper functions in command-router:
- * getFallbackErrorCode and cookieToInfo.
+ * cookieToInfo.
  */
 
 import { describe, it, expect } from 'vitest';
-import { getFallbackErrorCode, cookieToInfo } from '../src/lib/command-router';
-import { ErrorCode } from '@browser-cli/shared';
+import { cookieToInfo } from '../src/lib/command-router';
 
 type CookieInput = Parameters<typeof cookieToInfo>[0];
-
-// ─── getFallbackErrorCode ────────────────────────────────────────────
-
-describe('getFallbackErrorCode', () => {
-  it('navigate -> NAVIGATION_FAILED', () => {
-    expect(getFallbackErrorCode('navigate')).toBe(ErrorCode.NAVIGATION_FAILED);
-  });
-
-  it('goBack -> NAVIGATION_FAILED', () => {
-    expect(getFallbackErrorCode('goBack')).toBe(ErrorCode.NAVIGATION_FAILED);
-  });
-
-  it('goForward -> NAVIGATION_FAILED', () => {
-    expect(getFallbackErrorCode('goForward')).toBe(ErrorCode.NAVIGATION_FAILED);
-  });
-
-  it('reload -> NAVIGATION_FAILED', () => {
-    expect(getFallbackErrorCode('reload')).toBe(ErrorCode.NAVIGATION_FAILED);
-  });
-
-  it('tabNew -> TAB_NOT_FOUND', () => {
-    expect(getFallbackErrorCode('tabNew')).toBe(ErrorCode.TAB_NOT_FOUND);
-  });
-
-  it('tabList -> TAB_NOT_FOUND', () => {
-    expect(getFallbackErrorCode('tabList')).toBe(ErrorCode.TAB_NOT_FOUND);
-  });
-
-  it('tabSwitch -> TAB_NOT_FOUND', () => {
-    expect(getFallbackErrorCode('tabSwitch')).toBe(ErrorCode.TAB_NOT_FOUND);
-  });
-
-  it('tabClose -> TAB_NOT_FOUND', () => {
-    expect(getFallbackErrorCode('tabClose')).toBe(ErrorCode.TAB_NOT_FOUND);
-  });
-
-  it('screenshot -> SCREENSHOT_FAILED', () => {
-    expect(getFallbackErrorCode('screenshot')).toBe(ErrorCode.SCREENSHOT_FAILED);
-  });
-
-  it('windowNew -> UNKNOWN', () => {
-    expect(getFallbackErrorCode('windowNew')).toBe(ErrorCode.UNKNOWN);
-  });
-
-  it('windowFocus -> UNKNOWN', () => {
-    expect(getFallbackErrorCode('windowFocus')).toBe(ErrorCode.UNKNOWN);
-  });
-
-  it('tabGroupCreate -> TAB_NOT_FOUND', () => {
-    expect(getFallbackErrorCode('tabGroupCreate')).toBe(ErrorCode.TAB_NOT_FOUND);
-  });
-
-  it('tabGroupUpdate -> TAB_NOT_FOUND', () => {
-    expect(getFallbackErrorCode('tabGroupUpdate')).toBe(ErrorCode.TAB_NOT_FOUND);
-  });
-
-  it('tabGroupList -> TAB_NOT_FOUND', () => {
-    expect(getFallbackErrorCode('tabGroupList')).toBe(ErrorCode.TAB_NOT_FOUND);
-  });
-
-  it('tabUngroup -> TAB_NOT_FOUND', () => {
-    expect(getFallbackErrorCode('tabUngroup')).toBe(ErrorCode.TAB_NOT_FOUND);
-  });
-
-  it('bookmarkAdd -> UNKNOWN', () => {
-    expect(getFallbackErrorCode('bookmarkAdd')).toBe(ErrorCode.UNKNOWN);
-  });
-
-  it('bookmarkRemove -> UNKNOWN', () => {
-    expect(getFallbackErrorCode('bookmarkRemove')).toBe(ErrorCode.UNKNOWN);
-  });
-
-  it('bookmarkList -> UNKNOWN', () => {
-    expect(getFallbackErrorCode('bookmarkList')).toBe(ErrorCode.UNKNOWN);
-  });
-
-  it('historySearch -> UNKNOWN', () => {
-    expect(getFallbackErrorCode('historySearch')).toBe(ErrorCode.UNKNOWN);
-  });
-
-  it('unknownAction -> UNKNOWN', () => {
-    expect(getFallbackErrorCode('unknownAction')).toBe(ErrorCode.UNKNOWN);
-  });
-});
 
 // ─── cookieToInfo ────────────────────────────────────────────────────
 

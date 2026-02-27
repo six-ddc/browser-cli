@@ -5,7 +5,6 @@
  */
 
 import type { RequestMessage, ResponseMessage, Command } from '@browser-cli/shared';
-import { ErrorCode, createError, isProtocolError } from '@browser-cli/shared';
 import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
 
@@ -110,11 +109,19 @@ export async function handleBackgroundCommand(
     const data = await routeCommand(command, targetTabId, networkManager);
     return { id, type: 'response', success: true, data };
   } catch (err) {
+    const error =
+      err !== null &&
+      typeof err === 'object' &&
+      'message' in err &&
+      !(err instanceof Error) &&
+      typeof (err as { message: unknown }).message === 'string'
+        ? (err as { message: string })
+        : classifyError(err);
     return {
       id,
       type: 'response',
       success: false,
-      error: isProtocolError(err) ? err : classifyError(err, getFallbackErrorCode(command.action)),
+      error,
     };
   }
 }
@@ -124,12 +131,10 @@ const BLOCKED_SCHEMES = ['javascript', 'data', 'vbscript'];
 function assertSafeUrl(url: string): void {
   const scheme = url.trim().split(':')[0].toLowerCase();
   if (BLOCKED_SCHEMES.includes(scheme)) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught and classified upstream
-    throw createError(
-      ErrorCode.INVALID_URL,
-      `Blocked navigation to "${scheme}:" URL — this scheme is not allowed for security reasons`,
-      'Use http: or https: URLs instead',
-    );
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
+    throw {
+      message: `Blocked navigation to "${scheme}:" URL — this scheme is not allowed for security reasons. Use http: or https: URLs instead.`,
+    };
   }
 }
 
@@ -209,11 +214,9 @@ async function routeCommand(
         const identities = await ctxIds.query({ name: container });
         if (identities.length === 0) {
           // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-          throw createError(
-            ErrorCode.CONTAINER_NOT_FOUND,
-            `Container "${container}" not found`,
-            'Use "container list" to see available containers, or "container create" to create one.',
-          );
+          throw {
+            message: `Container "${container}" not found. Use "container list" to see available containers, or "container create" to create one.`,
+          };
         }
         cookieStoreId = identities[0].cookieStoreId;
       }
@@ -515,12 +518,12 @@ async function routeCommand(
         }
         // userScripts not available
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-        throw createError(
-          ErrorCode.EVAL_ERROR,
-          "eval() is blocked by this page's Content Security Policy (CSP).",
-          "Enable Developer Mode (or 'Allow User Scripts' on Chrome 138+) in chrome://extensions to auto-bypass CSP. " +
-            "Or use 'snapshot -ic' / 'find' to interact with elements without eval.",
-        );
+        throw {
+          message:
+            "eval() is blocked by this page's Content Security Policy (CSP). " +
+            "Enable Developer Mode (or 'Allow User Scripts' on Chrome 138+) in chrome://extensions to auto-bypass CSP, " +
+            "or use 'snapshot -ic' / 'find' to interact with elements without eval.",
+        };
       } else {
         // Firefox: ISOLATED world eval (extension CSP, always works)
         const response = await sendToContentScript(
@@ -1003,11 +1006,9 @@ async function routeCommand(
       const identitiesR = await ctxIdsR.query({ name });
       if (identitiesR.length === 0) {
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-        throw createError(
-          ErrorCode.CONTAINER_NOT_FOUND,
-          `Container "${name}" not found`,
-          'Use "container list" to see available containers.',
-        );
+        throw {
+          message: `Container "${name}" not found. Use "container list" to see available containers.`,
+        };
       }
       await ctxIdsR.remove(identitiesR[0].cookieStoreId);
       return { removed: true };
@@ -1016,34 +1017,6 @@ async function routeCommand(
     default:
       throw new Error(`Unknown background command: ${command.action}`);
   }
-}
-
-export function getFallbackErrorCode(action: string): ErrorCode {
-  if (['navigate', 'goBack', 'goForward', 'reload'].includes(action)) {
-    return ErrorCode.NAVIGATION_FAILED;
-  }
-  if (['tabNew', 'tabList', 'tabSwitch', 'tabClose'].includes(action)) {
-    return ErrorCode.TAB_NOT_FOUND;
-  }
-  if (action === 'screenshot') {
-    return ErrorCode.SCREENSHOT_FAILED;
-  }
-  if (['windowNew', 'windowList', 'windowClose', 'windowFocus'].includes(action)) {
-    return ErrorCode.UNKNOWN;
-  }
-  if (['tabGroupCreate', 'tabGroupUpdate', 'tabGroupList', 'tabUngroup'].includes(action)) {
-    return ErrorCode.TAB_NOT_FOUND;
-  }
-  if (['bookmarkAdd', 'bookmarkRemove', 'bookmarkList'].includes(action)) {
-    return ErrorCode.UNKNOWN;
-  }
-  if (action === 'historySearch') {
-    return ErrorCode.UNKNOWN;
-  }
-  if (['containerList', 'containerCreate', 'containerRemove'].includes(action)) {
-    return ErrorCode.CONTAINER_NOT_FOUND;
-  }
-  return ErrorCode.UNKNOWN;
 }
 
 export function cookieToInfo(c: Browser.cookies.Cookie) {

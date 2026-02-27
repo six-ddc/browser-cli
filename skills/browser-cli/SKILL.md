@@ -115,23 +115,23 @@ browser-cli fill @e2 hello   # Fill by ref
 
 #### Basic Interaction
 
-| Command                        | Description                                                                   |
-| ------------------------------ | ----------------------------------------------------------------------------- |
-| `click <selector>`             | Click element (`--button left/right/middle`)                                  |
-| `dblclick <selector>`          | Double-click element                                                          |
-| `hover <selector>`             | Hover over element                                                            |
-| `fill <selector> <value>`      | Fill input (replaces content)                                                 |
-| `type <selector> <text>`       | Type text character-by-character (`--delay <ms>`)                             |
-| `press <key>`                  | Press key at page level (alias: `key`). Examples: `Enter`, `Tab`, `Control+a` |
-| `clear <selector>`             | Clear an input field                                                          |
-| `focus <selector>`             | Focus an element                                                              |
-| `check <selector>`             | Check a checkbox/radio                                                        |
-| `uncheck <selector>`           | Uncheck a checkbox                                                            |
-| `select <selector> <value>`    | Select dropdown option (matches by value, text, or label)                     |
-| `upload <selector> <files...>` | Upload files (`--clear` to clear first)                                       |
-| `drag <source> <target>`       | Drag element to target                                                        |
-| `keydown <key>`                | Press key down without releasing                                              |
-| `keyup <key>`                  | Release a held key                                                            |
+| Command                        | Description                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `click <selector>`             | Click element (`--button left/right/middle`, `--debugger`)                                  |
+| `dblclick <selector>`          | Double-click element                                                                        |
+| `hover <selector>`             | Hover over element                                                                          |
+| `fill <selector> <value>`      | Fill input (replaces content) (`--debugger`)                                                |
+| `type <selector> <text>`       | Type text character-by-character (`--delay <ms>`, `--debugger`)                             |
+| `press <key>`                  | Press key at page level (alias: `key`, `--debugger`). Examples: `Enter`, `Tab`, `Control+a` |
+| `clear <selector>`             | Clear an input field                                                                        |
+| `focus <selector>`             | Focus an element                                                                            |
+| `check <selector>`             | Check a checkbox/radio                                                                      |
+| `uncheck <selector>`           | Uncheck a checkbox                                                                          |
+| `select <selector> <value>`    | Select dropdown option (matches by value, text, or label)                                   |
+| `upload <selector> <files...>` | Upload files (`--clear` to clear first)                                                     |
+| `drag <source> <target>`       | Drag element to target                                                                      |
+| `keydown <key>`                | Press key down without releasing                                                            |
+| `keyup <key>`                  | Release a held key                                                                          |
 
 #### Find Command (Semantic Locate + Act)
 
@@ -612,6 +612,27 @@ For comprehensive documentation on each domain:
 - [NETWORK_REFERENCE.md](references/NETWORK_REFERENCE.md) — network interception (route/unroute/requests), cookies, storage, tabs, frames, windows, dialogs, browser config, state save/load
 
 ## Known Limitations & Error Handling
+
+### Trusted Events (`--debugger`)
+
+By default, interaction commands (`click`, `fill`, `type`, `press`) dispatch DOM events via JavaScript (`isTrusted=false`). Some websites and anti-bot services check `event.isTrusted` and reject synthetic events.
+
+Add `--debugger` to use the Chrome DevTools Protocol for trusted input (`isTrusted=true`):
+
+```bash
+browser-cli click '#button' --debugger
+browser-cli fill '#input' 'hello' --debugger
+browser-cli type '#input' 'world' --debugger
+browser-cli press Enter --debugger
+```
+
+**How it works**: Attaches `chrome.debugger` to the tab, sends CDP `Input.dispatchMouseEvent`/`Input.dispatchKeyEvent` commands, then detaches. This produces real browser-level input events.
+
+**Limitations**:
+
+- Chrome only. On Firefox, `--debugger` prints a warning and falls back to the default JS dispatch.
+- Cannot be used while Chrome DevTools is open on the target tab (only one debugger can attach at a time).
+- Not supported for `dblclick`, `hover`, `check`, `uncheck`, `select`, `upload`.
 
 ### Hover limitation
 

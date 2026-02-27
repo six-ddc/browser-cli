@@ -1,5 +1,5 @@
 import type { Command } from '@browser-cli/shared';
-import { ErrorCode, createError, schemas } from '@browser-cli/shared';
+import { schemas } from '@browser-cli/shared';
 import { classifyError } from '../lib/error-classifier';
 import { initFrameBridge } from '../content-lib/frame-bridge';
 import { initOverlay } from '../content-lib/command-overlay';
@@ -28,11 +28,9 @@ export default defineContentScript({
         if (!parseResult.success) {
           sendResponse({
             success: false,
-            error: createError(
-              ErrorCode.INVALID_PARAMS,
-              `Invalid command: ${parseResult.error.message}`,
-              'Check the command action and params match the expected schema',
-            ),
+            error: {
+              message: `Invalid command: ${parseResult.error.message}. Check the command action and params match the expected schema.`,
+            },
           });
           return true;
         }
@@ -46,7 +44,7 @@ export default defineContentScript({
           .catch((err: unknown) => {
             sendResponse({
               success: false,
-              error: classifyError(err, ErrorCode.CONTENT_SCRIPT_ERROR),
+              error: classifyError(err),
             });
           });
 
