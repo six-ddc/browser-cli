@@ -14,36 +14,11 @@ argument-hint: '<describe your browser automation task>'
 
 Automate a real browser from the command line. Browser-CLI uses a Chrome/Firefox extension + daemon architecture — no Playwright or headless browser needed. It controls the user's actual browser with full access to extensions, login state, and cookies.
 
-## Install
-
-```bash
-npm install -g @browser-cli/cli@latest
-```
-
-The browser extension is also required — download from [GitHub Releases](https://github.com/six-ddc/browser-cli/releases) and load it into Chrome or Firefox.
-
 ## Setup
 
-Start the daemon before issuing commands:
+Run `browser-cli status` to check readiness. If the command fails or shows no connected sessions, follow the [Setup Guide](references/SETUP.md) to install the CLI and browser extension.
 
-```bash
-browser-cli start              # default port 9222
-browser-cli start --port 9333  # custom WebSocket port
-```
-
-Check connection status (daemon + extension):
-
-```bash
-browser-cli status
-```
-
-Stop the daemon when done:
-
-```bash
-browser-cli stop
-```
-
-> The browser extension must be installed and connected. Run `browser-cli status` to verify.
+When ready, start the daemon with `browser-cli start` before issuing commands.
 
 ## Quick Start
 
@@ -630,6 +605,7 @@ To add a new site guide, see [sites/CONTRIBUTING.md](references/sites/CONTRIBUTI
 
 For comprehensive documentation on each domain:
 
+- [SETUP.md](references/SETUP.md) — CLI installation, extension installation (Chrome/Firefox), daemon startup, connection troubleshooting
 - [SELECTOR_REFERENCE.md](references/SELECTOR_REFERENCE.md) — CSS selectors, semantic locators (role/text/label/placeholder/alt/title/testid/xpath), element refs, find command engines, position selectors, best practices
 - [INTERACTION_REFERENCE.md](references/INTERACTION_REFERENCE.md) — click, fill, type, press, drag, check/uncheck, select, upload, mouse control, scroll, form filling patterns
 - [QUERY_REFERENCE.md](references/QUERY_REFERENCE.md) — get/is queries, wait operations, snapshot flags, screenshot options, eval, console/errors, data extraction patterns
