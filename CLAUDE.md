@@ -40,6 +40,7 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - Content script runs in isolated world; evaluate uses background `chrome.scripting.executeScript({ world: 'MAIN' })` to bypass CSP
 - CLI ↔ Daemon uses NDJSON over Unix socket
 - Daemon ↔ Extension uses JSON over WebSocket
+- **Schema-first protocol**: When adding new fields to command params (e.g., a `--debugger` flag), you **MUST** add the field to the corresponding Zod schema in `packages/shared/src/protocol/schemas.ts`. Zod's `z.object()` strips unknown properties by default — any field not in the schema will be silently dropped during `parse()`/`safeParse()` at both the Daemon and Extension layers, causing the feature to fail silently. Always update schema → types → CLI → extension in the same changeset.
 
 ## Documentation
 

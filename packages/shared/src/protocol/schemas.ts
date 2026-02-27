@@ -32,6 +32,7 @@ export const emptyParamsSchema = z.object({});
 export const clickParamsSchema = z.object({
   selector: z.string(),
   button: z.enum(['left', 'right', 'middle']).optional(),
+  debugger: z.boolean().optional(),
   position: positionSchema,
 });
 export const dblclickParamsSchema = z.object({
@@ -45,17 +46,20 @@ export const hoverParamsSchema = z.object({
 export const fillParamsSchema = z.object({
   selector: z.string(),
   value: z.string(),
+  debugger: z.boolean().optional(),
   position: positionSchema,
 });
 export const typeParamsSchema = z.object({
   selector: z.string(),
   text: z.string(),
   delay: z.number().optional(),
+  debugger: z.boolean().optional(),
   position: positionSchema,
 });
 export const pressParamsSchema = z.object({
   selector: z.string().optional(),
   key: z.string(),
+  debugger: z.boolean().optional(),
   position: positionSchema,
 });
 export const clearParamsSchema = z.object({
