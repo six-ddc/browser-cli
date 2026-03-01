@@ -10,42 +10,42 @@
 >
 > 后续命令加 `--tab <tabId>`。
 
-## 搜索
+> **Recipe 脚本**: 本站常用操作已封装为可复用脚本，请阅读 `scripts/weixin.mjs` 源码了解可用的 recipe 函数及其前置条件（`@requires`）。
+>
+> ```bash
+> # 调用指定函数
+> browser-cli --tab <tabId> script scripts/weixin.mjs --call extractResults
+> # 传参给函数
+> browser-cli --tab <tabId> script scripts/weixin.mjs --call search -- --keyword "人工智能"
+> ```
+>
+> Agent 执行时将 `scripts/weixin.mjs` 替换为绝对路径（基于 SKILL.md 所在目录推导）。
 
-```bash
-browser-cli --tab <tabId> navigate 'https://weixin.sogou.com/'
-browser-cli --tab <tabId> fill '#query' '<关键词>'
-browser-cli --tab <tabId> click 'input[type="submit"]'
-browser-cli --tab <tabId> wait '.news-list' --timeout 5000
-```
+> **Recipe 调试**: 如果某个 recipe 函数失败（如选择器变了），可以从 `scripts/weixin.mjs` 复制该函数，修改选择器后通过 `script -`（stdin）重跑：
+>
+> ```bash
+> browser-cli --tab <tabId> script - <<'EOF'
+> export default async function(browser) {
+>   // 从 weixin.mjs 的 extractResults 复制出来，修改了选择器
+>   return browser.evaluate({
+>     expression: `JSON.stringify([...document.querySelectorAll(".news-list > li")].slice(0,3).map(el => ({ title: el.querySelector("h3 a")?.innerText || "" })))`
+>   });
+> }
+> EOF
+> ```
+>
+> 也可以直接用 `eval` 单步调试选择器：`browser-cli --tab <tabId> eval 'document.querySelectorAll(".news-list > li").length'`
+>
+> 下方选择器表格供参考。
 
-> **注意**: `press Enter` 不生效，必须 `click 'input[type="submit"]'`（"搜文章"按钮）提交搜索。
+## 选择器参考
 
-## 搜索结果页
-
-**URL 模式**: `/weixin?type=2&query=<keyword>&page=<n>`
-
-**等待加载**: `browser-cli --tab <tabId> wait '.news-list' --timeout 5000`
-
-**提取搜索结果**:
-
-```bash
-browser-cli --tab <tabId> eval --stdin <<'EOF'
-JSON.stringify([...document.querySelectorAll(".news-list > li")].map((el, i) => ({
-  index: i + 1,
-  title: el.querySelector("h3 a")?.innerText || "",
-  url: el.querySelector("h3 a")?.href || "",
-  account: el.querySelector(".all-time-y2")?.innerText || "",
-  date: el.querySelector(".s2")?.innerText || "",
-  snippet: el.querySelector(".txt-info")?.innerText || "",
-})))
-EOF
-```
-
-**关键选择器**:
+### 搜索页
 
 | 元素         | 选择器                 | 说明                              |
 | ------------ | ---------------------- | --------------------------------- |
+| 搜索输入框   | `#query`               | 首页和结果页均可用                |
+| 搜索按钮     | `input[type="submit"]` | "搜文章"按钮                      |
 | 结果列表容器 | `.news-list`           | `<ul>` 元素                       |
 | 单条结果     | `.news-list > li`      | 每页 10 条                        |
 | 文章标题     | `h3 a`                 | 文本为标题，href 为搜狗重定向链接 |
@@ -53,73 +53,9 @@ EOF
 | 摘要         | `.txt-info`            | 文章正文摘要                      |
 | 公众号名称   | `.all-time-y2`         | 来源公众号                        |
 | 发布日期     | `.s2`                  | 格式为 `YYYY-M-DD`                |
-| 搜索输入框   | `#query`               | 首页和结果页均可用                |
-| 搜索按钮     | `input[type="submit"]` | "搜文章"按钮                      |
+| 翻页链接     | `.p-fy a`              | 含"下一页"等分页按钮              |
 
-**翻页**:
-
-URL 参数分页 — 修改 `page` 参数：
-
-```bash
-# 第 2 页
-browser-cli --tab <tabId> navigate 'https://weixin.sogou.com/weixin?type=2&query=<关键词>&page=2'
-browser-cli --tab <tabId> wait '.news-list' --timeout 5000
-```
-
-或点击"下一页"：
-
-```bash
-browser-cli --tab <tabId> eval --stdin <<'EOF'
-(() => {
-  const links = [...document.querySelectorAll(".p-fy a")];
-  const next = links.find(a => a.innerText === "下一页");
-  if (next) { next.click(); return "next page"; }
-  return "no next page";
-})()
-EOF
-```
-
-```bash
-browser-cli --tab <tabId> wait '.news-list' --timeout 5000
-```
-
-## 阅读文章
-
-搜索结果链接是搜狗重定向 URL（`/link?url=...`），最终跳转到 `mp.weixin.qq.com`。
-
-**打开文章并提取内容**（从搜索结果提取 URL 后直接导航，避免 `target="_blank"` 弹窗拦截）：
-
-```bash
-# 先提取目标文章的 URL
-browser-cli --tab <tabId> eval 'document.querySelectorAll(".news-list > li h3 a")[0]?.href'
-
-# 然后直接导航 + markdown 提取（navigate 完成即表示页面已加载）
-browser-cli --tab <tabId> navigate '<提取到的URL>'
-browser-cli --tab <tabId> markdown
-```
-
-`markdown` 对所有页面状态都能正确返回：
-
-- **正常文章** — 返回完整的标题、作者、公众号名、正文内容
-- **违规/删除/过期文章** — 返回 `此内容因违规无法查看` 等错误文本，据此判断跳过即可
-
-> **不要用 `wait '#js_content'`** — 违规或已删除的文章页面没有此元素，会白等到超时。`navigate` 返回后页面已加载完成，直接 `markdown` 即可。
-
-如需结构化数据，可用 `eval` 提取：
-
-```bash
-browser-cli --tab <tabId> eval --stdin <<'EOF'
-JSON.stringify((() => {
-  const title = document.querySelector("#activity-name")?.innerText?.trim() || "";
-  const author = document.querySelector("#js_name")?.innerText?.trim() || "";
-  const date = document.querySelector("#publish_time")?.innerText?.trim() || "";
-  const content = document.querySelector("#js_content")?.innerText?.trim() || "";
-  return { title, author, date, content };
-})())
-EOF
-```
-
-**文章页关键选择器**（`mp.weixin.qq.com`）:
+### 文章详情页（mp.weixin.qq.com）
 
 | 元素     | 选择器             | 说明                                     |
 | -------- | ------------------ | ---------------------------------------- |
@@ -130,12 +66,11 @@ EOF
 | 错误标题 | `.weui-msg__title` | 不可用页面的错误信息（正常文章无此元素） |
 | 错误描述 | `.weui-msg__desc`  | 不可用页面的详细说明                     |
 
-**返回搜索结果**:
+### URL 规律
 
-```bash
-browser-cli --tab <tabId> back
-browser-cli --tab <tabId> wait '.news-list' --timeout 5000
-```
+| 页面       | URL 模式                             |
+| ---------- | ------------------------------------ |
+| 搜索结果页 | `/weixin?type=2&query=<kw>&page=<n>` |
 
 ## 注意事项
 

@@ -314,23 +314,6 @@ export async function prevSlide(browser) {
   return pos;
 }
 
-/** 图片翻页 — 回到第一张
- * @requires 当前页面为帖子详情页且帖子含多图轮播 */
-export async function goToFirstSlide(browser) {
-  console.log('回到第一张图片...');
-  await browser.evaluate({
-    expression: `(() => {
-      while (!document.querySelector(".arrow-controller.left")?.classList.contains("forbidden")) {
-        document.querySelector(".arrow-controller.left")?.click();
-      }
-    })()`,
-  });
-  await browser.wait({ duration: 300 });
-  const pos = await getSlidePosition(browser);
-  console.log(`已回到第 ${pos.current}/${pos.total} 张`);
-  return pos;
-}
-
 /** 发表评论
  * @requires 当前页面为帖子详情页，且已登录 */
 export async function postComment(browser, { text }) {

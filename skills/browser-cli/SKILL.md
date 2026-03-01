@@ -613,6 +613,12 @@ For comprehensive documentation on each domain:
 
 ## Known Limitations & Error Handling
 
+### Avoid loops inside `eval` / `browser.evaluate()`
+
+Never use `while` loops inside `eval` or `browser.evaluate()`. DOM changes triggered by `.click()` (class updates, animations) are asynchronous — a synchronous loop will spin forever and hang the tab. Put any loop logic in the script (CLI) layer where each step can be properly `await`ed.
+
+For complex or rapid sequences of actions, add `browser.wait({ duration: <ms> })` between steps to let the page settle.
+
 ### Trusted Events (`--debugger`)
 
 By default, interaction commands (`click`, `fill`, `type`, `press`) dispatch DOM events via JavaScript (`isTrusted=false`). Some websites and anti-bot services check `event.isTrusted` and reject synthetic events.
