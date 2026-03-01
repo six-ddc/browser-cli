@@ -195,6 +195,14 @@ browser-cli snapshot [options]
 
 **Best practice**: Use `snapshot -ic` for a concise view of interactive elements. Use element refs (`@e1`, `@e2`) from snapshot output in subsequent commands.
 
+**Scoping to a region**: use `-s @eN` to drill into a specific area from a previous snapshot. Refs from prior snapshots remain valid across `-s` calls — no need to re-run the overview between drills:
+
+```bash
+browser-cli --tab 12345 snapshot -ic        # full page, get refs
+browser-cli --tab 12345 snapshot -ic -s @e3 # only elements inside @e3
+browser-cli --tab 12345 snapshot -ic -s @e5 # @e3's ref still valid, explore another area
+```
+
 #### Markdown (Page Content Extraction)
 
 ```bash
@@ -496,6 +504,8 @@ export default async function (browser) {
 ```
 
 **Error reporting**: On failure, errors include step number and action name (e.g., "Step 3 (click) failed: ELEMENT_NOT_FOUND"). With `--json`, error output includes `step`, `action`, and `params` fields.
+
+**When to prefer script over standalone commands**: For sequences involving transient UI state (open dropdowns, hover panels), use script mode. Standalone commands run as separate processes with a small gap between them — enough for the browser to dismiss a dropdown before the next command arrives. Script mode has no such gap.
 
 **Example — login flow:**
 

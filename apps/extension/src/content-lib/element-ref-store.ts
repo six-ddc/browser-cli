@@ -65,11 +65,16 @@ export function resolveElement(
   }
 
   // Plain CSS selector
+  const elements = Array.from(document.querySelectorAll(selectorOrRef));
   if (position) {
-    const elements = Array.from(document.querySelectorAll(selectorOrRef));
     return applyPositionFilter(elements, position);
   }
-  return document.querySelector(selectorOrRef);
+  // Prefer the first element with non-zero dimensions (skip hidden duplicates)
+  const visible = elements.find((el) => {
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 || rect.height > 0;
+  });
+  return visible ?? elements[0] ?? null;
 }
 
 /** Apply position filter to an array of elements */

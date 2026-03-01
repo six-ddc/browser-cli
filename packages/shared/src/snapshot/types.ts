@@ -54,7 +54,8 @@ export function serializeSnapshot(nodes: SnapshotNode[], options?: { compact?: b
     let line = `${prefix}${node.role}`;
 
     if (node.name) {
-      line += ` "${node.name}"`;
+      const displayName = node.name.length > 80 ? node.name.slice(0, 80) + '…' : node.name;
+      line += ` "${displayName}"`;
     }
 
     // Additional attributes

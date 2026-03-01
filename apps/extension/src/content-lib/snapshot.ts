@@ -26,10 +26,8 @@ export async function handleSnapshot(params: SnapshotParams): Promise<{
     depth: params.depth,
   };
 
-  // Clear existing refs
-  clearRefs();
-
   // Determine root element (scoped by selector or full body)
+  // NOTE: must resolve before clearRefs() so @eN refs from the previous snapshot are still valid
   let rootElement: Element = document.body;
   if (params.selector) {
     const { resolveElement } = await import('./element-ref-store');
@@ -38,6 +36,12 @@ export async function handleSnapshot(params: SnapshotParams): Promise<{
       return { snapshot: '(no element matched selector)', refCount: 0 };
     }
     rootElement = scoped;
+  }
+
+  // When scoping to a selector, preserve existing refs so overview @eN refs remain valid
+  // across multiple drill-ins. Only clear on a full-page scan.
+  if (!params.selector) {
+    clearRefs();
   }
 
   // Build the tree
@@ -75,10 +79,27 @@ function buildSnapshotTree(
   const name = getAccessibleName(element);
   const isInteractive = isInteractiveElement(element, { cursor: options.cursor });
 
-  // Assign ref if interactive
+  // Assign ref if interactive and has non-zero dimensions (actually visible on screen)
   let ref: string | undefined;
   if (isInteractive) {
-    ref = registerElement(element, generateSelector(element));
+    const rect = element.getBoundingClientRect();
+    if (rect.width > 0 || rect.height > 0) {
+      ref = registerElement(element, generateSelector(element));
+    }
+  } else if (options.depth && depth >= options.depth) {
+    // At the depth boundary: assign a ref to containers that have interactive descendants
+    // in the real DOM (even though they're cut off by depth). This lets users drill in
+    // via `snapshot -s @eN` to explore the subtree interactively.
+    const rect = element.getBoundingClientRect();
+    if (rect.width > 0 || rect.height > 0) {
+      const hasDeepInteractive =
+        element.querySelector(
+          'button,input,textarea,select,a[href],[tabindex]:not([tabindex="-1"]),[role="button"],[role="link"],[role="checkbox"],[role="textbox"],[role="menuitem"],[role="tab"]',
+        ) !== null;
+      if (hasDeepInteractive) {
+        ref = registerElement(element, generateSelector(element));
+      }
+    }
   }
 
   // Build children
@@ -94,8 +115,10 @@ function buildSnapshotTree(
     if (!text) return null;
   }
 
-  // Skip non-semantic containers that only have one child with the same name
-  if (!ref && !name && children.length === 1 && role === 'generic' && !options.interactive) {
+  // Skip non-semantic containers that only have one child with the same name.
+  // Never collapse document.body itself: wrapPage() uses bodyNode.children, so collapsing
+  // body to a single child (which may have no children after depth pruning) would lose it.
+  if (!ref && !name && children.length === 1 && role === 'generic' && element !== document.body) {
     return children[0];
   }
 
