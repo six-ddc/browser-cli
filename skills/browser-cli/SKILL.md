@@ -185,13 +185,14 @@ browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 browser-cli snapshot [options]
 ```
 
-| Flag                   | Description                                          |
-| ---------------------- | ---------------------------------------------------- |
-| `-i, --interactive`    | Only interactive elements                            |
-| `-c, --compact`        | Compact output                                       |
-| `-C, --cursor`         | Include cursor-interactive elements (cursor:pointer) |
-| `-d, --depth <n>`      | Max tree depth                                       |
-| `-s, --selector <sel>` | Scope to element                                     |
+| Flag                   | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| `-i, --interactive`    | Only interactive elements                               |
+| `-c, --compact`        | Compact output                                          |
+| `-C, --cursor`         | Include cursor-interactive elements (cursor:pointer)    |
+| `-d, --depth <n>`      | Max tree depth                                          |
+| `-s, --selector <sel>` | Scope to element                                        |
+| `-f, --filter <role>`  | Only show nodes with this ARIA role and their ancestors |
 
 **Best practice**: Use `snapshot -ic` for a concise view of interactive elements. Use element refs (`@e1`, `@e2`) from snapshot output in subsequent commands.
 
@@ -201,6 +202,14 @@ browser-cli snapshot [options]
 browser-cli --tab 12345 snapshot -ic        # full page, get refs
 browser-cli --tab 12345 snapshot -ic -s @e3 # only elements inside @e3
 browser-cli --tab 12345 snapshot -ic -s @e5 # @e3's ref still valid, explore another area
+```
+
+**Filtering by ARIA role**: use `--filter <role>` to show only nodes with a specific role and their ancestor path. Useful for finding all buttons, navigation landmarks, headings, etc. without losing structural context:
+
+```bash
+browser-cli --tab 12345 snapshot --filter navigation   # all nav landmarks + ancestors
+browser-cli --tab 12345 snapshot -ic --filter button   # all buttons with tree context
+browser-cli --tab 12345 snapshot --filter heading      # page heading structure
 ```
 
 #### Markdown (Page Content Extraction)

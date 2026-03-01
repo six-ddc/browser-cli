@@ -8,6 +8,7 @@ export const snapshotCommand = new Command('snapshot')
   .option('-C, --cursor', 'Include cursor-interactive elements (cursor:pointer)')
   .option('-d, --depth <n>', 'Max tree depth')
   .option('-s, --selector <selector>', 'Scope snapshot to a specific element')
+  .option('-f, --filter <role>', 'Only show nodes with this ARIA role (and their ancestors)')
   .action(
     async (
       opts: {
@@ -16,6 +17,7 @@ export const snapshotCommand = new Command('snapshot')
         cursor?: boolean;
         depth?: string;
         selector?: string;
+        filter?: string;
       },
       cmd: Command,
     ) => {
@@ -27,6 +29,7 @@ export const snapshotCommand = new Command('snapshot')
           cursor: opts.cursor,
           depth: opts.depth ? parseInt(opts.depth, 10) : undefined,
           selector: opts.selector,
+          filter: opts.filter,
         },
       });
       if (result) {

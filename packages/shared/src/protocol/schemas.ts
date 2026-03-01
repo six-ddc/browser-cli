@@ -120,6 +120,7 @@ export const snapshotParamsSchema = z.object({
   cursor: z.boolean().optional(),
   depth: z.number().optional(),
   selector: z.string().optional(),
+  filter: z.string().optional(),
 });
 
 // Screenshot

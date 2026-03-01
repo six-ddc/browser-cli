@@ -24,6 +24,7 @@ export async function handleSnapshot(params: SnapshotParams): Promise<{
     compact: params.compact,
     cursor: params.cursor,
     depth: params.depth,
+    filter: params.filter,
   };
 
   // Determine root element (scoped by selector or full body)
@@ -49,7 +50,7 @@ export async function handleSnapshot(params: SnapshotParams): Promise<{
   const nodes = root ? [wrapPage(root)] : [];
 
   const snapshot = serializeSnapshot(nodes, { compact: options.compact });
-  return { snapshot, refCount: getRefCount() };
+  return { snapshot, refCount: countRefsInTree(nodes) };
 }
 
 function wrapPage(bodyNode: SnapshotNode): SnapshotNode {
@@ -122,10 +123,21 @@ function buildSnapshotTree(
     return children[0];
   }
 
-  // In interactive mode, skip non-interactive nodes without interactive children
+  // In interactive mode, skip non-interactive nodes without interactive children.
+  // Exempt nodes that match the role filter — they should always be kept.
   if (options.interactive && !isInteractive) {
+    const roleMatches =
+      options.filter && (role || 'generic').toLowerCase() === options.filter.toLowerCase();
     const hasInteractiveChild = children.some(hasInteractiveDescendant);
-    if (!hasInteractiveChild && !ref) return null;
+    if (!hasInteractiveChild && !ref && !roleMatches) return null;
+  }
+
+  // ARIA role filter: keep nodes whose role matches, and ancestors that lead to a match
+  if (options.filter) {
+    const filterRole = options.filter.toLowerCase();
+    const roleMatches = (role || 'generic').toLowerCase() === filterRole;
+    const hasMatchingDescendant = children.some((c) => hasRoleDescendant(c, filterRole));
+    if (!roleMatches && !hasMatchingDescendant) return null;
   }
 
   const node: SnapshotNode = {
@@ -163,7 +175,22 @@ function buildSnapshotTree(
   return node;
 }
 
+function countRefsInTree(nodes: SnapshotNode[]): number {
+  let count = 0;
+  function walk(node: SnapshotNode) {
+    if (node.ref) count++;
+    node.children.forEach(walk);
+  }
+  nodes.forEach(walk);
+  return count;
+}
+
 function hasInteractiveDescendant(node: SnapshotNode): boolean {
   if (node.ref) return true;
   return node.children.some(hasInteractiveDescendant);
+}
+
+function hasRoleDescendant(node: SnapshotNode, role: string): boolean {
+  if (node.role.toLowerCase() === role) return true;
+  return node.children.some((c) => hasRoleDescendant(c, role));
 }

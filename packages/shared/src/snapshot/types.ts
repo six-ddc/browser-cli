@@ -39,6 +39,8 @@ export interface SnapshotOptions {
   cursor?: boolean;
   /** Max depth of tree traversal (0 = unlimited) */
   depth?: number;
+  /** Only show nodes with this ARIA role (and their ancestors) */
+  filter?: string;
 }
 
 /**

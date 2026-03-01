@@ -97,6 +97,7 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 - `-C` / `--cursor` — include cursor-interactive elements (cursor:pointer)
 - `-d` / `--depth <n>` — max tree depth
 - `-s` / `--selector <sel>` — scope to element
+- `-f` / `--filter <role>` — only show nodes with this ARIA role and their ancestors
 
 ### Command Syntax (AgentBrowser-compatible)
 
