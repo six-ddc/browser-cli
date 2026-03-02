@@ -615,6 +615,7 @@ commands. Check for a matching guide before using generic extraction.
 | xiaohongshu.com      | [sites/xiaohongshu.com.md](references/sites/xiaohongshu.com.md)           |
 | news.ycombinator.com | [sites/news.ycombinator.com.md](references/sites/news.ycombinator.com.md) |
 | reddit.com           | [sites/reddit.com.md](references/sites/reddit.com.md)                     |
+| linkedin.com         | [sites/linkedin.com.md](references/sites/linkedin.com.md)                 |
 
 When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
 
