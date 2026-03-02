@@ -56,7 +56,14 @@ export function serializeSnapshot(nodes: SnapshotNode[], options?: { compact?: b
     let line = `${prefix}${node.role}`;
 
     if (node.name) {
-      const displayName = node.name.length > 80 ? node.name.slice(0, 80) + '…' : node.name;
+      let displayName = node.name.length > 80 ? node.name.slice(0, 80) + '…' : node.name;
+      // Escape quotes, newlines, and tabs to prevent format corruption
+      displayName = displayName
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, ' ')
+        .replace(/\r/g, '')
+        .replace(/\t/g, ' ');
       line += ` "${displayName}"`;
     }
 

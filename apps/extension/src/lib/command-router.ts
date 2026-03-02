@@ -429,25 +429,34 @@ async function routeCommand(
           console.info = __capture('info');
           console.debug = __capture('debug');
 
+          // Probe whether eval() is available (CSP / Trusted Types may block it)
+          const tt = (globalThis as Record<string, unknown>).trustedTypes as
+            | {
+                createPolicy: (
+                  name: string,
+                  rules: { createScript: (s: string) => string },
+                ) => { createScript: (s: string) => string };
+              }
+            | undefined;
+          let __evalFn: (code: string) => unknown;
           try {
-            let __r: unknown;
-            // Handle Trusted Types (e.g. Gmail)
-            const tt = (globalThis as Record<string, unknown>).trustedTypes as
-              | {
-                  createPolicy: (
-                    name: string,
-                    rules: { createScript: (s: string) => string },
-                  ) => { createScript: (s: string) => string };
-                }
-              | undefined;
             if (tt?.createPolicy) {
               const __p = tt.createPolicy('browser-cli-eval', {
                 createScript: (s: string) => s,
               });
-              __r = (0, eval)(__p.createScript(expr));
+              (0, eval)(__p.createScript('1'));
+              __evalFn = (code: string) => (0, eval)(__p.createScript(code));
             } else {
-              __r = (0, eval)(expr);
+              (0, eval)('1');
+              __evalFn = (code: string) => (0, eval)(code);
             }
+          } catch (e: unknown) {
+            return { __ok: false, error: (e as Error).message, __blocked: true, logs: __logs };
+          }
+
+          // eval() works — any error from here is a genuine expression error
+          try {
+            const __r = __evalFn(expr);
             return { __ok: true, value: __r, logs: __logs };
           } catch (e: unknown) {
             return { __ok: false, error: (e as Error).message, logs: __logs };
@@ -471,6 +480,7 @@ async function routeCommand(
         | {
             __ok: false;
             error: string;
+            __blocked?: boolean;
             logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
           }
         | undefined;
@@ -484,37 +494,51 @@ async function routeCommand(
         return result;
       }
 
-      const evalError = raw?.error ?? 'eval() returned no result';
-      const isCSP =
-        evalError.includes('CSP') ||
-        evalError.includes('Content Security Policy') ||
-        evalError.includes('unsafe-eval') ||
-        evalError.includes('Refused to evaluate');
+      const step1Error = raw?.error ?? 'eval() returned no result';
 
-      if (!isCSP) {
-        throw new Error(evalError);
+      // eval() ran the expression but it threw — genuine expression error.
+      if (raw && !raw.__blocked) {
+        throw new Error(step1Error);
       }
 
-      // ── Step 2: CSP fallback (platform-specific) ───────────
+      // ── Step 2: Fallback (platform-specific) ─────────────
+      // eval() never reached the expression (CSP / Trusted Types blocked
+      // it), so try a CSP-exempt execution path.
 
       if (!import.meta.env.FIREFOX) {
         // Chrome: userScripts API (USER_SCRIPT world, CSP-exempt)
+        // Note: chrome.userScripts may exist but .execute() throws at
+        // runtime when "Allow User Scripts" is disabled, so we must catch.
         if (chrome.userScripts?.execute) {
-          const usResults = await chrome.userScripts.execute({
-            target: { tabId: targetTabId },
-            js: [{ code: expression }],
-          });
-          const usResult = usResults[0] as
-            | { result?: unknown; error?: { message?: string } | string }
-            | undefined;
-          if (usResult?.error) {
-            const errDetail =
-              typeof usResult.error === 'string'
-                ? usResult.error
-                : (usResult.error.message ?? JSON.stringify(usResult.error));
-            throw new Error(`userScripts eval failed: ${errDetail}`);
+          try {
+            // Wrap in eval() + try/catch — userScripts.execute() returns
+            // { result: null } on errors instead of setting an error property.
+            // eval() ensures syntax errors are caught at runtime, not parse time.
+            const escaped = expression
+              .replace(/\\/g, '\\\\')
+              .replace(/`/g, '\\`')
+              .replace(/\$/g, '\\$');
+            const wrappedCode = `try { ({ __ok: true, value: (0, eval)(\`${escaped}\`) }) } catch(e) { ({ __ok: false, error: e.message }) }`;
+            const usResults = await chrome.userScripts.execute({
+              target: { tabId: targetTabId },
+              js: [{ code: wrappedCode }],
+            });
+            const usResult = usResults[0]?.result as
+              | { __ok: true; value: unknown }
+              | { __ok: false; error: string }
+              | null
+              | undefined;
+            if (usResult && !usResult.__ok) {
+              throw new Error(usResult.error);
+            }
+            return { value: usResult?.__ok ? usResult.value : usResult };
+          } catch (usErr) {
+            // Re-throw expression errors from userScripts
+            if (usErr instanceof Error && !String(usErr.message).includes('not available')) {
+              throw usErr;
+            }
+            // userScripts not available at runtime — fall through to CSP hint
           }
-          return { value: usResult?.result };
         }
         // userScripts not available
         // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream

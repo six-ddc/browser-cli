@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Snapshot Robustness Tests</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      section { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; }
+      h3 { margin-top: 0; }
+    </style>
+  </head>
+  <body>
+    <!-- Section 1: Shadow DOM with interactive elements -->
+    <section id="shadow-section">
+      <h3>Shadow DOM</h3>
+      <div id="shadow-host"></div>
+    </section>
+
+    <!-- Section 2: Text with quotes, newlines, tabs -->
+    <section id="text-escaping">
+      <h3>Text Escaping</h3>
+      <button id="btn-quotes">Click "here" now</button>
+      <button id="btn-newline">Line1
+Line2</button>
+      <button id="btn-tab">Col1	Col2</button>
+      <a href="#" id="link-quotes">Link with "quotes" inside</a>
+    </section>
+
+    <!-- Section 3: visibility:collapse -->
+    <section id="visibility-section">
+      <h3>Visibility</h3>
+      <button id="btn-visible">Visible Button</button>
+      <button id="btn-collapse" style="visibility: collapse">Collapsed Button</button>
+      <button id="btn-hidden" style="visibility: hidden">Hidden Button</button>
+      <button id="btn-visible2">Another Visible</button>
+    </section>
+
+    <!-- Section 4: iframe -->
+    <section id="iframe-section">
+      <h3>Iframe</h3>
+      <iframe id="test-iframe" title="Test Frame" src="iframe-content.html" width="300" height="100"></iframe>
+    </section>
+
+    <!-- Section 5: Deep DOM (created via script) -->
+    <section id="deep-dom-section">
+      <h3>Deep DOM</h3>
+      <div id="deep-root"></div>
+    </section>
+
+    <script>
+      // Shadow DOM with interactive elements
+      const host = document.getElementById('shadow-host');
+      const shadow = host.attachShadow({ mode: 'open' });
+      shadow.innerHTML = `
+        <div>
+          <button id="shadow-btn-1">Shadow Primary</button>
+          <input type="text" id="shadow-input" placeholder="Shadow Input">
+          <a href="#shadow" id="shadow-link">Shadow Link</a>
+        </div>
+      `;
+
+      // Deep DOM: 150 levels with a button at the bottom
+      let current = document.getElementById('deep-root');
+      for (let i = 0; i < 150; i++) {
+        const div = document.createElement('div');
+        div.className = 'deep-level-' + i;
+        current.appendChild(div);
+        current = div;
+      }
+      const deepBtn = document.createElement('button');
+      deepBtn.textContent = 'Deep Button';
+      deepBtn.id = 'deep-button';
+      current.appendChild(deepBtn);
+    </script>
+  </body>
+</html>

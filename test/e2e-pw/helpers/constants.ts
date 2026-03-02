@@ -36,6 +36,7 @@ export const PAGES = {
   TESTID_PAGE: 'testid-page',
   ARTICLE: 'article',
   TRUSTED_EVENTS: 'trusted-events',
+  SNAPSHOT_ROBUSTNESS: 'snapshot-robustness',
 } as const;
 
 // Test credentials for login page

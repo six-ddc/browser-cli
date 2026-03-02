@@ -142,7 +142,7 @@ export function isInteractiveElement(el: Element, options?: { cursor?: boolean }
 export function isVisibleForSnapshot(el: Element): boolean {
   const style = window.getComputedStyle(el);
   if (style.display === 'none') return false;
-  if (style.visibility === 'hidden') return false;
+  if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
 
   // Don't filter by opacity=0 for snapshot — could be transition state
 

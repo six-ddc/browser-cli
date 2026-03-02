@@ -15,6 +15,9 @@ import {
   isVisibleForSnapshot,
 } from './snapshot-helpers';
 
+/** Safety limit to prevent stack overflow on deeply nested DOMs (crash observed at ~2000 levels). */
+const MAX_DEPTH = 100;
+
 export async function handleSnapshot(params: SnapshotParams): Promise<{
   snapshot: string;
   refCount: number;
@@ -23,7 +26,8 @@ export async function handleSnapshot(params: SnapshotParams): Promise<{
     interactive: params.interactive,
     compact: params.compact,
     cursor: params.cursor,
-    depth: params.depth,
+    // Use explicit --depth if provided, otherwise apply safety limit
+    depth: params.depth || MAX_DEPTH,
     filter: params.filter,
   };
 
@@ -103,11 +107,36 @@ function buildSnapshotTree(
     }
   }
 
-  // Build children
+  // Build children — snapshot into Array.from() to avoid live HTMLCollection mutation issues
   const children: SnapshotNode[] = [];
-  for (const child of element.children) {
-    const childNode = buildSnapshotTree(child, options, depth + 1);
-    if (childNode) children.push(childNode);
+  const childElements = Array.from(element.children);
+
+  // Traverse open shadow roots (closed shadow roots return null, which is a browser security limit)
+  if (element.shadowRoot) {
+    childElements.push(...Array.from(element.shadowRoot.children));
+  }
+
+  for (const child of childElements) {
+    try {
+      // Annotate iframe elements without traversing their content (cross-document)
+      if (child.tagName === 'IFRAME') {
+        const iframe = child as HTMLIFrameElement;
+        const iframeName = iframe.title || iframe.getAttribute('aria-label') || '';
+        const iframeSrc = iframe.src || '';
+        const iframeNode: SnapshotNode = {
+          role: 'iframe',
+          name: iframeName,
+          children: [],
+        };
+        if (iframeSrc) iframeNode.url = iframeSrc;
+        children.push(iframeNode);
+        continue;
+      }
+      const childNode = buildSnapshotTree(child, options, depth + 1);
+      if (childNode) children.push(childNode);
+    } catch (err) {
+      console.warn('[snapshot] Error processing child element, skipping:', err);
+    }
   }
 
   // Handle text nodes
