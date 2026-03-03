@@ -606,16 +606,18 @@ browser-cli tab close                         # Close active tab
 For known websites, site-specific guides provide tested selectors and extraction
 commands. Check for a matching guide before using generic extraction.
 
-| Domain               | Guide                                                                     |
-| -------------------- | ------------------------------------------------------------------------- |
-| google.com           | [sites/google.com.md](references/sites/google.com.md)                     |
-| mail.google.com      | [sites/mail.google.com.md](references/sites/mail.google.com.md)           |
-| x.com                | [sites/x.com.md](references/sites/x.com.md)                               |
-| weixin.sogou.com     | [sites/weixin.sogou.com.md](references/sites/weixin.sogou.com.md)         |
-| xiaohongshu.com      | [sites/xiaohongshu.com.md](references/sites/xiaohongshu.com.md)           |
-| news.ycombinator.com | [sites/news.ycombinator.com.md](references/sites/news.ycombinator.com.md) |
-| reddit.com           | [sites/reddit.com.md](references/sites/reddit.com.md)                     |
-| linkedin.com         | [sites/linkedin.com.md](references/sites/linkedin.com.md)                 |
+| Domain                                               | Guide                                                                       |
+| ---------------------------------------------------- | --------------------------------------------------------------------------- |
+| google.com                                           | [sites/google.com.md](references/sites/google.com.md)                       |
+| mail.google.com                                      | [sites/mail.google.com.md](references/sites/mail.google.com.md)             |
+| x.com                                                | [sites/x.com.md](references/sites/x.com.md)                                 |
+| weixin.sogou.com                                     | [sites/weixin.sogou.com.md](references/sites/weixin.sogou.com.md)           |
+| xiaohongshu.com                                      | [sites/xiaohongshu.com.md](references/sites/xiaohongshu.com.md)             |
+| news.ycombinator.com                                 | [sites/news.ycombinator.com.md](references/sites/news.ycombinator.com.md)   |
+| reddit.com                                           | [sites/reddit.com.md](references/sites/reddit.com.md)                       |
+| linkedin.com                                         | [sites/linkedin.com.md](references/sites/linkedin.com.md)                   |
+| jira (any Jira Server/DC instance)                   | [sites/jira-datacenter.md](references/sites/jira-datacenter.md)             |
+| opensearch-dashboards (any self-hosted OSD instance) | [sites/opensearch-dashboards.md](references/sites/opensearch-dashboards.md) |
 
 When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
 
