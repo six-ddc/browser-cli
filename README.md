@@ -36,7 +36,7 @@ The CLI sends commands to a background daemon, which relays them over WebSocket 
 
 - Actions — click, fill, type, press, hover, drag & drop, scroll, check/uncheck, select, upload
 - Semantic locators — find elements by role, text, label, placeholder, alt, title, testid, xpath
-- `find` command — locate + act in one step: `find role button click --name "Submit"`
+- `find` command — locate + act in one step: `find 'role=button[name="Submit"]'`
 - Wait for selector, URL, duration, text, load state, or custom function
 
 **Browser State**
@@ -94,7 +94,7 @@ browser-cli snapshot -ic
 # Interact with elements
 browser-cli click 'role=button[name="Submit"]'
 browser-cli fill 'label=Email' user@example.com
-browser-cli find role button --name "Submit"
+browser-cli find 'role=button[name="Submit"]'
 
 # Extract page content
 browser-cli markdown

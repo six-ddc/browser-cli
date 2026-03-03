@@ -394,9 +394,9 @@ browser-cli state load /tmp/auth-state.json
 ```bash
 # Save state after login
 browser-cli navigate https://app.example.com/login
-browser-cli find label Email fill admin@example.com
-browser-cli find label Password fill secret
-browser-cli find role button --name "Log In"
+browser-cli find 'label=Email' fill admin@example.com
+browser-cli find 'label=Password' fill secret
+browser-cli find 'role=button[name="Log In"]'
 browser-cli wait --url '**/dashboard*'
 browser-cli state save ./auth.json
 

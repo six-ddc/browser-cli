@@ -536,9 +536,9 @@ export default async function (browser) {
 browser-cli tab new https://app.example.com/login --group browser-cli
 # Output: Tab 12345: ...
 browser-cli --tab 12345 snapshot -ic
-browser-cli --tab 12345 find label Username fill admin
-browser-cli --tab 12345 find label Password fill secret123
-browser-cli --tab 12345 find role button --name "Log In"
+browser-cli --tab 12345 find 'label=Username' fill admin
+browser-cli --tab 12345 find 'label=Password' fill secret123
+browser-cli --tab 12345 find 'role=button[name="Log In"]'
 browser-cli --tab 12345 wait --url '**/dashboard*'
 browser-cli --tab 12345 get title
 ```
@@ -559,16 +559,16 @@ browser-cli --tab 12345 get attr '.product-item:first-child a' href
 
 ```bash
 # Step 1
-browser-cli find label "First Name" fill John
-browser-cli find label "Last Name" fill Doe
-browser-cli find role button --name "Next"
+browser-cli find 'label="First Name"' fill John
+browser-cli find 'label="Last Name"' fill Doe
+browser-cli find 'role=button[name="Next"]'
 
 # Step 2
 browser-cli wait 'text=Address'
-browser-cli find label Address fill "123 Main St"
-browser-cli find label City fill "San Francisco"
+browser-cli find 'label=Address' fill "123 Main St"
+browser-cli find 'label=City' fill "San Francisco"
 browser-cli select 'select[name="state"]' CA
-browser-cli find role button --name "Submit"
+browser-cli find 'role=button[name="Submit"]'
 ```
 
 ### Work with iframes

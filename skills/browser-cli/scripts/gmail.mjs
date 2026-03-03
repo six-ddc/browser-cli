@@ -49,7 +49,7 @@ export async function extractInbox(browser) {
  * @requires Current page is a Gmail email list with the target email visible */
 export async function openEmail(browser, { subject }) {
   console.log(`Opening email: "${subject}"`);
-  await browser.find({ engine: 'text', value: subject, action: 'click' });
+  await browser.find({ selector: `text=${subject}`, action: 'click' });
   await browser.wait({ duration: 2000 });
   console.log('Email opened');
 }

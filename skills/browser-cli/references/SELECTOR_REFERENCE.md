@@ -139,31 +139,10 @@ Element refs are the most reliable selectors — they're unambiguous and mapped 
 The `find` command combines locating and acting on an element:
 
 ```
-browser-cli find <engine> <value> [action] [action-value]
+browser-cli find <selector> [action] [value]
 ```
 
-### Engines
-
-| Engine        | Description      | Example                   |
-| ------------- | ---------------- | ------------------------- |
-| `role`        | ARIA role        | `find role button`        |
-| `text`        | Text content     | `find text "Sign In"`     |
-| `label`       | Form label       | `find label Email`        |
-| `placeholder` | Placeholder text | `find placeholder Search` |
-| `alt`         | Image alt text   | `find alt Logo`           |
-| `title`       | Title attribute  | `find title Help`         |
-| `testid`      | Test ID          | `find testid login-btn`   |
-| `xpath`       | XPath expression | `find xpath "//button"`   |
-
-### Position Selectors
-
-When multiple elements match, use position selectors:
-
-| Selector | Description         | Example                  |
-| -------- | ------------------- | ------------------------ |
-| `first`  | First match         | `find first .item click` |
-| `last`   | Last match          | `find last .item click`  |
-| `nth`    | Nth match (1-based) | `find nth 2 .item click` |
+**Selector**: any CSS selector, semantic locator (`text=Submit`, `role=button[name="X"]`), or `@ref`
 
 ### Actions
 
@@ -183,43 +162,47 @@ When multiple elements match, use position selectors:
 
 ### Options
 
-| Option          | Description                         |
-| --------------- | ----------------------------------- |
-| `--name <name>` | Accessible name (for `role` engine) |
-| `--exact`       | Exact text match                    |
+| Option      | Description                           |
+| ----------- | ------------------------------------- |
+| `--first`   | Target first matching element         |
+| `--last`    | Target last matching element          |
+| `--nth <n>` | Target nth matching element (1-based) |
 
 ### Examples
 
 ```bash
 # Role-based
-browser-cli find role button click
-browser-cli find role button --name "Submit"           # Default action: click
-browser-cli find role textbox --name "Email" fill user@test.com
-browser-cli find role checkbox --name "Agree" check
-browser-cli find role link --name "Home"
+browser-cli find 'role=button'                         # Click first button
+browser-cli find 'role=button[name="Submit"]'          # Click button named "Submit"
+browser-cli find 'role=textbox[name="Email"]' fill user@test.com
+browser-cli find 'role=checkbox[name="Agree"]' check
+browser-cli find 'role=link[name="Home"]'
 
 # Text-based
-browser-cli find text "Sign In"                        # Default: click
-browser-cli find text Submit click
-browser-cli find text "Learn More" hover
+browser-cli find 'text=Sign In'                        # Default: click
+browser-cli find 'text=Submit' click
+browser-cli find 'text=Learn More' hover
 
 # Label-based
-browser-cli find label Email fill user@test.com
-browser-cli find label "First Name" fill John
-browser-cli find label Password fill secret --exact
+browser-cli find 'label=Email' fill user@test.com
+browser-cli find 'label="First Name"' fill John
+browser-cli find 'label="Password"' fill secret
 
-# Other engines
-browser-cli find placeholder "Search..." fill query
-browser-cli find alt "Profile" click
-browser-cli find title "Close" click
-browser-cli find testid submit-btn click
-browser-cli find xpath "//form//button[last()]" click
+# Other locators
+browser-cli find 'placeholder=Search...' fill query
+browser-cli find 'alt=Profile' click
+browser-cli find 'title=Close' click
+browser-cli find 'testid=submit-btn' click
+browser-cli find 'xpath=//form//button[last()]' click
 
-# Position selectors
-browser-cli find first ".product" click
-browser-cli find last ".nav-item" click
-browser-cli find nth 3 ".list-item" click
-browser-cli find nth 1 ".tab" fill "New Value"
+# CSS selectors
+browser-cli find '#submit' click
+browser-cli find '.product' click --first
+browser-cli find '.nav-item' click --last
+browser-cli find '.list-item' click --nth 3
+
+# Element refs
+browser-cli find @e1 fill "New Value"
 ```
 
 ---
@@ -238,16 +221,16 @@ When choosing a selector, prefer in this order:
 
 1. **Start with `snapshot -ic`**: Get the lay of the land with interactive elements and their refs.
 
-2. **Use `find` for AI workflows**: It's designed for semantic element targeting — `find label Email fill user@test.com` reads naturally.
+2. **Use `find` for AI workflows**: It's designed for semantic element targeting — `find 'label=Email' fill user@test.com` reads naturally.
 
 3. **Prefer `role` and `label`**: These match how users perceive the page, making them resilient to CSS/DOM refactors.
 
-4. **Use `--exact` when needed**: Partial matching is convenient but can be ambiguous. Use `--exact` or quoted values for precision.
+4. **Use quoted values for exact match**: `text="Submit"` matches exactly, while `text=Submit` does partial matching.
 
 5. **Fall back to XPath**: For complex structural queries that can't be expressed with other locators: `xpath=//table//tr[3]//td[2]`.
 
 6. **Combine with `wait`**: For dynamic content, wait for the element first:
    ```bash
    browser-cli wait 'role=button[name="Submit"]'
-   browser-cli find role button --name "Submit"
+   browser-cli find 'role=button[name="Submit"]'
    ```
