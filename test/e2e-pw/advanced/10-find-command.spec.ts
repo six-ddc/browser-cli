@@ -7,8 +7,8 @@ test.describe('find role', () => {
   test('default action is click', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    // find role button should click the first button (Login)
-    const r = bcli('find', 'role', 'button');
+    // find role=button should click the first button (Login)
+    const r = bcli('find', 'role=button');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
 
@@ -16,10 +16,10 @@ test.describe('find role', () => {
     await expect(activePage.locator(SEL.FLASH_MESSAGE)).toBeVisible();
   });
 
-  test('click button with --name', async ({ bcli, navigateAndWait, activePage }) => {
+  test('click button by name', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'role', 'button', '--name', 'Login');
+    const r = bcli('find', 'role=button[name="Login"]');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
 
@@ -30,7 +30,7 @@ test.describe('find role', () => {
   test('fill textbox', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'role', 'textbox', 'fill', TEST_USERNAME);
+    const r = bcli('find', 'role=textbox', 'fill', TEST_USERNAME);
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
 
@@ -41,7 +41,7 @@ test.describe('find role', () => {
   test('hover on link', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'role', 'link', 'hover');
+    const r = bcli('find', 'role=link', 'hover');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Hovered');
   });
@@ -49,7 +49,7 @@ test.describe('find role', () => {
   test('focus on textbox', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'role', 'textbox', 'focus');
+    const r = bcli('find', 'role=textbox', 'focus');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Focused');
   });
@@ -61,7 +61,7 @@ test.describe('find text', () => {
   test('click by text content', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'text', 'Login', 'click');
+    const r = bcli('find', 'text=Login', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -70,15 +70,15 @@ test.describe('find text', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     // Omitting action should default to click
-    const r = bcli('find', 'text', 'Login');
+    const r = bcli('find', 'text=Login');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
 
-  test('exact match with --exact flag', async ({ bcli, navigateAndWait }) => {
+  test('exact match with quoted value', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'text', 'Login', 'click', '--exact');
+    const r = bcli('find', 'text="Login"', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -87,7 +87,7 @@ test.describe('find text', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     // "Log" should match "Login" in partial/substring mode
-    const r = bcli('find', 'text', 'Log', 'click');
+    const r = bcli('find', 'text=Log', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -99,7 +99,7 @@ test.describe('find label', () => {
   test('fill input by label text', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'label', 'Username', 'fill', TEST_USERNAME);
+    const r = bcli('find', 'label=Username', 'fill', TEST_USERNAME);
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
 
@@ -110,7 +110,7 @@ test.describe('find label', () => {
   test('fill password by label', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'label', 'Password', 'fill', TEST_PASSWORD);
+    const r = bcli('find', 'label=Password', 'fill', TEST_PASSWORD);
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
 
@@ -120,7 +120,7 @@ test.describe('find label', () => {
   test('click input found by label', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'label', 'Username', 'click');
+    const r = bcli('find', 'label=Username', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -128,7 +128,7 @@ test.describe('find label', () => {
   test('focus input found by label', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'label', 'Username', 'focus');
+    const r = bcli('find', 'label=Username', 'focus');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Focused');
   });
@@ -140,7 +140,7 @@ test.describe('find placeholder', () => {
   test('fill input by placeholder text', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.FORGOT_PASSWORD);
 
-    const r = bcli('find', 'placeholder', 'E-mail', 'fill', 'test@example.com');
+    const r = bcli('find', 'placeholder=E-mail', 'fill', 'test@example.com');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
 
@@ -155,7 +155,7 @@ test.describe('find xpath', () => {
   test('click button by xpath', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'xpath', '//button[@type="submit"]', 'click');
+    const r = bcli('find', 'xpath=//button[@type="submit"]', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -163,7 +163,7 @@ test.describe('find xpath', () => {
   test('fill input by xpath', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'xpath', '//input[@id="username"]', 'fill', TEST_USERNAME);
+    const r = bcli('find', 'xpath=//input[@id="username"]', 'fill', TEST_USERNAME);
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
 
@@ -173,7 +173,7 @@ test.describe('find xpath', () => {
   test('complex xpath expression', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
-    const r = bcli('find', 'xpath', '//input[@type="checkbox"]', 'click');
+    const r = bcli('find', 'xpath=//input[@type="checkbox"]', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -185,7 +185,7 @@ test.describe('find + actions', () => {
   test('find + fill action', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'label', 'Username', 'fill', 'testuser');
+    const r = bcli('find', 'label=Username', 'fill', 'testuser');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
 
@@ -195,7 +195,7 @@ test.describe('find + actions', () => {
   test('find + type action', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.INPUTS);
 
-    const r = bcli('find', 'role', 'spinbutton', 'type', '12345');
+    const r = bcli('find', 'role=spinbutton', 'type', '12345');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Typed');
   });
@@ -203,7 +203,7 @@ test.describe('find + actions', () => {
   test('find + hover action', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOVERS);
 
-    const r = bcli('find', 'first', '.figure', 'hover');
+    const r = bcli('find', '.figure', 'hover', '--first');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Hovered');
   });
@@ -211,7 +211,7 @@ test.describe('find + actions', () => {
   test('find + check action', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
-    const r = bcli('find', 'first', SEL.CHECKBOX, 'check');
+    const r = bcli('find', SEL.CHECKBOX, 'check', '--first');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Checked');
 
@@ -223,7 +223,7 @@ test.describe('find + actions', () => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
     // The second checkbox is checked by default on this page
-    const r = bcli('find', 'last', SEL.CHECKBOX, 'uncheck');
+    const r = bcli('find', SEL.CHECKBOX, 'uncheck', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Unchecked');
 
@@ -234,7 +234,7 @@ test.describe('find + actions', () => {
   test('find + select action', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.DROPDOWN);
 
-    const r = bcli('find', 'role', 'combobox', 'select', '1');
+    const r = bcli('find', 'role=combobox', 'select', '1');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Selected');
 
@@ -249,7 +249,7 @@ test.describe('find + actions', () => {
     bcli('fill', SEL.USERNAME, 'testdata');
     await expect(activePage.locator(SEL.USERNAME)).toHaveValue('testdata');
 
-    const r = bcli('find', 'label', 'Username', 'clear');
+    const r = bcli('find', 'label=Username', 'clear');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Cleared');
 
@@ -259,7 +259,7 @@ test.describe('find + actions', () => {
   test('find + focus action', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'label', 'Username', 'focus');
+    const r = bcli('find', 'label=Username', 'focus');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Focused');
   });
@@ -267,7 +267,7 @@ test.describe('find + actions', () => {
   test('find + dblclick action', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.ADD_REMOVE);
 
-    const r = bcli('find', 'text', 'Add Element', 'dblclick');
+    const r = bcli('find', 'text=Add Element', 'dblclick');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Double-clicked');
   });
@@ -278,7 +278,7 @@ test.describe('find + actions', () => {
     // Focus on the username input, then press Tab
     bcli('focus', SEL.USERNAME);
 
-    const r = bcli('find', 'label', 'Username', 'press', 'Tab');
+    const r = bcli('find', 'label=Username', 'press', 'Tab');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Pressed');
   });
@@ -290,7 +290,7 @@ test.describe('find alt', () => {
   test('click image by alt text', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOVERS);
 
-    const r = bcli('find', 'alt', 'User 1', 'click');
+    const r = bcli('find', 'alt=User 1', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -298,7 +298,7 @@ test.describe('find alt', () => {
   test('hover image by alt text', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOVERS);
 
-    const r = bcli('find', 'alt', 'User 2', 'hover');
+    const r = bcli('find', 'alt=User 2', 'hover');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Hovered');
   });
@@ -310,7 +310,7 @@ test.describe('find title', () => {
   test('click element by title', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.TESTID_PAGE);
 
-    const r = bcli('find', 'title', 'Submit form', 'click');
+    const r = bcli('find', 'title=Submit form', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -318,7 +318,7 @@ test.describe('find title', () => {
   test('hover element by title', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.TESTID_PAGE);
 
-    const r = bcli('find', 'title', 'Go to home page', 'hover');
+    const r = bcli('find', 'title=Go to home page', 'hover');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Hovered');
   });
@@ -330,7 +330,7 @@ test.describe('find testid', () => {
   test('click button by testid', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.TESTID_PAGE);
 
-    const r = bcli('find', 'testid', 'submit-btn', 'click');
+    const r = bcli('find', 'testid=submit-btn', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -338,7 +338,7 @@ test.describe('find testid', () => {
   test('fill input by testid', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.TESTID_PAGE);
 
-    const r = bcli('find', 'testid', 'email-input', 'fill', 'test@example.com');
+    const r = bcli('find', 'testid=email-input', 'fill', 'test@example.com');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
 
@@ -349,7 +349,7 @@ test.describe('find testid', () => {
   test('check checkbox by testid', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.TESTID_PAGE);
 
-    const r = bcli('find', 'testid', 'terms-checkbox', 'check');
+    const r = bcli('find', 'testid=terms-checkbox', 'check');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Checked');
 
@@ -360,7 +360,7 @@ test.describe('find testid', () => {
   test('select option by testid', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.TESTID_PAGE);
 
-    const r = bcli('find', 'testid', 'country-select', 'select', 'us');
+    const r = bcli('find', 'testid=country-select', 'select', 'us');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Selected');
 
@@ -372,18 +372,10 @@ test.describe('find testid', () => {
 // ---- Find Error Handling ----
 
 test.describe('find error handling', () => {
-  test('unknown engine gives error', async ({ bcli, navigateAndWait }) => {
-    await navigateAndWait(PAGES.LOGIN);
-
-    const r = bcli('find', 'unknown', 'value', 'click');
-    expect(r).toBcliFailure();
-    expect(r.stdout + r.stderr).toMatch(/Unknown engine|unknown/i);
-  });
-
   test('unknown action gives error', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'text', 'Login', 'invalidaction');
+    const r = bcli('find', 'text=Login', 'invalidaction');
     expect(r).toBcliFailure();
     expect(r.stdout + r.stderr).toMatch(/Unknown action|unknown/i);
   });
@@ -391,19 +383,19 @@ test.describe('find error handling', () => {
   test('fill without value gives error', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'label', 'Username', 'fill');
+    const r = bcli('find', 'label=Username', 'fill');
     expect(r).toBcliFailure();
   });
 
   test('select without value gives error', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.DROPDOWN);
 
-    const r = bcli('find', 'role', 'combobox', 'select');
+    const r = bcli('find', 'role=combobox', 'select');
     expect(r).toBcliFailure();
   });
 
-  test('too few arguments gives usage error', async ({ bcli }) => {
-    const r = bcli('find', 'role');
+  test('missing selector gives usage error', async ({ bcli }) => {
+    const r = bcli('find');
     expect(r).toBcliFailure();
   });
 });
@@ -415,15 +407,15 @@ test.describe('find workflow', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     // Fill username using find + label
-    bcli('find', 'label', 'Username', 'fill', TEST_USERNAME);
+    bcli('find', 'label=Username', 'fill', TEST_USERNAME);
     await expect(activePage.locator(SEL.USERNAME)).toHaveValue(TEST_USERNAME);
 
     // Fill password using find + label
-    bcli('find', 'label', 'Password', 'fill', TEST_PASSWORD);
+    bcli('find', 'label=Password', 'fill', TEST_PASSWORD);
     await expect(activePage.locator(SEL.PASSWORD)).toHaveValue(TEST_PASSWORD);
 
-    // Click login button using find + role
-    bcli('find', 'role', 'button', '--name', 'Login', 'click');
+    // Click login button using find + role with name
+    bcli('find', 'role=button[name="Login"]', 'click');
 
     // Wait for navigation to secure page
     await activePage.waitForURL(/secure/, { timeout: 10_000 });

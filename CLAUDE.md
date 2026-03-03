@@ -74,11 +74,10 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 
 ### Find Command (AgentBrowser-compatible)
 
-- `find <engine> <value> [action] [action-value]` — locate + act in one step
+- `find <selector> [action] [value]` — locate + act in one step
+- Selector: any CSS selector, semantic locator (`text=Submit`, `role=button[name="X"]`), or `@ref`
 - Action defaults to `click` when omitted
-- Engines: role, text, label, placeholder, alt, title, testid, xpath
-- Position selectors: first, last, nth (e.g., `find nth 2 ".item" click`)
-- Options: `--name` (for role), `--exact` (exact text match)
+- Options: `--first`, `--last`, `--nth <n>` (pick among multiple matches, 1-based)
 - Actions: click, dblclick, fill, type, hover, check, uncheck, select, press, clear, focus
 
 ### Error Message Design

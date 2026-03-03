@@ -283,6 +283,7 @@ Captures the accessibility tree of the page. Output includes element refs (`@e1`
 | `--cursor`         | `-C`  | Include cursor-interactive elements (cursor:pointer)    |
 | `--depth <n>`      | `-d`  | Max tree depth                                          |
 | `--selector <sel>` | `-s`  | Scope to a specific element                             |
+| `--filter <role>`  | `-f`  | Only show nodes with this ARIA role and their ancestors |
 
 **Examples:**
 

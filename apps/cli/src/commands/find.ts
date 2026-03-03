@@ -1,40 +1,27 @@
 /**
- * `find` command — AgentBrowser-compatible convenience for locating elements
- * and performing actions in a single command.
+ * `find` command — locate an element by any selector and perform an action.
  *
  * Usage:
- *   find <engine> <value> <action> [action-value]
- *   find role button click
- *   find role button click --name "Submit"
- *   find text "Sign In" click
- *   find text "Sign In"                   # defaults to click
- *   find role button --name "Submit"       # defaults to click
- *   find label "Email" fill "test@test.com"
- *   find xpath "//button[@type='submit']" click
- *   find first ".item" click
- *   find last ".item" click
- *   find nth 2 ".item" click
+ *   find <selector> [action] [action-value]
+ *   find <selector> [action] [action-value] --first|--last|--nth <n>
+ *
+ * Selector can be:
+ *   - CSS selector:        '#submit', '.item', 'button[type="submit"]'
+ *   - Semantic locator:    'role=button[name="Submit"]', 'text=Sign In', 'label=Email'
+ *   - Element ref:         @e1, @e2
+ *
+ * Examples:
+ *   find 'role=button[name="Submit"]' click
+ *   find 'text=Sign In'                      # defaults to click
+ *   find 'label=Email' fill user@test.com
+ *   find '#submit' click
+ *   find '.item' click --nth 2
+ *   find '.item' click --last
+ *   find @e1 fill "hello world"
  */
 
 import { Command } from 'commander';
 import { sendCommand } from './shared.js';
-
-/** Semantic locator engines */
-const ENGINES = [
-  'role',
-  'text',
-  'label',
-  'placeholder',
-  'alt',
-  'title',
-  'testid',
-  'xpath',
-] as const;
-type Engine = (typeof ENGINES)[number];
-
-/** Position selectors */
-const POSITION_SELECTORS = ['first', 'last', 'nth'] as const;
-type PositionSelector = (typeof POSITION_SELECTORS)[number];
 
 /** All supported actions */
 const ALL_ACTIONS = new Set([
@@ -51,145 +38,28 @@ const ALL_ACTIONS = new Set([
   'focus',
 ]);
 
-interface ParsedFind {
-  selector: string;
-  action: string;
-  actionValue?: string;
-  position?: { type: PositionSelector; index?: number };
-}
-
-/**
- * Build a semantic locator string from engine, value, and options.
- */
-function buildLocator(
-  engine: Engine,
-  value: string,
-  opts: { name?: string; exact?: boolean },
-): string {
-  if (engine === 'role') {
-    let locator = `role=${value}`;
-    const brackets: string[] = [];
-    if (opts.name) brackets.push(`name="${opts.name}"`);
-    if (opts.exact) brackets.push('exact');
-    if (brackets.length > 0) locator += `[${brackets.join('][')}]`;
-    return locator;
-  }
-
-  if (engine === 'xpath') {
-    return `xpath=${value}`;
-  }
-
-  // For text-based engines: quoted value = exact match
-  let locator = `${engine}=${value}`;
-  if (opts.exact && !value.startsWith('"')) {
-    locator = `${engine}="${value}"`;
-  }
-  return locator;
-}
-
-/**
- * Parse the variadic args into a structured ParsedFind.
- *
- * Patterns:
- *   <engine> <value> <action> [actionValue]
- *   first <selector> <action> [actionValue]
- *   last <selector> <action> [actionValue]
- *   nth <n> <selector> <action> [actionValue]
- */
-export function parseFindArgs(
-  args: string[],
-  opts: { name?: string; exact?: boolean },
-): ParsedFind {
-  if (args.length < 2) {
-    throw new Error(
-      'Usage: find <engine> <value> [action] [action-value]\n  or:  find first|last <selector> [action] [action-value]\n  or:  find nth <n> <selector> [action] [action-value]',
-    );
-  }
-
-  const first = args[0];
-
-  // Position selectors: first, last, nth
-  if (first === 'first' || first === 'last') {
-    const [, selector, action, ...rest] = args;
-    if (!selector) {
-      throw new Error(`Usage: find ${first} <selector> [action] [action-value]`);
-    }
-    const resolvedAction = action || 'click';
-    validateAction(resolvedAction);
-    return {
-      selector,
-      action: resolvedAction,
-      actionValue: rest[0],
-      position: { type: first as PositionSelector },
-    };
-  }
-
-  if (first === 'nth') {
-    const [, indexStr, selector, action, ...rest] = args;
-    if (!indexStr || !selector) {
-      throw new Error('Usage: find nth <n> <selector> [action] [action-value]');
-    }
-    const index = parseInt(indexStr, 10);
-    if (isNaN(index) || index < 1) {
-      throw new Error(`Invalid index: ${indexStr}. Must be a positive integer (1-based).`);
-    }
-    const resolvedAction = action || 'click';
-    validateAction(resolvedAction);
-    return {
-      selector,
-      action: resolvedAction,
-      actionValue: rest[0],
-      position: { type: 'nth', index },
-    };
-  }
-
-  // Semantic locator engines
-  const engine = first as Engine;
-  if (!ENGINES.includes(engine)) {
-    throw new Error(
-      `Unknown engine: "${engine}". Use one of: ${[...ENGINES, ...POSITION_SELECTORS].join(', ')}`,
-    );
-  }
-
-  const [, value, action, ...rest] = args;
-  if (!value) {
-    throw new Error(`Usage: find ${engine} <value> [action] [action-value]`);
-  }
-  const resolvedAction = action || 'click';
-  validateAction(resolvedAction);
-
-  const selector = buildLocator(engine, value, opts);
-  return {
-    selector,
-    action: resolvedAction,
-    actionValue: rest[0],
-  };
-}
-
-function validateAction(action: string): void {
-  if (!ALL_ACTIONS.has(action)) {
-    throw new Error(`Unknown action: "${action}". Use one of: ${[...ALL_ACTIONS].join(', ')}`);
-  }
-}
-
 /**
  * Build the protocol command from parsed find args.
+ * Exported for unit testing.
  */
-function buildCommand(parsed: ParsedFind): { action: string; params: Record<string, unknown> } {
-  const { selector, action, actionValue, position } = parsed;
-
+export function buildCommand(
+  selector: string,
+  action: string,
+  actionValue: string | undefined,
+  position?: { type: 'first' | 'last' | 'nth'; index?: number },
+): { action: string; params: Record<string, unknown> } {
   switch (action) {
     case 'fill':
-      if (!actionValue) throw new Error('fill requires a value: find ... fill <value>');
+      if (!actionValue) throw new Error('fill requires a value: find <selector> fill <value>');
       return { action: 'fill', params: { selector, value: actionValue, position } };
     case 'type':
-      if (!actionValue) throw new Error('type requires text: find ... type <text>');
+      if (!actionValue) throw new Error('type requires text: find <selector> type <text>');
       return { action: 'type', params: { selector, text: actionValue, delay: 0, position } };
     case 'select':
-      if (!actionValue) throw new Error('select requires a value: find ... select <value>');
+      if (!actionValue) throw new Error('select requires a value: find <selector> select <value>');
       return { action: 'select', params: { selector, value: actionValue, position } };
     case 'press':
-      if (!actionValue) throw new Error('press requires a key: find ... press <key>');
+      if (!actionValue) throw new Error('press requires a key: find <selector> press <key>');
       return { action: 'press', params: { selector, key: actionValue, position } };
     case 'click':
       return { action: 'click', params: { selector, button: 'left', position } };
@@ -214,21 +84,49 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export const findCommand = new Command('find')
-  .description('Find an element by semantic locator and perform an action')
-  .argument('<args...>', 'Engine, value, optional action, and optional action-value')
-  .option('--name <name>', 'Filter by accessible name (for role engine)')
-  .option('--exact', 'Require exact text match')
-  .action(async (args: string[], opts: { name?: string; exact?: boolean }, cmd: Command) => {
-    const parsed = parseFindArgs(args, opts);
-    const command = buildCommand(parsed);
+  .description('Find an element by selector and perform an action')
+  .argument(
+    '<selector>',
+    'CSS selector, semantic locator (text=Submit, role=button[name="X"]), or @ref',
+  )
+  .argument('[action]', `Action to perform: ${[...ALL_ACTIONS].join(', ')} (default: click)`)
+  .argument('[value]', 'Value for fill, type, select, press actions')
+  .option('--first', 'Target first matching element')
+  .option('--last', 'Target last matching element')
+  .option('--nth <n>', 'Target nth matching element (1-based)', (v) => {
+    const n = parseInt(v, 10);
+    if (isNaN(n) || n < 1) throw new Error(`--nth requires a positive integer, got: ${v}`);
+    return n;
+  })
+  .action(
+    async (
+      selector: string,
+      action: string | undefined,
+      value: string | undefined,
+      opts: { first?: boolean; last?: boolean; nth?: number },
+      cmd: Command,
+    ) => {
+      const resolvedAction = action ?? 'click';
+      if (!ALL_ACTIONS.has(resolvedAction)) {
+        throw new Error(
+          `Unknown action: "${resolvedAction}". Use one of: ${[...ALL_ACTIONS].join(', ')}`,
+        );
+      }
 
-    const result = await sendCommand(cmd, command as Parameters<typeof sendCommand>[1]);
+      let position: { type: 'first' | 'last' | 'nth'; index?: number } | undefined;
+      if (opts.first) position = { type: 'first' };
+      else if (opts.last) position = { type: 'last' };
+      else if (opts.nth !== undefined) position = { type: 'nth', index: opts.nth };
 
-    const label = ACTION_LABELS[parsed.action] || parsed.action;
-    if (result && parsed.action === 'select' && 'value' in result && result.value) {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- result.value is a string at runtime from select action
-      console.log(`${label}: ${result.value}`);
-    } else {
-      console.log(label);
-    }
-  });
+      const command = buildCommand(selector, resolvedAction, value, position);
+      const result = await sendCommand(cmd, command as Parameters<typeof sendCommand>[1]);
+
+      const label = ACTION_LABELS[resolvedAction] || resolvedAction;
+      if (result && resolvedAction === 'select' && 'value' in result && result.value) {
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- result.value is a string at runtime from select action
+        console.log(`${label}: ${result.value}`);
+      } else {
+        console.log(label);
+      }
+    },
+  );

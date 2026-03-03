@@ -81,11 +81,15 @@ export const pressCommand = new Command('press')
   .description('Press a key')
   .argument('<key>', 'Key to press (e.g., Enter, Escape, Tab)')
   .alias('key')
+  .option(
+    '-s, --selector <selector>',
+    'Target element (CSS selector or @ref); defaults to document.activeElement',
+  )
   .option('--debugger', 'Use Chrome DevTools Protocol for trusted events (isTrusted=true)')
-  .action(async (key: string, opts: { debugger?: true }, cmd: Command) => {
+  .action(async (key: string, opts: { selector?: string; debugger?: true }, cmd: Command) => {
     await sendCommand(cmd, {
       action: 'press',
-      params: { key, debugger: opts.debugger || undefined },
+      params: { key, selector: opts.selector, debugger: opts.debugger || undefined },
     });
     console.log('Pressed');
   });

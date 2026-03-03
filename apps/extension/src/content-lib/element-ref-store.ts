@@ -13,6 +13,12 @@ interface RefEntry {
   ref: string;
   selector: string;
   element: WeakRef<Element>;
+  identity: {
+    tagName: string;
+    ariaLabel: string;
+    role: string;
+    textSnippet: string; // first 40 chars of trimmed textContent
+  };
 }
 
 let refCounter = 0;
@@ -28,7 +34,17 @@ export function clearRefs(): void {
 export function registerElement(element: Element, selector: string): string {
   refCounter++;
   const ref = `@e${refCounter}`;
-  refMap.set(ref, { ref, selector, element: new WeakRef(element) });
+  refMap.set(ref, {
+    ref,
+    selector,
+    element: new WeakRef(element),
+    identity: {
+      tagName: element.tagName,
+      ariaLabel: element.getAttribute('aria-label') ?? '',
+      role: element.getAttribute('role') ?? '',
+      textSnippet: (element.textContent ?? '').trim().slice(0, 40),
+    },
+  });
   return ref;
 }
 
@@ -51,8 +67,10 @@ export function resolveElement(
     const el = entry.element.deref();
     if (el && el.isConnected) return el;
 
-    // Fall back to CSS selector
-    return document.querySelector(entry.selector);
+    // Fall back to CSS selector, but verify identity to avoid silently hitting a different element
+    const found = document.querySelector(entry.selector);
+    if (found && matchesIdentity(found, entry.identity)) return found;
+    return null;
   }
 
   // Handle semantic locators (role=button, text=Submit, xpath=//button, etc.)
@@ -116,6 +134,25 @@ export function resolveElements(selectorOrRef: string): Element[] {
 
   // Plain CSS selector
   return Array.from(document.querySelectorAll(selectorOrRef));
+}
+
+/** Check if a DOM element matches a stored identity fingerprint */
+function matchesIdentity(el: Element, identity: RefEntry['identity']): boolean {
+  if (el.tagName !== identity.tagName) return false;
+  // aria-label is the strongest signal — must match exactly if non-empty
+  if (identity.ariaLabel && el.getAttribute('aria-label') !== identity.ariaLabel) return false;
+  // role must match if non-empty
+  if (identity.role && el.getAttribute('role') !== identity.role) return false;
+  // When neither aria-label nor role is present, fall back to textSnippet to
+  // distinguish elements that share the same CSS path but have different content
+  // (e.g. search result cards after pagination re-render).
+  // We compare the first 20 chars — enough to tell apart different entries while
+  // tolerating minor in-place text changes (counters, etc.) that go via WeakRef anyway.
+  if (!identity.ariaLabel && !identity.role && identity.textSnippet.length >= 20) {
+    const elText = (el.textContent ?? '').trim().slice(0, 40);
+    if (elText.slice(0, 20) !== identity.textSnippet.slice(0, 20)) return false;
+  }
+  return true;
 }
 
 /** Generate a unique CSS selector for an element */

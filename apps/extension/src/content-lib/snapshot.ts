@@ -15,6 +15,8 @@ import {
   isVisibleForSnapshot,
 } from './snapshot-helpers';
 
+import { waitForDOMStable } from './dom-stable';
+
 /** Safety limit to prevent stack overflow on deeply nested DOMs (crash observed at ~2000 levels). */
 const MAX_DEPTH = 100;
 
@@ -22,6 +24,8 @@ export async function handleSnapshot(params: SnapshotParams): Promise<{
   snapshot: string;
   refCount: number;
 }> {
+  await waitForDOMStable();
+
   const options: SnapshotOptions = {
     interactive: params.interactive,
     compact: params.compact,

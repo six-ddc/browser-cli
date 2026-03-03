@@ -673,92 +673,91 @@ describe('AgentBrowser CLI syntax compatibility', () => {
     });
   });
 
-  // ─── Find (AgentBrowser-compatible) ───────────────────────────────
+  // ─── Find ─────────────────────────────────────────────────────────
 
   describe('find', () => {
-    it('find role button click', async () => {
-      await parseArgs('find', 'role', 'button', 'click');
+    it('find role=button click', async () => {
+      await parseArgs('find', 'role=button', 'click');
       expectCommand('click', { selector: 'role=button', button: 'left' });
     });
 
-    it('find role button click --name "Submit"', async () => {
-      await parseArgs('find', 'role', 'button', 'click', '--name', 'Submit');
+    it('find role=button[name="Submit"] (default click)', async () => {
+      await parseArgs('find', 'role=button[name="Submit"]');
       expectCommand('click', { selector: 'role=button[name="Submit"]', button: 'left' });
     });
 
-    it('find role button --name "Submit" (default click)', async () => {
-      await parseArgs('find', 'role', 'button', '--name', 'Submit');
-      expectCommand('click', { selector: 'role=button[name="Submit"]', button: 'left' });
-    });
-
-    it('find text "Sign In" (default click)', async () => {
-      await parseArgs('find', 'text', 'Sign In');
+    it('find text=Sign In (default click)', async () => {
+      await parseArgs('find', 'text=Sign In');
       expectCommand('click', { selector: 'text=Sign In', button: 'left' });
     });
 
-    it('find label Email fill user@test.com', async () => {
-      await parseArgs('find', 'label', 'Email', 'fill', 'user@test.com');
+    it('find label=Email fill user@test.com', async () => {
+      await parseArgs('find', 'label=Email', 'fill', 'user@test.com');
       expectCommand('fill', { selector: 'label=Email', value: 'user@test.com' });
     });
 
-    it('find placeholder Search... fill query', async () => {
-      await parseArgs('find', 'placeholder', 'Search...', 'fill', 'query');
+    it('find placeholder=Search... fill query', async () => {
+      await parseArgs('find', 'placeholder=Search...', 'fill', 'query');
       expectCommand('fill', { selector: 'placeholder=Search...', value: 'query' });
     });
 
-    it('find testid login-btn click', async () => {
-      await parseArgs('find', 'testid', 'login-btn', 'click');
+    it('find testid=login-btn click', async () => {
+      await parseArgs('find', 'testid=login-btn', 'click');
       expectCommand('click', { selector: 'testid=login-btn', button: 'left' });
     });
 
-    it('find xpath //button[@type="submit"] click', async () => {
-      await parseArgs('find', 'xpath', '//button[@type="submit"]', 'click');
+    it('find xpath=//button[@type="submit"] click', async () => {
+      await parseArgs('find', 'xpath=//button[@type="submit"]', 'click');
       expectCommand('click', { selector: 'xpath=//button[@type="submit"]', button: 'left' });
     });
 
-    it('find first .item click', async () => {
-      await parseArgs('find', 'first', '.item', 'click');
-      expectCommand('click', { selector: '.item', button: 'left' });
+    it('find .item click --first', async () => {
+      await parseArgs('find', '.item', 'click', '--first');
+      expectCommand('click', { selector: '.item', button: 'left', position: { type: 'first' } });
     });
 
-    it('find last .item click', async () => {
-      await parseArgs('find', 'last', '.item', 'click');
-      expectCommand('click', { selector: '.item', button: 'left' });
+    it('find .item click --last', async () => {
+      await parseArgs('find', '.item', 'click', '--last');
+      expectCommand('click', { selector: '.item', button: 'left', position: { type: 'last' } });
     });
 
-    it('find nth 2 .item click', async () => {
-      await parseArgs('find', 'nth', '2', '.item', 'click');
-      expectCommand('click', { selector: '.item', button: 'left' });
+    it('find .item click --nth 2', async () => {
+      await parseArgs('find', '.item', 'click', '--nth', '2');
+      expectCommand('click', {
+        selector: '.item',
+        button: 'left',
+        position: { type: 'nth', index: 2 },
+      });
     });
 
-    it('find role textbox fill hello --name Email', async () => {
-      await parseArgs('find', 'role', 'textbox', 'fill', 'hello', '--name', 'Email');
+    it('find role=textbox[name="Email"] fill hello', async () => {
+      await parseArgs('find', 'role=textbox[name="Email"]', 'fill', 'hello');
       expectCommand('fill', { selector: 'role=textbox[name="Email"]', value: 'hello' });
     });
 
-    it('find text Submit hover', async () => {
-      await parseArgs('find', 'text', 'Submit', 'hover');
+    it('find text=Submit hover', async () => {
+      await parseArgs('find', 'text=Submit', 'hover');
       expectCommand('hover', { selector: 'text=Submit' });
     });
 
-    it('find role checkbox check --name "Agree"', async () => {
-      await parseArgs('find', 'role', 'checkbox', 'check', '--name', 'Agree');
+    it('find role=checkbox[name="Agree"] check', async () => {
+      await parseArgs('find', 'role=checkbox[name="Agree"]', 'check');
       expectCommand('check', { selector: 'role=checkbox[name="Agree"]' });
     });
 
-    it('find text Submit (no action = default click)', async () => {
-      await parseArgs('find', 'text', 'Submit');
+    it('find text=Submit (no action = default click)', async () => {
+      await parseArgs('find', 'text=Submit');
       expectCommand('click', { selector: 'text=Submit', button: 'left' });
     });
 
-    it('find role button --exact', async () => {
-      await parseArgs('find', 'role', 'button', '--exact');
-      expectCommand('click', { selector: 'role=button[exact]', button: 'left' });
+    it('find CSS selector #submit', async () => {
+      await parseArgs('find', '#submit');
+      expectCommand('click', { selector: '#submit', button: 'left' });
     });
 
-    it('find text Submit --exact (wraps in quotes)', async () => {
-      await parseArgs('find', 'text', 'Submit', '--exact');
-      expectCommand('click', { selector: 'text="Submit"', button: 'left' });
+    it('find @e1 click', async () => {
+      await parseArgs('find', '@e1', 'click');
+      expectCommand('click', { selector: '@e1', button: 'left' });
     });
   });
 

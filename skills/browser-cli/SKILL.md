@@ -115,45 +115,44 @@ browser-cli fill @e2 hello   # Fill by ref
 
 #### Basic Interaction
 
-| Command                        | Description                                                                                 |
-| ------------------------------ | ------------------------------------------------------------------------------------------- |
-| `click <selector>`             | Click element (`--button left/right/middle`, `--debugger`)                                  |
-| `dblclick <selector>`          | Double-click element (`--debugger`)                                                         |
-| `hover <selector>`             | Hover over element (`--debugger` for CSS `:hover`)                                          |
-| `fill <selector> <value>`      | Fill input (replaces content) (`--debugger`)                                                |
-| `type <selector> <text>`       | Type text character-by-character (`--delay <ms>`, `--debugger`)                             |
-| `press <key>`                  | Press key at page level (alias: `key`, `--debugger`). Examples: `Enter`, `Tab`, `Control+a` |
-| `clear <selector>`             | Clear an input field                                                                        |
-| `focus <selector>`             | Focus an element                                                                            |
-| `check <selector>`             | Check a checkbox/radio                                                                      |
-| `uncheck <selector>`           | Uncheck a checkbox                                                                          |
-| `select <selector> <value>`    | Select dropdown option (matches by value, text, or label)                                   |
-| `upload <selector> <files...>` | Upload files (`--clear` to clear first)                                                     |
-| `drag <source> <target>`       | Drag element to target                                                                      |
-| `keydown <key>`                | Press key down without releasing                                                            |
-| `keyup <key>`                  | Release a held key                                                                          |
+| Command                        | Description                                                                                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `click <selector>`             | Click element (`--button left/right/middle`, `--debugger`)                                                                                                   |
+| `dblclick <selector>`          | Double-click element (`--debugger`)                                                                                                                          |
+| `hover <selector>`             | Hover over element (`--debugger` for CSS `:hover`)                                                                                                           |
+| `fill <selector> <value>`      | Fill input (replaces content) (`--debugger`)                                                                                                                 |
+| `type <selector> <text>`       | Type text character-by-character (`--delay <ms>`, `--debugger`)                                                                                              |
+| `press <key>`                  | Press key (alias: `key`, `-s/--selector <sel>`, `--debugger`). Without `--selector`, targets `document.activeElement`. Examples: `Enter`, `Tab`, `Control+a` |
+| `clear <selector>`             | Clear an input field                                                                                                                                         |
+| `focus <selector>`             | Focus an element                                                                                                                                             |
+| `check <selector>`             | Check a checkbox/radio                                                                                                                                       |
+| `uncheck <selector>`           | Uncheck a checkbox                                                                                                                                           |
+| `select <selector> <value>`    | Select dropdown option (matches by value, text, or label)                                                                                                    |
+| `upload <selector> <files...>` | Upload files (`--clear` to clear first)                                                                                                                      |
+| `drag <source> <target>`       | Drag element to target                                                                                                                                       |
+| `keydown <key>`                | Press key down without releasing                                                                                                                             |
+| `keyup <key>`                  | Release a held key                                                                                                                                           |
 
-#### Find Command (Semantic Locate + Act)
+#### Find Command (Locate + Act)
 
-`find <engine> <value> [action] [action-value]` — locate element and perform action in one step.
+`find <selector> [action] [value]` — locate element by any selector and perform action in one step.
 
-**Engines**: `role`, `text`, `label`, `placeholder`, `alt`, `title`, `testid`, `xpath`
-**Position selectors**: `first`, `last`, `nth`
+**Selector**: any CSS selector, semantic locator, or `@ref`
 **Actions**: `click` (default), `dblclick`, `fill`, `type`, `hover`, `check`, `uncheck`, `select`, `press`, `clear`, `focus`
+**Options**: `--first`, `--last`, `--nth <n>` (position among matches, 1-based)
 
-| Example                                       | Description                                         |
-| --------------------------------------------- | --------------------------------------------------- |
-| `find role button click`                      | Click first button                                  |
-| `find role button --name "Submit"`            | Click button named "Submit" (default action: click) |
-| `find text "Sign In"`                         | Click element with text "Sign In"                   |
-| `find label Email fill user@test.com`         | Fill input labeled "Email"                          |
-| `find placeholder Search... fill query`       | Fill by placeholder                                 |
-| `find testid login-btn click`                 | Click by test ID                                    |
-| `find xpath "//button[@type='submit']" click` | Click by XPath                                      |
-| `find first .item click`                      | Click first matching `.item`                        |
-| `find nth 2 .item click`                      | Click 2nd matching `.item`                          |
-
-Options: `--name <name>` (for role engine), `--exact` (exact text match)
+| Example                                 | Description                       |
+| --------------------------------------- | --------------------------------- |
+| `find 'role=button[name="Submit"]'`     | Click button named "Submit"       |
+| `find 'text=Sign In'`                   | Click element with text "Sign In" |
+| `find 'label=Email' fill user@test.com` | Fill input labeled "Email"        |
+| `find 'placeholder=Search' fill query`  | Fill by placeholder               |
+| `find 'testid=login-btn'`               | Click by test ID                  |
+| `find 'xpath=//button[@type="submit"]'` | Click by XPath                    |
+| `find '#submit'`                        | Click by CSS selector             |
+| `find '.item' click --nth 2`            | Click 2nd matching `.item`        |
+| `find '.item' click --last`             | Click last matching `.item`       |
+| `find @e1 fill "hello"`                 | Fill element by ref               |
 
 #### Scroll
 
