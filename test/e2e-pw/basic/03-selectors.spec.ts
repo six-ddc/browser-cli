@@ -151,7 +151,7 @@ test.describe('find command — semantic engines', () => {
 
   test('find by label with exact match', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('find', 'label=Username', 'fill', 'exacttest', '--exact');
+    const r = bcli('find', 'label="Username"', 'fill', 'exacttest');
     expect(r).toBcliSuccess();
     await expect(activePage.locator(SEL.USERNAME)).toHaveValue('exacttest');
   });
