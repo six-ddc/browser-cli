@@ -159,7 +159,7 @@ test.describe('--json JSON validity', () => {
 test.describe('--json + various commands integration', () => {
   test('find command returns JSON format', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('--json', 'find', 'role', 'button');
+    const r = bcli('--json', 'find', 'role=button');
     expect(r).toBcliSuccess();
     const parsed = JSON.parse(r.stdout);
     expect(parsed.success).toBe(true);

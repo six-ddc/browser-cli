@@ -121,21 +121,21 @@ test.describe('element references (@e1, @e2, ...)', () => {
 test.describe('find command — semantic engines', () => {
   test('find by role with default click action', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('find', 'role', 'button');
+    const r = bcli('find', 'role=button');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
 
-  test('find by role with --name filter', async ({ bcli, navigateAndWait }) => {
+  test('find by role with name filter', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('find', 'role', 'button', '--name', 'Login');
+    const r = bcli('find', 'role=button[name="Login"]');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
 
   test('find by text', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.ADD_REMOVE);
-    const r = bcli('find', 'text', 'Add Element', 'click');
+    const r = bcli('find', 'text=Add Element', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
     await expect(activePage.locator('.added-manually')).toBeVisible();
@@ -143,7 +143,7 @@ test.describe('find command — semantic engines', () => {
 
   test('find by label and fill', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('find', 'label', 'Username', 'fill', TEST_USERNAME);
+    const r = bcli('find', 'label=Username', 'fill', TEST_USERNAME);
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Filled');
     await expect(activePage.locator(SEL.USERNAME)).toHaveValue(TEST_USERNAME);
@@ -151,14 +151,14 @@ test.describe('find command — semantic engines', () => {
 
   test('find by label with exact match', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('find', 'label', 'Username', 'fill', 'exacttest', '--exact');
+    const r = bcli('find', 'label=Username', 'fill', 'exacttest', '--exact');
     expect(r).toBcliSuccess();
     await expect(activePage.locator(SEL.USERNAME)).toHaveValue('exacttest');
   });
 
   test('find by xpath', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('find', 'xpath', '//button[@type="submit"]', 'click');
+    const r = bcli('find', 'xpath=//button[@type="submit"]', 'click');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -167,7 +167,7 @@ test.describe('find command — semantic engines', () => {
 test.describe('find command — position selectors', () => {
   test('first position selector', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
-    const r = bcli('find', 'first', SEL.CHECKBOX, 'check');
+    const r = bcli('find', SEL.CHECKBOX, 'check', '--first');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Checked');
     await expect(activePage.locator(`${SEL.CHECKBOX}:first-of-type`)).toBeChecked();
@@ -175,7 +175,7 @@ test.describe('find command — position selectors', () => {
 
   test('last position selector', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
-    const r = bcli('find', 'last', SEL.CHECKBOX, 'uncheck');
+    const r = bcli('find', SEL.CHECKBOX, 'uncheck', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Unchecked');
     await expect(activePage.locator(`${SEL.CHECKBOX}:last-of-type`)).not.toBeChecked();
@@ -183,7 +183,7 @@ test.describe('find command — position selectors', () => {
 
   test('nth position selector (1-based)', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
-    const r = bcli('find', 'nth', '1', SEL.CHECKBOX, 'check');
+    const r = bcli('find', SEL.CHECKBOX, 'check', '--nth', '1');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Checked');
     await expect(activePage.locator(`${SEL.CHECKBOX}:first-of-type`)).toBeChecked();
@@ -191,7 +191,7 @@ test.describe('find command — position selectors', () => {
 
   test('nth 2 position selector', async ({ bcli, navigateAndWait, activePage }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
-    const r = bcli('find', 'nth', '2', SEL.CHECKBOX, 'uncheck');
+    const r = bcli('find', SEL.CHECKBOX, 'uncheck', '--nth', '2');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Unchecked');
     await expect(activePage.locator(`${SEL.CHECKBOX}:last-of-type`)).not.toBeChecked();
@@ -201,14 +201,14 @@ test.describe('find command — position selectors', () => {
 test.describe('find command — different actions', () => {
   test('find + hover action', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOVERS);
-    const r = bcli('find', 'first', '.figure', 'hover');
+    const r = bcli('find', '.figure', 'hover', '--first');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Hovered');
   });
 
   test('find + select action', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.DROPDOWN);
-    const r = bcli('find', 'role', 'combobox', 'select', 'Option 1');
+    const r = bcli('find', 'role=combobox', 'select', 'Option 1');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Selected');
   });
@@ -217,7 +217,7 @@ test.describe('find command — different actions', () => {
     await navigateAndWait(PAGES.LOGIN);
     bcli('fill', SEL.USERNAME, 'clearme');
 
-    const r = bcli('find', 'label', 'Username', 'clear');
+    const r = bcli('find', 'label=Username', 'clear');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Cleared');
     await expect(activePage.locator(SEL.USERNAME)).toHaveValue('');
@@ -225,7 +225,7 @@ test.describe('find command — different actions', () => {
 
   test('find + focus action', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('find', 'label', 'Username', 'focus');
+    const r = bcli('find', 'label=Username', 'focus');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Focused');
   });

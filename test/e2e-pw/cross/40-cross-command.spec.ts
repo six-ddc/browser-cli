@@ -288,9 +288,9 @@ test.describe('multi-step workflow cross-tests', () => {
     const snap = bcli('snapshot', '-ic');
     expect(snap.exitCode).toBe(0);
 
-    bcli('find', 'label', 'Username', 'fill', TEST_USERNAME);
-    bcli('find', 'label', 'Password', 'fill', TEST_PASSWORD);
-    bcli('find', 'role', 'button', '--name', 'Login');
+    bcli('find', 'label=Username', 'fill', TEST_USERNAME);
+    bcli('find', 'label=Password', 'fill', TEST_PASSWORD);
+    bcli('find', 'role=button[name="Login"]');
 
     bcli('wait', '--url', '**/secure*', '--timeout', '5000');
 
