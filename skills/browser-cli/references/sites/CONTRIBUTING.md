@@ -207,6 +207,17 @@ JSON.stringify((() => {
 EOF
 ```
 
+For async operations (e.g., `fetch()`), use an async IIFE — eval auto-awaits Promises:
+
+```bash
+browser-cli eval --stdin <<'EOF'
+(async () => {
+  const resp = await fetch('/api/data', { credentials: 'include' });
+  return resp.json();
+})()
+EOF
+```
+
 ### Always wrap output in `JSON.stringify`
 
 Claude needs structured data. Always return JSON, not raw strings:
