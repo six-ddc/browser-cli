@@ -768,7 +768,7 @@ export type ActionDef =
 
 // ─── Derived Types ──────────────────────────────────────────────────
 
-type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 /** All action type strings */
 export type ActionType = ActionDef['action'];

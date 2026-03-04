@@ -414,7 +414,7 @@ async function routeCommand(
                 level,
                 args: args.map((a) => {
                   try {
-                    return JSON.parse(JSON.stringify(a));
+                    return JSON.parse(JSON.stringify(a)) as unknown;
                   } catch {
                     return String(a);
                   }
@@ -534,7 +534,7 @@ async function routeCommand(
             return { value: usResult?.__ok ? usResult.value : usResult };
           } catch (usErr) {
             // Re-throw expression errors from userScripts
-            if (usErr instanceof Error && !String(usErr.message).includes('not available')) {
+            if (usErr instanceof Error && !usErr.message.includes('not available')) {
               throw usErr;
             }
             // userScripts not available at runtime — fall through to CSP hint

@@ -14,7 +14,7 @@ import type { Command, ConsoleEntry } from '@browser-cli/shared';
  */
 async function ensurePatched(): Promise<void> {
   // Check if already patched by reading the flag from MAIN world
-  const checkResponse = await browser.runtime.sendMessage({
+  const checkResponse: { result?: unknown } | undefined = await browser.runtime.sendMessage({
     type: 'browser-cli-eval-in-main',
     expression: '!!window.__browserCliConsolePatched',
   });
@@ -70,7 +70,7 @@ async function readEntries(level?: string, clear?: boolean): Promise<ConsoleEntr
       })()`
     : `window.__browserCliConsoleEntries || []`;
 
-  const response = await browser.runtime.sendMessage({
+  const response: { result?: string } | undefined = await browser.runtime.sendMessage({
     type: 'browser-cli-eval-in-main',
     expression: `JSON.stringify(${expr})`,
   });

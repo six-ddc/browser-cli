@@ -8,9 +8,7 @@
 
 import type { EvaluateParams } from '@browser-cli/shared';
 
-export function handleEvaluate(
-  params: EvaluateParams,
-): Promise<{
+export function handleEvaluate(params: EvaluateParams): Promise<{
   value: unknown;
   logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
 }> {
@@ -32,7 +30,7 @@ export function handleEvaluate(
         level,
         args: args.map((a) => {
           try {
-            return JSON.parse(JSON.stringify(a));
+            return JSON.parse(JSON.stringify(a)) as unknown;
           } catch {
             return String(a);
           }

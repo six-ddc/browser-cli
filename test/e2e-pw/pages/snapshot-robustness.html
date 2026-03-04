@@ -4,9 +4,18 @@
     <meta charset="UTF-8" />
     <title>Snapshot Robustness Tests</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 20px; }
-      section { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; }
-      h3 { margin-top: 0; }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      section {
+        margin-bottom: 20px;
+        border: 1px solid #ccc;
+        padding: 10px;
+      }
+      h3 {
+        margin-top: 0;
+      }
     </style>
   </head>
   <body>
@@ -20,9 +29,8 @@
     <section id="text-escaping">
       <h3>Text Escaping</h3>
       <button id="btn-quotes">Click "here" now</button>
-      <button id="btn-newline">Line1
-Line2</button>
-      <button id="btn-tab">Col1	Col2</button>
+      <button id="btn-newline">Line1 Line2</button>
+      <button id="btn-tab">Col1 Col2</button>
       <a href="#" id="link-quotes">Link with "quotes" inside</a>
     </section>
 
@@ -38,7 +46,13 @@ Line2</button>
     <!-- Section 4: iframe -->
     <section id="iframe-section">
       <h3>Iframe</h3>
-      <iframe id="test-iframe" title="Test Frame" src="iframe-content.html" width="300" height="100"></iframe>
+      <iframe
+        id="test-iframe"
+        title="Test Frame"
+        src="iframe-content.html"
+        width="300"
+        height="100"
+      ></iframe>
     </section>
 
     <!-- Section 5: Deep DOM (created via script) -->

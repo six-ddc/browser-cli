@@ -20,7 +20,7 @@ import { sendToContentScript } from './send-to-content-script';
  */
 function getChromeDebugger(): ChromeDebuggerAPI | undefined {
   if (typeof chrome === 'undefined') return undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
   return (chrome as any)['debugger'] as ChromeDebuggerAPI | undefined;
 }
 

@@ -40,9 +40,9 @@ export function registerElement(element: Element, selector: string): string {
     element: new WeakRef(element),
     identity: {
       tagName: element.tagName,
-      ariaLabel: element.getAttribute('aria-label') ?? '',
-      role: element.getAttribute('role') ?? '',
-      textSnippet: (element.textContent ?? '').trim().slice(0, 40),
+      ariaLabel: element.getAttribute('aria-label') || '',
+      role: element.getAttribute('role') || '',
+      textSnippet: (element.textContent || '').trim().slice(0, 40),
     },
   });
   return ref;
@@ -92,7 +92,7 @@ export function resolveElement(
     const rect = el.getBoundingClientRect();
     return rect.width > 0 || rect.height > 0;
   });
-  return visible ?? elements[0] ?? null;
+  return visible || elements[0] || null;
 }
 
 /** Apply position filter to an array of elements */
@@ -149,7 +149,7 @@ function matchesIdentity(el: Element, identity: RefEntry['identity']): boolean {
   // We compare the first 20 chars — enough to tell apart different entries while
   // tolerating minor in-place text changes (counters, etc.) that go via WeakRef anyway.
   if (!identity.ariaLabel && !identity.role && identity.textSnippet.length >= 20) {
-    const elText = (el.textContent ?? '').trim().slice(0, 40);
+    const elText = (el.textContent || '').trim().slice(0, 40);
     if (elText.slice(0, 20) !== identity.textSnippet.slice(0, 20)) return false;
   }
   return true;

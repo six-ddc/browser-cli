@@ -6,7 +6,7 @@
 import type { SnapshotNode, SnapshotOptions } from '@browser-cli/shared';
 import { serializeSnapshot } from '@browser-cli/shared';
 import type { SnapshotParams } from '@browser-cli/shared';
-import { clearRefs, registerElement, generateSelector, getRefCount } from './element-ref-store';
+import { clearRefs, registerElement, generateSelector } from './element-ref-store';
 import {
   getAriaRole,
   getAccessibleName,

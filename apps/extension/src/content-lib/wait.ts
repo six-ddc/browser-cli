@@ -248,7 +248,7 @@ function waitForFunction(expression: string, timeout: number): Promise<void> {
       void (async () => {
         try {
           // Use background script to evaluate in MAIN world (bypasses CSP)
-          const response = await browser.runtime.sendMessage({
+          const response: { result?: unknown } | undefined = await browser.runtime.sendMessage({
             type: 'browser-cli-eval-in-main',
             expression: `!!(${expression})`,
           });

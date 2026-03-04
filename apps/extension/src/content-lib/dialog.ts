@@ -11,7 +11,7 @@ import type { Command } from '@browser-cli/shared';
  * Ensure the dialog patcher is injected into the MAIN world.
  */
 async function ensureInjected(): Promise<void> {
-  const checkResponse = await browser.runtime.sendMessage({
+  const checkResponse: { result?: unknown } | undefined = await browser.runtime.sendMessage({
     type: 'browser-cli-eval-in-main',
     expression: '!!window.__browserCliDialogPatched',
   });
