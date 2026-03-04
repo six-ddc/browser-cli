@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt zip && wxt zip -b firefox",
-    "lint": "eslint .",
+    "lint": "wxt prepare && eslint .",
     "typecheck": "wxt prepare && tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
