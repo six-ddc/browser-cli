@@ -3,8 +3,6 @@
 // All search calls use /internal/search/opensearch (OSD's internal proxy) so they
 // run in the browser context and inherit session cookies automatically.
 //
-// IMPORTANT: browser.evaluate() does NOT await Promises returned by async
-// expressions. All HTTP calls must use synchronous XMLHttpRequest.
 //
 // Typical workflow:
 //   1. listIndexPatterns()      — discover available indices
@@ -21,7 +19,6 @@ function formatDate(iso) {
 
 /**
  * Run a DSL search against the OSD internal search proxy.
- * Uses synchronous XHR — works inside browser.evaluate() which does not await Promises.
  * @param {object} browser
  * @param {string} index — index name or pattern, e.g. "my-logs-*"
  * @param {object} dslBody — full OpenSearch DSL body ({ query, aggs, size, sort, _source, ... })
@@ -30,23 +27,24 @@ function formatDate(iso) {
 async function osdSearch(browser, index, dslBody) {
   const payload = JSON.stringify({ params: { index, body: dslBody } });
   const result = await browser.evaluate({
-    expression: `JSON.stringify((() => {
+    expression: `(async () => {
       try {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', location.origin + '/internal/search/opensearch', false);
-        xhr.setRequestHeader('osd-xsrf', 'true');
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.withCredentials = true;
-        xhr.send(${JSON.stringify(payload)});
-        if (xhr.status < 200 || xhr.status >= 300) {
-          return { __error: true, status: xhr.status, body: xhr.responseText.slice(0, 400) };
+        const resp = await fetch(location.origin + '/internal/search/opensearch', {
+          method: 'POST',
+          headers: { 'osd-xsrf': 'true', 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: ${JSON.stringify(payload)},
+        });
+        if (!resp.ok) {
+          const body = (await resp.text()).slice(0, 400);
+          return { __error: true, status: resp.status, body };
         }
-        const d = JSON.parse(xhr.responseText);
+        const d = await resp.json();
         return d.rawResponse || d;
       } catch(e) {
         return { __error: true, status: 0, message: e.message };
       }
-    })())`,
+    })()`,
   });
 
   if (result && result.__error) {
@@ -68,21 +66,21 @@ async function osdSearch(browser, index, dslBody) {
  */
 async function osdGet(browser, path) {
   const result = await browser.evaluate({
-    expression: `JSON.stringify((() => {
+    expression: `(async () => {
       try {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', location.origin + ${JSON.stringify(path)}, false);
-        xhr.setRequestHeader('osd-xsrf', 'true');
-        xhr.withCredentials = true;
-        xhr.send();
-        if (xhr.status < 200 || xhr.status >= 300) {
-          return { __error: true, status: xhr.status, body: xhr.responseText.slice(0, 400) };
+        const resp = await fetch(location.origin + ${JSON.stringify(path)}, {
+          headers: { 'osd-xsrf': 'true' },
+          credentials: 'include',
+        });
+        if (!resp.ok) {
+          const body = (await resp.text()).slice(0, 400);
+          return { __error: true, status: resp.status, body };
         }
-        return JSON.parse(xhr.responseText);
+        return resp.json();
       } catch(e) {
         return { __error: true, status: 0, message: e.message };
       }
-    })())`,
+    })()`,
   });
 
   if (result && result.__error) {

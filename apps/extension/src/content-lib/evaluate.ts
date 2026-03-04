@@ -8,7 +8,7 @@
 
 import type { EvaluateParams } from '@browser-cli/shared';
 
-export function handleEvaluate(params: EvaluateParams): Promise<{
+export async function handleEvaluate(params: EvaluateParams): Promise<{
   value: unknown;
   logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
 }> {
@@ -50,15 +50,15 @@ export function handleEvaluate(params: EvaluateParams): Promise<{
   // (document, elements, attributes) are shared with the page so all
   // querySelector / innerText / getAttribute patterns work.
   try {
-    const result: unknown = (0, eval)(expression);
+    const result: unknown = await (0, eval)(expression);
     const res: {
       value: unknown;
       logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
     } = { value: result };
     if (logs.length) res.logs = logs;
-    return Promise.resolve(res);
+    return res;
   } catch (e: unknown) {
-    return Promise.reject(new Error((e as Error).message));
+    throw new Error((e as Error).message);
   } finally {
     console.log = origConsole.log;
     console.warn = origConsole.warn;

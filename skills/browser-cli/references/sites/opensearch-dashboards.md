@@ -57,15 +57,15 @@
 > browser-cli --tab <tabId> script - <<'EOF'
 > export default async function(browser) {
 >   return browser.evaluate({
->     expression: `JSON.stringify((() => {
->       const xhr = new XMLHttpRequest();
->       xhr.open('POST', location.origin + '/internal/search/opensearch', false);
->       xhr.setRequestHeader('osd-xsrf', 'true');
->       xhr.setRequestHeader('Content-Type', 'application/json');
->       xhr.withCredentials = true;
->       xhr.send(JSON.stringify({ params: { index: 'YOUR-INDEX-*', body: { size: 1, query: { match_all: {} } } } }));
->       return { status: xhr.status, preview: xhr.responseText.slice(0, 500) };
->     })())`
+>     expression: `(async () => {
+>       const resp = await fetch(location.origin + '/internal/search/opensearch', {
+>         method: 'POST',
+>         headers: { 'osd-xsrf': 'true', 'Content-Type': 'application/json' },
+>         credentials: 'include',
+>         body: JSON.stringify({ params: { index: 'YOUR-INDEX-*', body: { size: 1, query: { match_all: {} } } } }),
+>       });
+>       return { status: resp.status, preview: (await resp.text()).slice(0, 500) };
+>     })()`
 >   });
 > }
 > EOF
@@ -108,7 +108,7 @@ browser-cli --tab <tabId> eval 'JSON.parse(document.body.innerText).version.numb
 
 ### Authentication
 
-All recipe functions run in the browser context and use session cookies via `XMLHttpRequest` with `withCredentials = true`. No API tokens needed. If calls return 401, navigate to the OSD login page first.
+All recipe functions run in the browser context and use session cookies via `fetch()` with `credentials: 'include'`. No API tokens needed. If calls return 401, navigate to the OSD login page first.
 
 **Required header on every call**: `osd-xsrf: true`
 
@@ -227,7 +227,7 @@ Normal for large indices with `size: 0` aggregation-only queries. Results are st
 
 ## Notes
 
-- **`browser.evaluate()` does not await Promises** — always use synchronous `XMLHttpRequest`, never `fetch()`.
+- **`browser.evaluate()` auto-awaits Promises** — use `fetch()` freely inside eval expressions; the result will be awaited before returning.
 - **`/api/console/proxy` returns 404 for wildcard index patterns** — always use `/internal/search/opensearch` for DSL queries.
 - **Large queries can time out** — avoid fetching full `_source` on high-volume indices without `_source` field filtering, or use aggregations (`size: 0`).
 - **Session authentication** — all calls inherit browser session cookies. If you get 401, navigate to the OSD login page first.

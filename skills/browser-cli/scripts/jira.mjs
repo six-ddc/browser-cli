@@ -150,25 +150,22 @@ function parseIssueSummary(raw) {
  * @param {string} path — full path + query string, e.g. "/rest/api/2/issue/ORI-1?fields=summary"
  */
 async function jiraFetch(browser, path) {
-  // Use synchronous XHR — browser.evaluate() does not await Promises returned
-  // by async expressions; XHR in sync mode avoids that limitation.
   const result = await browser.evaluate({
-    expression: `JSON.stringify((() => {
+    expression: `(async () => {
       try {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', location.origin + ${JSON.stringify(path)}, false);
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        xhr.withCredentials = true;
-        xhr.send();
-        if (xhr.status < 200 || xhr.status >= 300) {
-          return { __error: true, status: xhr.status, statusText: xhr.statusText, body: xhr.responseText.slice(0, 300) };
+        const resp = await fetch(location.origin + ${JSON.stringify(path)}, {
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'include',
+        });
+        if (!resp.ok) {
+          const body = (await resp.text()).slice(0, 300);
+          return { __error: true, status: resp.status, statusText: resp.statusText, body };
         }
-        return JSON.parse(xhr.responseText);
+        return resp.json();
       } catch (e) {
         return { __error: true, status: 0, statusText: e.message };
       }
-    })())`,
+    })()`,
   });
 
   if (result && result.__error) {

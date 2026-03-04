@@ -213,7 +213,7 @@ browser-cli --tab <tabId> script scripts/jira.mjs --call getBoardIssues
 
 > **Why prefer REST API over DOM**: REST API responses are consistent across Jira DC versions, include all fields (custom and system), and are unaffected by rendering delays. DOM selectors may break across minor versions or with custom themes.
 
-All API calls use the browser's session cookies. The recipe script's `jiraFetch()` helper handles authentication automatically via `browser.evaluate()` + synchronous XHR.
+All API calls use the browser's session cookies. The recipe script's `jiraFetch()` helper handles authentication automatically via `browser.evaluate()` + `fetch()`.
 
 ### Common Endpoints
 

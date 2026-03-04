@@ -346,7 +346,7 @@ browser-cli eval -b '<base64-encoded-expression>'
 echo '<expression>' | browser-cli eval --stdin
 ```
 
-Evaluates JavaScript in the page context (MAIN world) and returns the result.
+Evaluates JavaScript in the page context (MAIN world) and returns the result. **Async-aware**: if the expression returns a Promise, it is automatically awaited — `fetch()`, async IIFEs, and other async patterns work seamlessly.
 
 | Option         | Description                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------- |
@@ -362,6 +362,10 @@ browser-cli eval 'document.querySelectorAll("a").length'
 browser-cli eval 'JSON.stringify(performance.timing)'
 browser-cli eval -b 'ZG9jdW1lbnQudGl0bGU='
 cat script.js | browser-cli eval --stdin
+
+# Async expressions (Promises are auto-awaited)
+browser-cli eval 'fetch("/api/data").then(r => r.json())'
+browser-cli eval '(async () => { const r = await fetch("/api"); return r.status; })()'
 ```
 
 ---

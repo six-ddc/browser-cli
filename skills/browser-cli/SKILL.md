@@ -261,7 +261,7 @@ browser-cli eval -b/--base64 '<base64-encoded-expression>'  # decode from base64
 echo '<expression>' | browser-cli eval --stdin       # read from stdin
 ```
 
-Evaluates JavaScript in the page context and returns the result. CSP-strict pages (Gmail, GitHub, etc.) are handled automatically with platform-specific fallbacks.
+Evaluates JavaScript in the page context and returns the result. **Async-aware**: Promises are auto-awaited, so `fetch()` and async IIFEs work directly. CSP-strict pages (Gmail, GitHub, etc.) are handled automatically with platform-specific fallbacks.
 
 #### Console & Errors
 
@@ -617,6 +617,7 @@ commands. Check for a matching guide before using generic extraction.
 | linkedin.com                                         | [sites/linkedin.com.md](references/sites/linkedin.com.md)                   |
 | jira (any Jira Server/DC instance)                   | [sites/jira-datacenter.md](references/sites/jira-datacenter.md)             |
 | opensearch-dashboards (any self-hosted OSD instance) | [sites/opensearch-dashboards.md](references/sites/opensearch-dashboards.md) |
+| youtube.com                                          | [sites/youtube.com.md](references/sites/youtube.com.md)                     |
 
 When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
 

@@ -397,7 +397,7 @@ async function routeCommand(
       const mainWorldResult = await browser.scripting.executeScript({
         target: { tabId: targetTabId },
         world: 'MAIN',
-        func: (expr: string) => {
+        func: async (expr: string) => {
           // Capture console output during eval
           const __logs: Array<{ level: string; args: unknown[]; timestamp: number }> = [];
           const __origConsole = {
@@ -456,7 +456,7 @@ async function routeCommand(
 
           // eval() works — any error from here is a genuine expression error
           try {
-            const __r = __evalFn(expr);
+            const __r = await __evalFn(expr);
             return { __ok: true, value: __r, logs: __logs };
           } catch (e: unknown) {
             return { __ok: false, error: (e as Error).message, logs: __logs };
@@ -518,7 +518,7 @@ async function routeCommand(
               .replace(/\\/g, '\\\\')
               .replace(/`/g, '\\`')
               .replace(/\$/g, '\\$');
-            const wrappedCode = `try { ({ __ok: true, value: (0, eval)(\`${escaped}\`) }) } catch(e) { ({ __ok: false, error: e.message }) }`;
+            const wrappedCode = `(async () => { try { return { __ok: true, value: await (0, eval)(\`${escaped}\`) }; } catch(e) { return { __ok: false, error: e.message }; } })()`;
             const usResults = await chrome.userScripts.execute({
               target: { tabId: targetTabId },
               js: [{ code: wrappedCode }],
