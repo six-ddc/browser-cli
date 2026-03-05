@@ -20,7 +20,7 @@ export const scrollCommand = new Command('scroll')
 
 export const scrollIntoViewCommand = new Command('scrollintoview')
   .description('Scroll an element into view')
-  .argument('<selector>', 'CSS selector or @ref')
+  .argument('<selector>', 'CSS selector, semantic locator, or @ref')
   .action(async (selector: string, _opts: unknown, cmd: Command) => {
     await sendCommand(cmd, { action: 'scrollIntoView', params: { selector } });
     console.log('Scrolled into view');

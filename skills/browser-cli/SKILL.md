@@ -159,7 +159,7 @@ browser-cli fill @e2 hello   # Fill by ref
 | Command                     | Description                                                                      |
 | --------------------------- | -------------------------------------------------------------------------------- |
 | `scroll <direction>`        | Scroll page: `up`, `down`, `left`, `right` (`--amount <px>`, `--selector <sel>`) |
-| `scrollintoview <selector>` | Scroll element into view                                                         |
+| `scrollintoview <selector>` | Scroll element into view (CSS, semantic locator, or `@ref`)                      |
 
 #### Mouse Control (Low-level)
 

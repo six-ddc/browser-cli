@@ -319,11 +319,15 @@ browser-cli scroll up --selector '.sidebar'
 browser-cli scrollintoview <selector>
 ```
 
+Selector can be a CSS selector, semantic locator (`text=`, `role=`, `label=`, etc.), or `@ref`.
+
 **Examples:**
 
 ```bash
 browser-cli scrollintoview '#footer'
 browser-cli scrollintoview 'text=Contact Us'
+browser-cli scrollintoview 'role=button[name="Submit"]'
+browser-cli scrollintoview @e5
 ```
 
 ---
