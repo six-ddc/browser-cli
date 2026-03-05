@@ -688,6 +688,24 @@ browser-cli eval --stdin <<'EOF'
 EOF
 ```
 
+### Remote access (public tunnel)
+
+If you need to control a browser on a remote machine (or expose the daemon to the internet), use the included Cloudflare Tunnel script. **Always enable auth token** when exposing publicly:
+
+```bash
+# 1. Start daemon with auth (required for public exposure)
+browser-cli start --auth            # auto-generate random token
+# or: browser-cli start --token <your-secret>   # use a specific token
+
+# 2. Start the tunnel (auto-detects port from running daemon)
+./skills/browser-cli/scripts/tunnel.sh
+# Prints a public WSS URL like: wss://abc-123.trycloudflare.com
+
+# 3. Set the WSS URL in the remote browser extension settings to connect
+```
+
+Prerequisites: install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) and `jq`. No Cloudflare account needed (uses TryCloudflare free tunnels).
+
 ### Error recovery
 
 All commands return structured output. On error:

@@ -3,8 +3,8 @@
 # tunnel.sh — Expose the browser-cli daemon WS port via Cloudflare Tunnel
 #
 # Usage:
-#   ./scripts/tunnel.sh          # auto-detect port from running daemon
-#   ./scripts/tunnel.sh 9333     # override port manually
+#   ./skills/browser-cli/scripts/tunnel.sh          # auto-detect port from running daemon
+#   ./skills/browser-cli/scripts/tunnel.sh 9333     # override port manually
 #
 # The script will:
 #   1. Check that cloudflared is installed (guide install if missing)
