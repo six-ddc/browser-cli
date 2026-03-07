@@ -617,11 +617,14 @@ commands. Check for a matching guide before using generic extraction.
 | linkedin.com                                         | [sites/linkedin.com.md](references/sites/linkedin.com.md)                   |
 | jira (any Jira Server/DC instance)                   | [sites/jira-datacenter.md](references/sites/jira-datacenter.md)             |
 | opensearch-dashboards (any self-hosted OSD instance) | [sites/opensearch-dashboards.md](references/sites/opensearch-dashboards.md) |
+| scholar.google.com                                   | [sites/scholar.google.com.md](references/sites/scholar.google.com.md)       |
 | youtube.com                                          | [sites/youtube.com.md](references/sites/youtube.com.md)                     |
+| discord.com                                          | [sites/discord.com.md](references/sites/discord.com.md)                     |
+| quora.com                                            | [sites/quora.com.md](references/sites/quora.com.md)                         |
 
 When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
 
-To add a new site guide, see [sites/CONTRIBUTING.md](references/sites/CONTRIBUTING.md).
+To add a new site guide, use the `site-guide` skill (invoke with `/site-guide <domain>`). See [sites/CONTRIBUTING.md](references/sites/CONTRIBUTING.md) for format conventions.
 
 ## Detailed References
 
