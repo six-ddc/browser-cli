@@ -34,11 +34,12 @@ All paths are relative to `skills/browser-cli/` within the project root.
 ## Workflow Overview
 
 1. **Prepare** — start daemon, open target site in a dedicated tab
-2. **Explore** — identify page types, discover selectors from live DOM
-3. **Build & Validate** — write extraction scripts incrementally, test on real data
-4. **Write Recipe Script** — create the `.mjs` file with reusable functions
-5. **Write Guide** — create the `.md` file with selector tables and boilerplate
-6. **Register** — add to SKILL.md table
+2. **Explore** — identify page types; try `markdown` as a first pass for content pages
+3. **Discover Selectors** — scan live DOM for testids, containers, field selectors; check network requests for API-heavy SPAs
+4. **Build & Validate** — write extraction scripts incrementally, test on real data
+5. **Write Recipe Script** — create the `.mjs` file with reusable functions
+6. **Write Guide** — create the `.md` file with selector tables and boilerplate
+7. **Register** — add to SKILL.md table
 
 ---
 
@@ -82,6 +83,17 @@ EOF
 ```
 
 Document which pages are public and which require login.
+
+### Quick content check
+
+For **content/article pages** (news, docs, blogs), try `markdown` as a first pass before DOM discovery:
+
+```bash
+browser-cli --tab <tabId> navigate '<page-url>'
+browser-cli --tab <tabId> markdown    # extracts readable content; may be enough without DOM scraping
+```
+
+If `markdown` returns the data you need, skip DOM selector discovery and go straight to Step 5.
 
 ### Page type discovery
 
@@ -132,6 +144,29 @@ EOF
 browser-cli --tab <tabId> eval 'document.querySelector("<container> <field-sel>")?.innerText'
 ```
 
+### 3c. Check network requests for API-heavy SPAs
+
+For sites built on React/Vue/Angular that fetch data via XHR/fetch, network requests often expose cleaner extraction paths than DOM scraping:
+
+```bash
+# After navigating to the page, inspect captured API calls
+browser-cli --tab <tabId> network requests --pattern '*api*' --limit 20
+browser-cli --tab <tabId> network requests --pattern '*graphql*' --limit 10
+```
+
+If an endpoint returns clean JSON, extract via in-page `fetch()`:
+
+```bash
+browser-cli --tab <tabId> eval --stdin <<'EOF'
+(async () => {
+  const resp = await fetch('/api/data', { credentials: 'include' });
+  return await resp.json();
+})()
+EOF
+```
+
+For sites where API URLs include auth tokens (e.g., YouTube's POT), capture the full URL from network requests, mutate query params as needed, and re-fetch. Reference: `scripts/youtube.mjs` → `findTimedtextUrl`.
+
 ### Selector preference order
 
 1. `[data-testid="..."]` — most stable, explicitly for testing
@@ -171,6 +206,8 @@ EOF
 - Verify across different content types (image vs. text posts, etc.)
 
 ### Test interactions
+
+> **Anti-bot tip**: If clicks or fills are silently rejected by the site, add `--debugger` to dispatch trusted CDP events (`isTrusted=true`). Example: `browser-cli --tab <tabId> click '<sel>' --debugger`. Chrome only; falls back to synthetic events on Firefox.
 
 ```bash
 # Pagination — infinite scroll
@@ -257,6 +294,14 @@ export default async function (browser, args) {
   return await extractItems(browser);
 }
 ```
+
+### Advanced patterns
+
+For complex sites, these patterns from existing scripts are worth adapting:
+
+- **Virtual scroll accumulator** — when items are removed from the DOM as you scroll (virtualized lists), inject `window` globals to track seen items across scroll batches. Reference: `scripts/xhs.mjs` → `initScrollCollector` / `scrollAndCollect` / `getCollected`.
+- **Network capture for API extraction** — for sites with auth-bearing XHR URLs, capture the full URL from network requests and re-fetch via in-page `fetch()`. More stable than DOM selectors for data-heavy SPAs. Reference: `scripts/youtube.mjs` → `findTimedtextUrl` / `fetchTimedtext`.
+- **contentEditable input** — rich text editors don't respond to `fill`. Use `document.execCommand('insertText')` after focusing the element. Reference: `scripts/xhs.mjs` → `postComment`.
 
 ### Testing the script
 
@@ -350,6 +395,21 @@ Every guide starts with the same header boilerplate, then has selector reference
 | ------- | -------- | ----- |
 | ...     | `...`    |       |
 
+## Common Interactions (optional)
+
+Include for complex sites with multi-step flows that agents will frequently need:
+
+### <Action> (e.g., Search)
+
+```bash
+# Direct URL (most reliable)
+browser-cli --tab <tabId> navigate 'https://<domain>/search?q=<query>'
+browser-cli --tab <tabId> wait '<results-container>'
+
+# Or via recipe
+browser-cli --tab <tabId> script scripts/<name>.mjs --call <function> -- --query "test"
+```
+
 ## Notes
 
 - Gotcha 1
@@ -376,6 +436,7 @@ Before finishing, confirm:
 
 - [ ] Every selector was discovered from the live DOM (not guessed)
 - [ ] Recipe script tested with `--call` for each exported function
+- [ ] Default export (full workflow) tested end-to-end
 - [ ] Extraction returns populated data on 2–3 different pages/queries
 - [ ] Zero-value edge cases handled (0 likes, 0 comments)
 - [ ] Filter/sort interactions tested if documented
