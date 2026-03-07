@@ -8,7 +8,7 @@ without Playwright. Uses a Chrome extension + daemon architecture.
 ## Architecture
 
 - Three-layer: CLI (client) → Daemon (WS server + socket server) → Extension (WS client)
-- CLI connects to Daemon via Unix socket (~/.browser-cli/{session}.sock)
+- CLI connects to Daemon via Unix socket (~/.browser-cli/daemon.sock)
 - Daemon runs WS server on localhost:9222 for Extension connection
 - Extension background SW routes commands to chrome APIs or content scripts
 - Protocol defined in packages/shared/src/protocol/
@@ -151,4 +151,4 @@ pnpm test:e2e:cross     # Cross-command interactions, --json flag
 - Extension CSP must include `connect-src ws://localhost:*` for WS connections
 - chrome.tabs.sendMessage only works on http/https pages (not chrome://, extension pages)
 - fill() must use native value setter to work with React/Vue controlled components
-- Daemon socket path: ~/.browser-cli/{session}.sock (Unix) or TCP port (Windows)
+- Daemon socket path: ~/.browser-cli/daemon.sock (Unix) or TCP port (Windows)

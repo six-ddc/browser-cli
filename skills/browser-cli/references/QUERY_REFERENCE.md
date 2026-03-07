@@ -400,6 +400,23 @@ browser-cli errors                     # Page errors
 
 ---
 
+## Markdown Extraction
+
+```bash
+browser-cli markdown
+```
+
+Extracts the page's main content as readable Markdown (using Defuddle). Strips navigation, ads, and boilerplate. Useful for reading articles, documentation, or any content-heavy page.
+
+**Examples:**
+
+```bash
+browser-cli markdown                         # Print markdown to stdout
+browser-cli markdown --json                  # Structured JSON: { title, markdown, byline, excerpt }
+```
+
+---
+
 ## Common Patterns
 
 ### Wait for page load, then extract data

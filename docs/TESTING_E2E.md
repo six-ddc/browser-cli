@@ -102,7 +102,9 @@ test/e2e-pw/
 │   ├── 06-frame-management.spec.ts
 │   ├── 07-scroll.spec.ts
 │   ├── 08-window-management.spec.ts
-│   └── 09-shadow-dom.spec.ts
+│   ├── 08b-infinite-scroll.spec.ts
+│   ├── 09-shadow-dom.spec.ts
+│   └── 10-snapshot-robustness.spec.ts
 ├── advanced/                     # Advanced feature tests
 │   ├── 10-find-command.spec.ts
 │   ├── 11-semantic-locators.spec.ts
@@ -119,7 +121,8 @@ test/e2e-pw/
 │   ├── 21-is-commands.spec.ts
 │   ├── 22-wait-commands.spec.ts
 │   ├── 23-dynamic-state.spec.ts
-│   └── 24-tables-and-content.spec.ts
+│   ├── 24-tables-and-content.spec.ts
+│   └── 25-markdown.spec.ts
 ├── state/                        # State management tests
 │   ├── 30-cookies.spec.ts
 │   ├── 31-storage.spec.ts
@@ -207,6 +210,7 @@ test.describe('navigate command', () => {
 | `navigateAndWait`  | test   | Navigate via CLI + wait for page load: `await navigateAndWait(PAGES.LOGIN)`          |
 | `activePage`       | worker | Playwright Page with extension loaded                                                |
 | `extensionContext` | worker | Persistent browser context with extension                                            |
+| `_autoCleanup`     | test   | Auto-cleans cookies/storage between tests                                            |
 | `baseURL`          | test   | `http://localhost:4173` (local fixture server)                                       |
 
 All CLI calls include `BROWSER_CLI_DIR` in the environment, so they connect to the isolated E2E daemon automatically.

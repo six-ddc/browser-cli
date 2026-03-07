@@ -196,6 +196,10 @@ browser-cli tab <n>                          # Switch to tab by ID
 browser-cli tab new [url]                    # Open new tab
 browser-cli tab list                         # List all tabs
 browser-cli tab close [tabId]               # Close tab (default: active)
+browser-cli tab group <tabIds...>           # Group tabs together (Chrome only)
+browser-cli tab group update <groupId>      # Update group (--title, --color, --collapse, --expand)
+browser-cli tab groups                      # List all tab groups (Chrome only)
+browser-cli tab ungroup <tabIds...>         # Remove tabs from group (Chrome only)
 ```
 
 **Examples:**
@@ -206,6 +210,10 @@ browser-cli tab new https://example.com      # Open in new tab
 browser-cli tab 42                           # Switch to tab 42
 browser-cli tab close                        # Close current tab
 browser-cli tab close 42                     # Close specific tab
+browser-cli tab group 42 43 44              # Group tabs together
+browser-cli tab group update 1 --title "Research" --color blue
+browser-cli tab groups                       # List all groups
+browser-cli tab ungroup 42 43               # Remove from group
 ```
 
 ---

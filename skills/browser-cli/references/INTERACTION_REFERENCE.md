@@ -108,12 +108,12 @@ browser-cli type 'label=Search' query
 ### press - Press a Key
 
 ```bash
-browser-cli press <key> [selector]
+browser-cli press <key> [-s|--selector <selector>] [--debugger]
 ```
 
 Alias: `key`
 
-Presses a key at the page level or targeted at a specific element (optional selector). Supports modifier combinations with `+` separator.
+Presses a key at the page level or targeted at a specific element (optional `--selector`). Supports modifier combinations with `+` separator. Add `--debugger` to use Chrome DevTools Protocol for trusted events (`isTrusted=true`).
 
 **Key names:** `Enter`, `Tab`, `Escape`, `Backspace`, `Delete`, `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Home`, `End`, `PageUp`, `PageDown`, `F1`-`F12`, `Space`
 
@@ -124,9 +124,10 @@ Presses a key at the page level or targeted at a specific element (optional sele
 ```bash
 browser-cli press Enter
 browser-cli press Tab
-browser-cli press Control+a
+browser-cli press Control+a -s 'input[name="search"]'
 browser-cli press Escape
 browser-cli key Control+Shift+k
+browser-cli press Enter --debugger
 ```
 
 ---
