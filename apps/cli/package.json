@@ -57,7 +57,7 @@
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "commander": "^14.0.0",
-    "defuddle": "^0.7.0",
+    "defuddle": "^0.10.0",
     "eslint": "catalog:",
     "jsdom": "^24.0.0",
     "typescript": "catalog:",
