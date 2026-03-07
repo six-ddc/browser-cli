@@ -62,15 +62,22 @@ The CLI sends commands to a background daemon, which relays them over WebSocket 
 
 Browser-CLI ships with **site-specific guides** that contain tested CSS selectors, extraction scripts, and interaction patterns for popular websites. When an AI agent automates a known site, it can skip trial-and-error DOM exploration and use the pre-built scripts directly — **saving tokens and dramatically improving accuracy**.
 
-| Site                                                                                | What's Covered                                           |
-| ----------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| [google.com](skills/browser-cli/references/sites/google.com.md)                     | Search results extraction, pagination, "People also ask" |
-| [mail.google.com](skills/browser-cli/references/sites/mail.google.com.md)           | Gmail inbox, email reading, compose, labels              |
-| [x.com](skills/browser-cli/references/sites/x.com.md)                               | Timeline, tweets, search, profiles                       |
-| [reddit.com](skills/browser-cli/references/sites/reddit.com.md)                     | Feeds, posts, threaded comments, subreddit search        |
-| [news.ycombinator.com](skills/browser-cli/references/sites/news.ycombinator.com.md) | Front page, comments, search                             |
-| [xiaohongshu.com](skills/browser-cli/references/sites/xiaohongshu.com.md)           | Search, note detail, comments                            |
-| [weixin.sogou.com](skills/browser-cli/references/sites/weixin.sogou.com.md)         | WeChat article search                                    |
+| Site                                                                                  | What's Covered                                           |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [google.com](skills/browser-cli/references/sites/google.com.md)                       | Search results extraction, pagination, "People also ask" |
+| [scholar.google.com](skills/browser-cli/references/sites/scholar.google.com.md)       | Academic paper search, citations, metadata               |
+| [mail.google.com](skills/browser-cli/references/sites/mail.google.com.md)             | Gmail inbox, email reading, compose, labels              |
+| [youtube.com](skills/browser-cli/references/sites/youtube.com.md)                     | Video search, transcript extraction, captions            |
+| [x.com](skills/browser-cli/references/sites/x.com.md)                                 | Timeline, tweets, search, profiles                       |
+| [reddit.com](skills/browser-cli/references/sites/reddit.com.md)                       | Feeds, posts, threaded comments, subreddit search        |
+| [news.ycombinator.com](skills/browser-cli/references/sites/news.ycombinator.com.md)   | Front page, comments, search                             |
+| [linkedin.com](skills/browser-cli/references/sites/linkedin.com.md)                   | Company pages, people search, feed, job listings         |
+| [discord.com](skills/browser-cli/references/sites/discord.com.md)                     | Servers, channels, messages, search, members             |
+| [quora.com](skills/browser-cli/references/sites/quora.com.md)                         | Question search, answers extraction                      |
+| [xiaohongshu.com](skills/browser-cli/references/sites/xiaohongshu.com.md)             | Search, note detail, comments                            |
+| [weixin.sogou.com](skills/browser-cli/references/sites/weixin.sogou.com.md)           | WeChat article search                                    |
+| [jira-datacenter](skills/browser-cli/references/sites/jira-datacenter.md)             | Self-hosted Jira issue tracking, agile boards            |
+| [opensearch-dashboards](skills/browser-cli/references/sites/opensearch-dashboards.md) | Self-hosted log analytics (Kibana fork)                  |
 
 Each guide includes ready-to-use `browser-cli eval` scripts, key selectors, pagination/scroll patterns, and site-specific gotchas (auth requirements, shadow DOM, SPA caveats). Community contributions welcome — use the [site-guide skill](skills/site-guide/SKILL.md) to interactively explore a site's live DOM and generate a tested guide, or see the [contributing guide](skills/browser-cli/references/sites/CONTRIBUTING.md) for manual authoring.
 
