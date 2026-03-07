@@ -191,18 +191,40 @@ browser-cli --tab <tabId> script SCRIPT_PATH/google.mjs --call applyTimeFilter -
 
 ### 3. Google Scholar (Academic Research)
 
-For academic papers, citations, and scholarly sources:
+For academic papers, citations, and scholarly sources.
+
+**Script path**: `SCRIPT_PATH/scholar.mjs`
 
 ```bash
-browser-cli --tab <tabId> navigate 'https://scholar.google.com/scholar?q=<encoded-query>'
-browser-cli --tab <tabId> wait '#gs_res' --timeout 5000
+# Search (with optional year filter and date sort)
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs --call search -- --query "attention mechanism" --yearFrom 2024
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs --call extractResults
 
-# Extract results
-browser-cli --tab <tabId> eval 'JSON.stringify([...document.querySelectorAll(".gs_r.gs_or")].map((el, i) => ({ index: i+1, title: el.querySelector(".gs_rt a")?.innerText || "", url: el.querySelector(".gs_rt a")?.href || "", authors: el.querySelector(".gs_a")?.innerText || "", snippet: el.querySelector(".gs_rs")?.innerText || "", citations: el.querySelector(".gs_fl a")?.innerText?.match(/\\d+/)?.[0] || "0" })))'
+# Page metadata (result count, related searches)
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs --call extractMeta
+
+# Follow citation chains
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs --call navigateCitedBy -- --url "<citedByUrl from extractResults>"
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs --call extractResults
+
+# Pagination
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs --call nextPage
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs --call extractResults
+
+# Or full workflow (search + extract in one call)
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs -- --query "LLM reasoning" --yearFrom 2023 --sort date
 ```
 
-Useful for technical research where peer-reviewed sources matter. Follow up by reading
-full papers via `markdown` when accessible.
+**Research workflow**:
+
+1. Search Scholar for the topic with year filter for recency
+2. Extract results — each includes title, authors, venue, citedBy count, PDF links
+3. Follow citation chains (`citedByUrl`) to find influential related work
+4. Read full papers via `markdown` — works on arxiv, ACL Anthology, Nature, Springer,
+   PMC, IEEE, MDPI, and most academic publishers
+
+**Notes**: `markdown` does NOT work on Scholar itself (use the recipe script). Scholar
+may trigger CAPTCHA on frequent automated queries — space out requests.
 
 ### 4. YouTube (Video Search + Transcript Extraction)
 
