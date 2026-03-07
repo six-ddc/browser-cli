@@ -1,5 +1,4 @@
 import { parseArgs } from 'node:util';
-import type { BunPlugin } from 'bun';
 import pkg from './package.json';
 
 const { values } = parseArgs({
@@ -12,25 +11,7 @@ const { values } = parseArgs({
 
 const outfile = values.outfile ?? './dist/browser-cli';
 
-// jsdom's XMLHttpRequest-impl.js calls require.resolve("./xhr-sync-worker.js") at
-// module load time. bun --compile bakes this into an absolute path from the build
-// machine, causing "Cannot find module" errors on other machines.
-// This plugin intercepts the file at bundle time and neutralizes that call.
-const patchJsdomXhr: BunPlugin = {
-  name: 'patch-jsdom-xhr',
-  setup(build) {
-    build.onLoad({ filter: /XMLHttpRequest-impl\.js$/ }, async (args) => {
-      let contents = await Bun.file(args.path).text();
-      contents = contents.replace(
-        /const syncWorkerFile = require\.resolve\s*\?\s*require\.resolve\(["']\.\/xhr-sync-worker\.js["']\)\s*:\s*null;/,
-        'const syncWorkerFile = null;',
-      );
-      return { contents, loader: 'js' };
-    });
-  },
-};
-
-// First, bundle to a temporary file with the plugin applied
+// First, bundle to a temporary file
 const bundleResult = await Bun.build({
   entrypoints: ['./src/main.ts'],
   outdir: './dist/.tmp',
@@ -39,7 +20,6 @@ const bundleResult = await Bun.build({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
-  plugins: [patchJsdomXhr],
 });
 
 if (!bundleResult.success) {

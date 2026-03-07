@@ -5,6 +5,10 @@ export default defineConfig({
   zip: {
     name: 'browser-cli-extension',
   },
+  // Escape non-ASCII chars — Chrome rejects content scripts with raw UTF-8 bytes
+  vite: () => ({
+    esbuild: { charset: 'ascii' },
+  }),
   modules: ['@wxt-dev/module-react'],
   runner: {
     disabled: false,

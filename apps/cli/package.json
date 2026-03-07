@@ -53,13 +53,10 @@
   "devDependencies": {
     "@browser-cli/shared": "workspace:*",
     "@eslint/js": "catalog:",
-    "@types/jsdom": "^21.1.0",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "commander": "^14.0.0",
-    "defuddle": "^0.10.0",
     "eslint": "catalog:",
-    "jsdom": "^24.0.0",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:",

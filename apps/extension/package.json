@@ -17,6 +17,7 @@
   "dependencies": {
     "@browser-cli/shared": "workspace:*",
     "aria-api": "^0.8.0",
+    "defuddle": "0.10.0",
     "dom-accessibility-api": "^0.7.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

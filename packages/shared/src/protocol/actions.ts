@@ -639,12 +639,6 @@ export interface MarkdownResult {
   excerpt: string | null;
 }
 
-/** Raw HTML returned by extension for CLI-side extraction */
-export interface MarkdownRawResult {
-  html: string;
-  url: string;
-}
-
 // ─── Action Definition (Single Source of Truth) ─────────────────────
 
 /**
