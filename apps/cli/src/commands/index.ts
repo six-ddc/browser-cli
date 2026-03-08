@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 
 // Lifecycle
-import { startCommand, stopCommand, statusCommand } from './lifecycle.js';
+import { startCommand, stopCommand, statusCommand, listCommand } from './lifecycle.js';
 // Navigation
 import { navigateCommand, backCommand, forwardCommand, reloadCommand } from './navigate.js';
 // Interaction
@@ -71,110 +71,62 @@ import { containerCommand } from './container.js';
 // Script
 import { scriptCommand } from './script.js';
 
+/**
+ * Single source of truth for command registration AND categorization.
+ * help-generator.ts reads this directly — no separate category list to maintain.
+ *
+ * To add a new command: import it, then add it to the appropriate category below.
+ */
+export const commandCategories: Array<{ name: string; commands: Command[] }> = [
+  { name: 'Lifecycle', commands: [startCommand, stopCommand, statusCommand, listCommand] },
+  { name: 'Navigation', commands: [navigateCommand, backCommand, forwardCommand, reloadCommand] },
+  {
+    name: 'Interaction',
+    commands: [
+      clickCommand,
+      dblclickCommand,
+      hoverCommand,
+      fillCommand,
+      typeCommand,
+      pressCommand,
+      clearCommand,
+      focusCommand,
+      keydownCommand,
+      keyupCommand,
+      dragCommand,
+    ],
+  },
+  { name: 'Mouse', commands: [mouseCommand] },
+  { name: 'Form', commands: [checkCommand, uncheckCommand, selectCommand, uploadCommand] },
+  { name: 'Scroll', commands: [scrollCommand, scrollIntoViewCommand] },
+  { name: 'Data Queries', commands: [getCommand, isCommand] },
+  { name: 'Snapshot', commands: [snapshotCommand] },
+  { name: 'Screenshot', commands: [screenshotCommand] },
+  { name: 'Wait', commands: [waitCommand, waitForUrlCommand] },
+  { name: 'Evaluate', commands: [evalCommand] },
+  { name: 'Console', commands: [consoleCommand, errorsCommand] },
+  { name: 'Tabs', commands: [tabCommand] },
+  { name: 'Cookies', commands: [cookiesCommand] },
+  { name: 'Storage', commands: [storageCommand] },
+  { name: 'Dialog', commands: [dialogCommand] },
+  { name: 'Highlight', commands: [highlightCommand] },
+  { name: 'Frame', commands: [frameCommand] },
+  { name: 'Network', commands: [networkCommand] },
+  { name: 'Window', commands: [windowCommand] },
+  { name: 'Browser Config', commands: [setCommand] },
+  { name: 'State', commands: [stateCommand] },
+  { name: 'Find', commands: [findCommand] },
+  { name: 'Markdown', commands: [markdownCommand] },
+  { name: 'Bookmarks', commands: [bookmarkCommand] },
+  { name: 'History', commands: [historyCommand] },
+  { name: 'Container', commands: [containerCommand] },
+  { name: 'Script', commands: [scriptCommand] },
+];
+
 export function registerCommands(program: Command): void {
-  // Lifecycle
-  program.addCommand(startCommand);
-  program.addCommand(stopCommand);
-  program.addCommand(statusCommand);
-
-  // Navigation
-  program.addCommand(navigateCommand);
-  program.addCommand(backCommand);
-  program.addCommand(forwardCommand);
-  program.addCommand(reloadCommand);
-
-  // Interaction
-  program.addCommand(clickCommand);
-  program.addCommand(dblclickCommand);
-  program.addCommand(hoverCommand);
-  program.addCommand(fillCommand);
-  program.addCommand(typeCommand);
-  program.addCommand(pressCommand);
-  program.addCommand(clearCommand);
-  program.addCommand(focusCommand);
-  program.addCommand(keydownCommand);
-  program.addCommand(keyupCommand);
-  program.addCommand(dragCommand);
-
-  // Mouse
-  program.addCommand(mouseCommand);
-
-  // Form
-  program.addCommand(checkCommand);
-  program.addCommand(uncheckCommand);
-  program.addCommand(selectCommand);
-  program.addCommand(uploadCommand);
-
-  // Scroll
-  program.addCommand(scrollCommand);
-  program.addCommand(scrollIntoViewCommand);
-
-  // Data queries
-  program.addCommand(getCommand);
-  program.addCommand(isCommand);
-
-  // Snapshot
-  program.addCommand(snapshotCommand);
-
-  // Screenshot
-  program.addCommand(screenshotCommand);
-
-  // Wait
-  program.addCommand(waitCommand);
-  program.addCommand(waitForUrlCommand);
-
-  // Evaluate
-  program.addCommand(evalCommand);
-
-  // Console
-  program.addCommand(consoleCommand);
-  program.addCommand(errorsCommand);
-
-  // Tabs
-  program.addCommand(tabCommand);
-
-  // Cookies
-  program.addCommand(cookiesCommand);
-
-  // Storage
-  program.addCommand(storageCommand);
-
-  // Dialog
-  program.addCommand(dialogCommand);
-
-  // Highlight
-  program.addCommand(highlightCommand);
-
-  // Frame
-  program.addCommand(frameCommand);
-
-  // Network
-  program.addCommand(networkCommand);
-
-  // Window
-  program.addCommand(windowCommand);
-
-  // Browser Config
-  program.addCommand(setCommand);
-
-  // State
-  program.addCommand(stateCommand);
-
-  // Find (AgentBrowser-compatible)
-  program.addCommand(findCommand);
-
-  // Markdown
-  program.addCommand(markdownCommand);
-
-  // Bookmarks
-  program.addCommand(bookmarkCommand);
-
-  // History
-  program.addCommand(historyCommand);
-
-  // Container (Firefox)
-  program.addCommand(containerCommand);
-
-  // Script
-  program.addCommand(scriptCommand);
+  for (const category of commandCategories) {
+    for (const cmd of category.commands) {
+      program.addCommand(cmd);
+    }
+  }
 }

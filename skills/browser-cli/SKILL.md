@@ -16,7 +16,7 @@ Automate a real browser from the command line. Browser-CLI uses a Chrome/Firefox
 
 ## Setup
 
-Run `browser-cli status` to check readiness. If the command fails or shows no connected sessions, follow the [Setup Guide](references/SETUP.md) to install the CLI and browser extension.
+Run `browser-cli status` to check readiness, or `browser-cli list` to see connected browser sessions. If the command fails or shows no connected sessions, follow the [Setup Guide](references/SETUP.md) to install the CLI and browser extension.
 
 When ready, start the daemon with `browser-cli start` before issuing commands.
 
@@ -48,9 +48,11 @@ browser-cli tab new https://other.com --group browser-cli
 
 | Option                  | Description                                                                                                                                                                                        |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--session <sessionId>` | Target a specific browser connection by session ID (e.g., `brave-falcon`). Only needed with multiple browsers; get IDs from `browser-cli status`                                                   |
+| `--session <sessionId>` | Target a specific browser connection by session ID (e.g., `brave-falcon`). Only needed with multiple browsers; get IDs from `browser-cli list`                                                     |
 | `--tab <tabId>`         | Target a specific tab by ID (get IDs from `tab list`). Commands run against this tab instead of the active tab. For `screenshot`, the tab is auto-switched to active first (Chrome API limitation) |
 | `--json`                | Output in JSON format (machine-readable)                                                                                                                                                           |
+| `--help-json`           | Output full command reference as JSON (for AI agents)                                                                                                                                              |
+| `--help-all`            | Show all commands organized by category                                                                                                                                                            |
 
 ## Selector Types
 
@@ -88,6 +90,15 @@ browser-cli fill @e2 hello   # Fill by ref
 
 ## Commands Reference
 
+### Lifecycle & Sessions
+
+| Command  | Description                                                                              |
+| -------- | ---------------------------------------------------------------------------------------- |
+| `start`  | Start the daemon (`--port`, `--host`, `--auth`, `--token`)                               |
+| `stop`   | Stop the daemon                                                                          |
+| `status` | Show daemon status, connections, uptime                                                  |
+| `list`   | List connected browser sessions (table format with session ID, browser, connection time) |
+
 ### Navigation & Waiting
 
 #### Navigation
@@ -103,9 +114,9 @@ browser-cli fill @e2 hello   # Fill by ref
 
 | Command                  | Description                                                              |
 | ------------------------ | ------------------------------------------------------------------------ |
-| `wait <selector>`        | Wait for element to appear (`--timeout <ms>`, `--hidden`)                |
-| `wait <ms>`              | Wait for duration (auto-detects numeric)                                 |
-| `wait --url <pattern>`   | Wait for URL to match                                                    |
+| `wait <selector>`        | Wait for element to appear (`--timeout <ms>`, `--hidden` for disappear)  |
+| `wait <ms>`              | Wait for duration in ms (auto-detects numeric argument)                  |
+| `wait --url <pattern>`   | Wait for URL to match pattern                                            |
 | `wait --text <text>`     | Wait for text content to appear on page                                  |
 | `wait --load [state]`    | Wait for load state: `load` (default), `domcontentloaded`, `networkidle` |
 | `wait --fn <expression>` | Wait for JS expression to return truthy                                  |
@@ -115,27 +126,27 @@ browser-cli fill @e2 hello   # Fill by ref
 
 #### Basic Interaction
 
-| Command                        | Description                                                                                                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `click <selector>`             | Click element (`--button left/right/middle`, `--debugger`)                                                                                                   |
-| `dblclick <selector>`          | Double-click element (`--debugger`)                                                                                                                          |
-| `hover <selector>`             | Hover over element (`--debugger` for CSS `:hover`)                                                                                                           |
-| `fill <selector> <value>`      | Fill input (replaces content) (`--debugger`)                                                                                                                 |
-| `type <selector> <text>`       | Type text character-by-character (`--delay <ms>`, `--debugger`)                                                                                              |
-| `press <key>`                  | Press key (alias: `key`, `-s/--selector <sel>`, `--debugger`). Without `--selector`, targets `document.activeElement`. Examples: `Enter`, `Tab`, `Control+a` |
-| `clear <selector>`             | Clear an input field                                                                                                                                         |
-| `focus <selector>`             | Focus an element                                                                                                                                             |
-| `check <selector>`             | Check a checkbox/radio                                                                                                                                       |
-| `uncheck <selector>`           | Uncheck a checkbox                                                                                                                                           |
-| `select <selector> <value>`    | Select dropdown option (matches by value, text, or label)                                                                                                    |
-| `upload <selector> <files...>` | Upload files (`--clear` to clear first)                                                                                                                      |
-| `drag <source> <target>`       | Drag element to target                                                                                                                                       |
-| `keydown <key>`                | Press key down without releasing                                                                                                                             |
-| `keyup <key>`                  | Release a held key                                                                                                                                           |
+| Command                        | Description                                                                                          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `click <selector>`             | Click an element (`--button right/middle`; `--debugger` for CDP isTrusted events)                    |
+| `dblclick <selector>`          | Double-click an element (`--debugger` for CDP isTrusted events)                                      |
+| `hover <selector>`             | Hover over an element (`--debugger` for CDP dispatch, activates CSS `:hover`)                        |
+| `fill <selector> <value>`      | Fill an input, replacing content (works with React/Vue; `--debugger` for CDP)                        |
+| `type <selector> <text>`       | Type text character by character (`--delay` ms between keys; `--debugger` for CDP)                   |
+| `press <key>`                  | Press a key or combo like Enter, Tab, Control+a (alias: `key`; `-s` to target element; `--debugger`) |
+| `clear <selector>`             | Clear an input field                                                                                 |
+| `focus <selector>`             | Focus an element                                                                                     |
+| `check <selector>`             | Check a checkbox or radio button                                                                     |
+| `uncheck <selector>`           | Uncheck a checkbox                                                                                   |
+| `select <selector> <value>`    | Select an option in a `<select>` dropdown by value or visible text                                   |
+| `upload <selector> <files...>` | Upload file(s) to a file input element (`--clear` to reset)                                          |
+| `drag <source> <target>`       | Drag an element to a target                                                                          |
+| `keydown <key>`                | Press a key down (without releasing)                                                                 |
+| `keyup <key>`                  | Release a key                                                                                        |
 
 #### Find Command (Locate + Act)
 
-`find <selector> [action] [value]` — locate element by any selector and perform action in one step.
+`find <selector> [action] [value]` — find by CSS/semantic locator/XPath and act (default: click; `--first`/`--last`/`--nth` to pick match).
 
 **Selector**: any CSS selector, semantic locator, or `@ref`
 **Actions**: `click` (default), `dblclick`, `fill`, `type`, `hover`, `check`, `uncheck`, `select`, `press`, `clear`, `focus`
@@ -156,10 +167,10 @@ browser-cli fill @e2 hello   # Fill by ref
 
 #### Scroll
 
-| Command                     | Description                                                                      |
-| --------------------------- | -------------------------------------------------------------------------------- |
-| `scroll <direction>`        | Scroll page: `up`, `down`, `left`, `right` (`--amount <px>`, `--selector <sel>`) |
-| `scrollintoview <selector>` | Scroll element into view (CSS, semantic locator, or `@ref`)                      |
+| Command                     | Description                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| `scroll <direction>`        | Scroll the page or element (up/down/left/right; `--amount` px; `--selector` to scope) |
+| `scrollintoview <selector>` | Scroll an element into view (CSS, semantic locator, or `@ref`)                        |
 
 #### Mouse Control (Low-level)
 
@@ -172,6 +183,8 @@ browser-cli fill @e2 hello   # Fill by ref
 
 #### Element Highlight
 
+Highlight an element with a visual overlay (`--color`, `--duration` ms):
+
 ```bash
 browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 ```
@@ -179,6 +192,8 @@ browser-cli highlight <selector> [--color <color>] [--duration <ms>]
 ### Page Content & Data
 
 #### Snapshot (Accessibility Tree)
+
+Get accessibility tree snapshot (`-i` interactive, `-c` compact, `-C` cursor, `-d` depth, `-s` selector, `-f` role filter):
 
 ```bash
 browser-cli snapshot [options]
@@ -217,9 +232,11 @@ browser-cli --tab 12345 snapshot --filter heading      # page heading structure
 browser-cli markdown
 ```
 
-Extracts the current page's readable content using Defuddle and converts it to Markdown. Long query strings in URLs are automatically trimmed. Useful for AI agents consuming page content.
+Extracts page content as clean Markdown using Defuddle for article extraction. Long query strings in URLs are automatically trimmed. Useful for AI agents consuming page content.
 
 #### Screenshot
+
+Capture a screenshot (`--selector` for element, `--path` to save, `--format` png/jpeg, `--quality` 0-100):
 
 ```bash
 browser-cli screenshot [options]
@@ -234,24 +251,26 @@ browser-cli screenshot [options]
 
 #### Data Queries (get)
 
-| Command                           | Description                         |
-| --------------------------------- | ----------------------------------- |
-| `get url`                         | Current page URL                    |
-| `get title`                       | Current page title                  |
-| `get text <selector>`             | Text content of element             |
-| `get html <selector>`             | innerHTML (`--outer` for outerHTML) |
-| `get value <selector>`            | Input value                         |
-| `get attr <selector> <attribute>` | Attribute value                     |
-| `get count <selector>`            | Count matching elements             |
-| `get box <selector>`              | Bounding box (x, y, width, height)  |
+| Command                           | Description                                       |
+| --------------------------------- | ------------------------------------------------- |
+| `get url`                         | Current page URL                                  |
+| `get title`                       | Current page title                                |
+| `get text <selector>`             | Text content of element                           |
+| `get html <selector>`             | innerHTML of an element (`--outer` for outerHTML) |
+| `get value <selector>`            | Input value                                       |
+| `get attr <selector> <attribute>` | Attribute value                                   |
+| `get count <selector>`            | Count matching elements                           |
+| `get box <selector>`              | Bounding box (x, y, width, height)                |
 
 #### State Queries (is)
 
-| Command                 | Description         |
-| ----------------------- | ------------------- |
-| `is visible <selector>` | Check visibility    |
-| `is enabled <selector>` | Check enabled state |
-| `is checked <selector>` | Check checked state |
+Check element state — returns true/false:
+
+| Command                 | Description                          |
+| ----------------------- | ------------------------------------ |
+| `is visible <selector>` | Check if an element is visible       |
+| `is enabled <selector>` | Check if an element is enabled       |
+| `is checked <selector>` | Check if a checkbox/radio is checked |
 
 #### JavaScript Execution
 
@@ -261,51 +280,51 @@ browser-cli eval -b/--base64 '<base64-encoded-expression>'  # decode from base64
 echo '<expression>' | browser-cli eval --stdin       # read from stdin
 ```
 
-Evaluates JavaScript in the page context and returns the result. **Async-aware**: Promises are auto-awaited, so `fetch()` and async IIFEs work directly. CSP-strict pages (Gmail, GitHub, etc.) are handled automatically with platform-specific fallbacks.
+Evaluates JavaScript in the page context (runs in MAIN world; `--stdin` or `-b` base64 input) and returns the result. **Async-aware**: Promises are auto-awaited, so `fetch()` and async IIFEs work directly. CSP-strict pages (Gmail, GitHub, etc.) are handled automatically with platform-specific fallbacks.
 
 #### Console & Errors
 
-| Command   | Description                                                         |
-| --------- | ------------------------------------------------------------------- |
-| `console` | Get console output (`--level log/warn/error/info/debug`, `--clear`) |
-| `errors`  | Get page errors                                                     |
+| Command   | Description                                                                              |
+| --------- | ---------------------------------------------------------------------------------------- |
+| `console` | Get page console output (`--level` log/warn/error/info/debug; `--clear` to reset buffer) |
+| `errors`  | Get page errors (shorthand for console `--level` error)                                  |
 
 ### Tabs, Windows & Frames
 
 #### Tab Management
 
-| Command                                                                  | Description                                             |
-| ------------------------------------------------------------------------ | ------------------------------------------------------- |
-| `tab`                                                                    | List all tabs                                           |
-| `tab <n>`                                                                | Switch to tab by ID                                     |
-| `tab new [url] [--group <name>] [--container <name>]`                    | Open new tab (optionally in a named group or container) |
-| `tab list`                                                               | List all tabs                                           |
-| `tab close [tabId]`                                                      | Close tab (default: active)                             |
-| `tab group <tabIds...>`                                                  | Group tabs together (Chrome only)                       |
-| `tab group update <groupId> [--title] [--color] [--collapse] [--expand]` | Update a tab group (Chrome only)                        |
-| `tab groups`                                                             | List all tab groups (Chrome only)                       |
-| `tab ungroup <tabIds...>`                                                | Remove tabs from their group (Chrome only)              |
+| Command                                                                  | Description                                                           |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| `tab`                                                                    | List all tabs (or switch by ID; subcommands: new, list, close, group) |
+| `tab <n>`                                                                | Switch to tab by ID                                                   |
+| `tab new [url] [--group <name>] [--container <name>]`                    | Open new tab (optionally in a named group or container)               |
+| `tab list`                                                               | List all tabs                                                         |
+| `tab close [tabId]`                                                      | Close tab (default: active)                                           |
+| `tab group <tabIds...>`                                                  | Group tabs together (Chrome only)                                     |
+| `tab group update <groupId> [--title] [--color] [--collapse] [--expand]` | Update a tab group (Chrome only)                                      |
+| `tab groups`                                                             | List all tab groups (Chrome only)                                     |
+| `tab ungroup <tabIds...>`                                                | Remove tabs from their group (Chrome only)                            |
 
 **Tab group colors**: `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`
 
 #### Window Management
 
-| Command                   | Description                          |
-| ------------------------- | ------------------------------------ |
-| `window`                  | List windows                         |
-| `window new [url]`        | Open new window                      |
-| `window list`             | List windows                         |
-| `window close [windowId]` | Close window                         |
-| `window focus [windowId]` | Focus a window (defaults to current) |
+| Command                   | Description                                         |
+| ------------------------- | --------------------------------------------------- |
+| `window`                  | List windows (subcommands: new, list, close, focus) |
+| `window new [url]`        | Open new window                                     |
+| `window list`             | List windows                                        |
+| `window close [windowId]` | Close window (defaults to current)                  |
+| `window focus [windowId]` | Focus a window (defaults to current)                |
 
 #### Frame Management (iframe)
 
-| Command            | Description               |
-| ------------------ | ------------------------- |
-| `frame <selector>` | Switch to iframe          |
-| `frame main`       | Switch back to main frame |
-| `frame list`       | List all frames           |
-| `frame current`    | Show current frame info   |
+| Command            | Description                           |
+| ------------------ | ------------------------------------- |
+| `frame <selector>` | Switch to iframe by selector          |
+| `frame main`       | Switch back to top-level (main frame) |
+| `frame list`       | List all frames in the page           |
+| `frame current`    | Show current frame info               |
 
 #### Container Management (Firefox only)
 
@@ -327,7 +346,7 @@ Evaluates JavaScript in the page context and returns the result. **Async-aware**
 
 | Command                      | Description                                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------------------------- |
-| `cookies`                    | List all cookies                                                                            |
+| `cookies`                    | List all cookies (subcommands: get, set, clear)                                             |
 | `cookies get [name]`         | Get cookies (`--url`, `--domain`)                                                           |
 | `cookies set <name> <value>` | Set cookie (`--url` required, `--domain`, `--path`, `--secure`, `--httponly`, `--samesite`) |
 | `cookies clear`              | Clear cookies (`--url`, `--domain`)                                                         |
@@ -356,10 +375,10 @@ Evaluates JavaScript in the page context and returns the result. **Async-aware**
 
 #### Dialog Handling
 
-| Command                | Description                                    |
-| ---------------------- | ---------------------------------------------- |
-| `dialog accept [text]` | Auto-accept next dialog (optional prompt text) |
-| `dialog dismiss`       | Auto-dismiss next dialog                       |
+| Command                | Description                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| `dialog accept [text]` | Auto-accept the next dialog (must be set before dialog appears; optional prompt text) |
+| `dialog dismiss`       | Auto-dismiss the next dialog (must be set before dialog appears)                      |
 
 #### Browser Configuration
 
@@ -372,18 +391,18 @@ Evaluates JavaScript in the page context and returns the result. **Async-aware**
 
 #### Bookmarks
 
-| Command                      | Description                         |
-| ---------------------------- | ----------------------------------- |
-| `bookmark [search]`          | List bookmarks or search by keyword |
-| `bookmark add <url> [title]` | Add a bookmark                      |
-| `bookmark remove <id>`       | Remove a bookmark by ID             |
+| Command                      | Description                                                           |
+| ---------------------------- | --------------------------------------------------------------------- |
+| `bookmark [search]`          | List all bookmarks; pass keyword to search (subcommands: add, remove) |
+| `bookmark add <url> [title]` | Add a bookmark                                                        |
+| `bookmark remove <id>`       | Remove a bookmark by ID                                               |
 
 #### History
 
-| Command                 | Description                                       |
-| ----------------------- | ------------------------------------------------- |
-| `history [--limit N]`   | List recent browser history (default: 20 entries) |
-| `history search <text>` | Search browser history by text (`--limit N`)      |
+| Command                 | Description                                                 |
+| ----------------------- | ----------------------------------------------------------- |
+| `history [--limit N]`   | Browse recent history (`--limit` count; subcommand: search) |
+| `history search <text>` | Search browser history by text (`--limit N`)                |
 
 #### State Management (Save/Load)
 
@@ -396,15 +415,15 @@ Evaluates JavaScript in the page context and returns the result. **Async-aware**
 
 Run multi-step browser automation as a single operation. Unlike `eval` (which runs a single JS expression in the page context), `script` runs an ES module in the **CLI process (Node.js)** and dispatches each `browser.xxx()` call through the CLI → Daemon → Extension pipeline. This means scripts can use Node.js APIs, `process.env`, and npm packages.
 
-| Command                                    | Description                               |
-| ------------------------------------------ | ----------------------------------------- |
-| `script <file.js>`                         | Run script from file (default export)     |
-| `script -`                                 | Read script from stdin                    |
-| `script <file> --call <name>`              | Call a named export instead of default    |
-| `script <file> --call <name> -- [args...]` | Call named export with arguments          |
-| `script <file> --list`                     | List all exported functions in the script |
-| `script <file> --timeout <ms>`             | Run script with per-command timeout       |
-| `script <file> -- [args...]`               | Pass arguments to the script              |
+| Command                                    | Description                                            |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `script <file.js>`                         | Run a multi-step automation ES module (default export) |
+| `script -`                                 | Read script from stdin                                 |
+| `script <file> --call <name>`              | Call a named export instead of default                 |
+| `script <file> --call <name> -- [args...]` | Call named export with arguments                       |
+| `script <file> --list`                     | List all exported functions in the script              |
+| `script <file> --timeout <ms>`             | Run script with per-command timeout                    |
+| `script <file> -- [args...]`               | Pass arguments to the script                           |
 
 | Option               | Description                               |
 | -------------------- | ----------------------------------------- |
@@ -621,6 +640,7 @@ commands. Check for a matching guide before using generic extraction.
 | youtube.com                                          | [sites/youtube.com.md](references/sites/youtube.com.md)                     |
 | discord.com                                          | [sites/discord.com.md](references/sites/discord.com.md)                     |
 | quora.com                                            | [sites/quora.com.md](references/sites/quora.com.md)                         |
+| weibo.com                                            | [sites/weibo.com.md](references/sites/weibo.com.md)                         |
 
 When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
 

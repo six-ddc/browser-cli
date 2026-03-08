@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const frameCmd = new Command('frame')
-  .description('Frame management (switch between main page and iframes)')
+  .description('Switch to iframe by selector, or "main" for top-level (subcommands: list, current)')
   .argument('[selectorOrKeyword]', 'Selector to switch to iframe, or "main" to return to top frame')
   .action(async (selectorOrKeyword: string | undefined, _opts: unknown, cmd: Command) => {
     if (!selectorOrKeyword) {

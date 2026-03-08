@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 export const scrollCommand = new Command('scroll')
-  .description('Scroll the page or element')
+  .description('Scroll the page or element (up/down/left/right; --amount px; --selector to scope)')
   .argument('<direction>', 'Direction: up, down, left, right')
   .option('--amount <px>', 'Scroll amount in pixels', '400')
   .option('--selector <sel>', 'Element to scroll (defaults to page)')

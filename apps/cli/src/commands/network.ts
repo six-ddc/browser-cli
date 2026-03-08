@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const networkCmd = new Command('network').description(
-  'Network interception (block/redirect/track requests)',
+  'Network interception — block/redirect/track requests (subcommands: route, unroute, routes, requests, clear)',
 );
 
 networkCmd

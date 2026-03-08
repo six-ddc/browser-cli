@@ -15,7 +15,9 @@ function readStdin(): Promise<string> {
 }
 
 export const evalCommand = new Command('eval')
-  .description('Evaluate JavaScript in the page context')
+  .description(
+    'Evaluate JavaScript in the page context (runs in MAIN world; --stdin or -b base64 input)',
+  )
   .argument('[expression]', 'JavaScript expression')
   .option('-b, --base64', 'Decode expression from base64')
   .option('--stdin', 'Read expression from stdin')

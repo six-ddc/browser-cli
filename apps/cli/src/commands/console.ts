@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 export const consoleCommand = new Command('console')
-  .description('Get page console output')
+  .description(
+    'Get page console output (--level log/warn/error/info/debug; --clear to reset buffer)',
+  )
   .option('--level <level>', 'Filter by level: log, warn, error, info, debug')
   .option('--clear', 'Clear console buffer after reading')
   .action(async (opts: { level?: string; clear?: boolean }, cmd: Command) => {
@@ -30,7 +32,7 @@ export const consoleCommand = new Command('console')
   });
 
 export const errorsCommand = new Command('errors')
-  .description('Get page error output')
+  .description('Get page errors (shorthand for console --level error)')
   .action(async (_opts: unknown, cmd: Command) => {
     const result = await sendCommand(cmd, { action: 'getErrors', params: {} });
     if (result) {

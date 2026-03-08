@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 export const dialogCommand = new Command('dialog').description(
-  'Handle page dialogs (alert, confirm, prompt)',
+  'Handle page dialogs — must be set before dialog appears (subcommands: accept, dismiss)',
 );
 
 dialogCommand

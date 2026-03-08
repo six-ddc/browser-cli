@@ -1,7 +1,9 @@
 import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
-const mouseCmd = new Command('mouse').description('Low-level mouse control');
+const mouseCmd = new Command('mouse').description(
+  'Low-level mouse control (subcommands: move, down, up, wheel)',
+);
 
 mouseCmd
   .command('move <x> <y>')

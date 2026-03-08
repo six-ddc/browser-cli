@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const tabCmd = new Command('tab')
-  .description('Tab management')
+  .description('Tab management — switch by ID, or use subcommands: new, list, close, group')
   .argument('[tabId]', 'Tab ID to switch to (or subcommand)')
   .action(async (tabId: string | undefined, _opts: unknown, cmd: Command) => {
     // If tabId is a number, switch to that tab

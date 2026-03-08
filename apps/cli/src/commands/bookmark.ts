@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const bookmarkCmd = new Command('bookmark')
-  .description('Bookmark management')
+  .description(
+    'Bookmark management — bare command lists all; pass keyword to search (subcommands: add, remove)',
+  )
   .argument('[search]', 'Search bookmarks by keyword')
   .action(async (search: string | undefined, _opts: unknown, cmd: Command) => {
     const result = await sendCommand(cmd, {

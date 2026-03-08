@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const historyCmd = new Command('history')
-  .description('Browse history')
+  .description('Browse recent history (--limit count; subcommand: search)')
   .option('--limit <n>', 'Maximum number of entries', '20')
   .action(async (opts: { limit: string }, cmd: Command) => {
     const result = await sendCommand(cmd, {

@@ -4,7 +4,7 @@ import { sendCommand } from './shared.js';
 export const navigateCommand = new Command('navigate')
   .alias('goto')
   .alias('open')
-  .description('Navigate to a URL')
+  .description('Navigate to a URL (aliases: goto, open)')
   .argument('<url>', 'URL to navigate to')
   .action(async (url: string, _opts: unknown, cmd: Command) => {
     const result = await sendCommand(cmd, { action: 'navigate', params: { url } });

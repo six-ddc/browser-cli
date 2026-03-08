@@ -3,7 +3,9 @@ import { writeFileSync } from 'node:fs';
 import { sendCommand } from './shared.js';
 
 export const screenshotCommand = new Command('screenshot')
-  .description('Capture a screenshot of the current page')
+  .description(
+    'Capture a screenshot (--selector for element, --path to save, --format png/jpeg, --quality 0-100)',
+  )
   .option('--selector <sel>', 'CSS selector for element screenshot')
   .option('--path <path>', 'Save path (default: screenshot.png)')
   .option('--format <fmt>', 'Image format: png, jpeg', 'png')

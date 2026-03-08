@@ -1,7 +1,9 @@
 import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
-const getCmd = new Command('get').description('Get data from an element');
+const getCmd = new Command('get').description(
+  'Query page data (subcommands: text, html, value, attr, url, title, count, box)',
+);
 
 getCmd
   .command('text <selector>')
@@ -13,7 +15,7 @@ getCmd
 
 getCmd
   .command('html <selector>')
-  .description('Get innerHTML of an element')
+  .description('Get innerHTML of an element (--outer for outerHTML)')
   .option('--outer', 'Get outerHTML instead')
   .action(async (selector: string, opts: { outer?: boolean }, cmd: Command) => {
     const result = await sendCommand(cmd, {
@@ -77,7 +79,9 @@ getCmd
 export { getCmd as getCommand };
 
 // is commands
-const isCmd = new Command('is').description('Check element state');
+const isCmd = new Command('is').description(
+  'Check element state — returns true/false (subcommands: visible, enabled, checked)',
+);
 
 isCmd
   .command('visible <selector>')

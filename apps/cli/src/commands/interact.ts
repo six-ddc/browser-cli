@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 export const clickCommand = new Command('click')
-  .description('Click an element')
+  .description('Click an element (--button right/middle; --debugger for CDP isTrusted events)')
   .argument('<selector>', 'CSS selector or @ref')
   .option('--button <button>', 'Mouse button: left, right, middle', 'left')
   .option('--debugger', 'Use Chrome DevTools Protocol for trusted events (isTrusted=true)')
@@ -19,7 +19,7 @@ export const clickCommand = new Command('click')
   });
 
 export const dblclickCommand = new Command('dblclick')
-  .description('Double-click an element')
+  .description('Double-click an element (--debugger for CDP isTrusted events)')
   .argument('<selector>', 'CSS selector or @ref')
   .option('--debugger', 'Use Chrome DevTools Protocol for trusted events (isTrusted=true)')
   .action(async (selector: string, opts: { debugger?: true }, cmd: Command) => {
@@ -31,7 +31,7 @@ export const dblclickCommand = new Command('dblclick')
   });
 
 export const hoverCommand = new Command('hover')
-  .description('Hover over an element')
+  .description('Hover over an element (--debugger for CDP dispatch, activates CSS :hover)')
   .argument('<selector>', 'CSS selector or @ref')
   .option('--debugger', 'Use Chrome DevTools Protocol for trusted events (isTrusted=true)')
   .action(async (selector: string, opts: { debugger?: true }, cmd: Command) => {
@@ -43,7 +43,7 @@ export const hoverCommand = new Command('hover')
   });
 
 export const fillCommand = new Command('fill')
-  .description('Fill an input with a value (replaces current content)')
+  .description('Fill an input, replacing content (works with React/Vue; --debugger for CDP)')
   .argument('<selector>', 'CSS selector or @ref')
   .argument('<value>', 'Value to fill')
   .option('--debugger', 'Use Chrome DevTools Protocol for trusted events (isTrusted=true)')
@@ -56,7 +56,7 @@ export const fillCommand = new Command('fill')
   });
 
 export const typeCommand = new Command('type')
-  .description('Type text into an element (character by character)')
+  .description('Type text character by character (--delay ms between keys; --debugger for CDP)')
   .argument('<selector>', 'CSS selector or @ref')
   .argument('<text>', 'Text to type')
   .option('--delay <ms>', 'Delay between keystrokes in ms', '0')
@@ -78,7 +78,9 @@ export const typeCommand = new Command('type')
   );
 
 export const pressCommand = new Command('press')
-  .description('Press a key')
+  .description(
+    'Press a key or combo like Enter, Tab, Control+a (alias: key; -s to target element; --debugger)',
+  )
   .argument('<key>', 'Key to press (e.g., Enter, Escape, Tab)')
   .alias('key')
   .option(

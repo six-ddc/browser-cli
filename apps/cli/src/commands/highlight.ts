@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 export const highlightCommand = new Command('highlight')
-  .description('Highlight an element on the page')
+  .description('Highlight an element with a visual overlay (--color, --duration ms)')
   .argument('<selector>', 'CSS selector or @ref')
   .option('--color <color>', 'Highlight color', '#2196F3')
   .option('--duration <ms>', 'Duration in ms', '2000')

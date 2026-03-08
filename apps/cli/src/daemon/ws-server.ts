@@ -26,6 +26,7 @@ export interface ExtensionConnection {
   browser?: BrowserInfo;
   alive: boolean;
   lastPong: number;
+  connectedAt: number;
 }
 
 export interface PendingRequest {
@@ -77,12 +78,18 @@ export class WsServer {
       : null;
   }
 
-  /** All active connections for status display */
-  get allConnections(): Array<{ extensionId: string; sessionId: string; browser?: BrowserInfo }> {
+  /** All active connections for status/list display */
+  get allConnections(): Array<{
+    extensionId: string;
+    sessionId: string;
+    browser?: BrowserInfo;
+    connectedAt: number;
+  }> {
     return Array.from(this.connections.values()).map((c) => ({
       extensionId: c.extensionId,
       sessionId: c.sessionId,
       browser: c.browser,
+      connectedAt: c.connectedAt,
     }));
   }
 
@@ -215,6 +222,7 @@ export class WsServer {
       browser: msg.browser,
       alive: true,
       lastPong: Date.now(),
+      connectedAt: Date.now(),
     });
     this.defaultSessionId = sessionId;
 

@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const cookiesCmd = new Command('cookies')
-  .description('Cookie management')
+  .description('Cookie management — bare command lists all (subcommands: get, set, clear)')
   .action(async (_opts: unknown, cmd: Command) => {
     // Default action: list all cookies (like AgentBrowser bare `cookies`)
     const result = await sendCommand(cmd, {

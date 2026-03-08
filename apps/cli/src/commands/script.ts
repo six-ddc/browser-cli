@@ -39,7 +39,9 @@ function parseScriptArgs(raw: string[]): Record<string, string | boolean> {
 }
 
 export const scriptCommand = new Command('script')
-  .description('Run a multi-step browser automation script')
+  .description(
+    'Run a multi-step automation ES module (-c call export, -l list exports, -t timeout; "-" for stdin)',
+  )
   .argument('<file>', 'Path to script file (.js or .mjs), or "-" for stdin')
   .argument('[scriptArgs...]', 'Arguments passed to the script (use -- to separate)')
   .option('-t, --timeout <ms>', 'Per-command timeout in milliseconds')

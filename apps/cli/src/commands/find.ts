@@ -84,7 +84,9 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export const findCommand = new Command('find')
-  .description('Find an element by selector and perform an action')
+  .description(
+    'Find by CSS/semantic locator/XPath and act (default: click; --first/--last/--nth to pick match)',
+  )
   .argument(
     '<selector>',
     'CSS selector, semantic locator (text=Submit, role=button[name="X"]), or @ref',

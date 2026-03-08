@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const windowCmd = new Command('window')
-  .description('Window management')
+  .description(
+    'Window management — bare command lists windows (subcommands: new, list, close, focus)',
+  )
   .action(async (_opts: unknown, cmd: Command) => {
     // Default: list windows
     const result = await sendCommand(cmd, { action: 'windowList', params: {} });

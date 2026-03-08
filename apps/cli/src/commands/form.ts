@@ -18,7 +18,7 @@ export const uncheckCommand = new Command('uncheck')
   });
 
 export const selectCommand = new Command('select')
-  .description('Select an option in a dropdown')
+  .description('Select an option in a <select> dropdown by value or visible text')
   .argument('<selector>', 'CSS selector or @ref')
   .argument('<value>', 'Option value to select')
   .action(async (selector: string, value: string, _opts: unknown, cmd: Command) => {

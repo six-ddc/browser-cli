@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 export const snapshotCommand = new Command('snapshot')
-  .description('Get accessibility snapshot of the page')
+  .description(
+    'Get accessibility tree snapshot (-i interactive, -c compact, -C cursor, -d depth, -s selector, -f role filter)',
+  )
   .option('-i, --interactive', 'Only show interactive elements')
   .option('-c, --compact', 'Compact output')
   .option('-C, --cursor', 'Include cursor-interactive elements (cursor:pointer)')

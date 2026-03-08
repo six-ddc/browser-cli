@@ -16,7 +16,7 @@ function trimMarkdownUrls(md: string): string {
 }
 
 export const markdownCommand = new Command('markdown')
-  .description('Extract page content as readable Markdown')
+  .description('Extract page content as clean Markdown (uses Defuddle for article extraction)')
   .action(async (_opts: Record<string, never>, cmd: Command) => {
     const result = (await sendCommand(
       cmd,

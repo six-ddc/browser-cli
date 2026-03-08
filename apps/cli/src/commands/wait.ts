@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 export const waitCommand = new Command('wait')
-  .description('Wait for a selector, duration, URL, text, load state, or function')
+  .description(
+    'Wait for selector, duration (ms), --url, --text, --load state, or --fn expression (--timeout to customize)',
+  )
   .argument('[selectorOrMs]', 'CSS selector or duration in ms')
   .option('--timeout <ms>', 'Timeout in ms (for selector/URL wait)', '10000')
   .option('--hidden', 'Wait until hidden (not visible)')
