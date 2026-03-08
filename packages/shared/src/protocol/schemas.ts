@@ -246,6 +246,15 @@ export const highlightParamsSchema = z.object({
   duration: z.number().optional(),
 });
 
+// Network Watch (CDP)
+export const networkWatchParamsSchema = z.object({
+  pattern: z.string().optional(),
+  timeout: z.number().optional(),
+  body: z.boolean().optional(),
+  method: z.string().optional(),
+});
+export const networkUnwatchParamsSchema = z.object({});
+
 // Network
 export const routeParamsSchema = z.object({
   pattern: z.string(),
@@ -253,14 +262,7 @@ export const routeParamsSchema = z.object({
   redirectUrl: z.string().optional(),
 });
 export const unrouteParamsSchema = z.object({ routeId: z.number() });
-export const getRequestsParamsSchema = z.object({
-  pattern: z.string().optional(),
-  tabId: z.number().optional(),
-  blockedOnly: z.boolean().optional(),
-  limit: z.number().optional(),
-});
 export const getRoutesParamsSchema = emptyParamsSchema;
-export const clearRequestsParamsSchema = emptyParamsSchema;
 
 // Frame management
 export const switchFrameParamsSchema = z.object({
@@ -437,11 +439,11 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('switchFrame'), params: switchFrameParamsSchema }),
   z.object({ action: z.literal('listFrames'), params: emptyParamsSchema }),
   z.object({ action: z.literal('getCurrentFrame'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('networkWatch'), params: networkWatchParamsSchema }),
+  z.object({ action: z.literal('networkUnwatch'), params: networkUnwatchParamsSchema }),
   z.object({ action: z.literal('route'), params: routeParamsSchema }),
   z.object({ action: z.literal('unroute'), params: unrouteParamsSchema }),
-  z.object({ action: z.literal('getRequests'), params: getRequestsParamsSchema }),
   z.object({ action: z.literal('getRoutes'), params: getRoutesParamsSchema }),
-  z.object({ action: z.literal('clearRequests'), params: clearRequestsParamsSchema }),
   z.object({ action: z.literal('windowNew'), params: windowNewParamsSchema }),
   z.object({ action: z.literal('windowList'), params: emptyParamsSchema }),
   z.object({ action: z.literal('windowClose'), params: windowCloseParamsSchema }),

@@ -1,8 +1,6 @@
 import { test, expect } from '../fixtures';
 import { PAGES, SEL } from '../helpers/constants';
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 const isHeadless = process.env.HEADLESS !== '0';
 
 // ===========================================================================
@@ -136,16 +134,6 @@ test.describe('--json network', () => {
     const r = bcli('--json', 'network', 'routes');
     expect(r).toBcliSuccess();
     expect(() => JSON.parse(r.stdout)).not.toThrow();
-  });
-
-  test('--json network requests succeeds', async ({ bcli, navigateAndWait }) => {
-    await navigateAndWait(PAGES.HOME);
-    await sleep(1000);
-    const r = bcli('--json', 'network', 'requests');
-    expect(r).toBcliSuccess();
-    // Output may be single JSON, NDJSON, or mixed format — just verify non-empty and contains success indicator
-    expect(r.stdout.trim().length).toBeGreaterThan(0);
-    expect(r.stdout).toContain('success');
   });
 });
 

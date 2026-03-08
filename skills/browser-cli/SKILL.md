@@ -364,14 +364,60 @@ Evaluates JavaScript in the page context (runs in MAIN world; `--stdin` or `-b` 
 
 #### Network Interception
 
-| Command                                    | Description                                                          |
-| ------------------------------------------ | -------------------------------------------------------------------- |
-| `network route <pattern> --abort`          | Block requests matching pattern                                      |
-| `network route <pattern> --redirect <url>` | Redirect matching requests                                           |
-| `network unroute <routeId>`                | Remove a route                                                       |
-| `network routes`                           | List active routes                                                   |
-| `network requests`                         | List tracked requests (`--pattern`, `--tab`, `--blocked`, `--limit`) |
-| `network clear`                            | Clear tracked requests                                               |
+| Command                                    | Description                     |
+| ------------------------------------------ | ------------------------------- |
+| `network route <pattern> --abort`          | Block requests matching pattern |
+| `network route <pattern> --redirect <url>` | Redirect matching requests      |
+| `network unroute <routeId>`                | Remove a route                  |
+| `network routes`                           | List active routes              |
+
+#### Network Watch (CDP)
+
+Monitor API requests/responses with full request/response bodies via Chrome DevTools Protocol.
+The command returns immediately; captured traffic is written to a file in `~/.browser-cli/watches/`.
+
+| Command                   | Description                                             |
+| ------------------------- | ------------------------------------------------------- |
+| `network watch [pattern]` | Start monitoring network (non-blocking, writes to file) |
+| `network unwatch`         | Stop an active network watch (use `--tab` to target)    |
+
+**Options for `network watch`:**
+
+- `--timeout <ms>` — auto-stop after ms (default: `30000`)
+- `--body` — capture response bodies (skips binary; default off)
+- `--method <method>` — filter by HTTP method (e.g. `GET`, `POST`)
+
+**Usage:**
+
+```bash
+# Start watching API calls
+browser-cli network watch '/api/*' --timeout 30000 --body
+
+# Perform actions...
+browser-cli click '#submit'
+
+# Stop watching (or wait for timeout)
+browser-cli network unwatch
+
+# View captured traffic
+cat ~/.browser-cli/watches/watch-*.txt
+```
+
+**Output format:** HTTP-readable text (httpie-style), one request/response pair per block:
+
+```
+>>> POST https://api.example.com/users  [XHR, 142ms]
+Content-Type: application/json
+
+{"name": "Alice"}
+
+<<< 200 OK  (256B)
+Content-Type: application/json
+
+{"id": 1, "name": "Alice"}
+```
+
+**Note:** Chrome only (uses `chrome.debugger` API). Not available on Firefox.
 
 #### Dialog Handling
 
@@ -606,7 +652,7 @@ browser-cli network route '*google-analytics*' --abort
 browser-cli network route '*doubleclick.net*' --abort
 browser-cli tab new https://example.com --group browser-cli
 # Output: Tab 12345: ...
-browser-cli --tab 12345 network requests --blocked        # Verify blocked requests
+browser-cli --tab 12345 network routes                     # Verify active routes
 ```
 
 ### Tab management
@@ -654,7 +700,7 @@ For comprehensive documentation on each domain:
 - [SELECTOR_REFERENCE.md](references/SELECTOR_REFERENCE.md) — CSS selectors, semantic locators (role/text/label/placeholder/alt/title/testid/xpath), element refs, find command engines, position selectors, best practices
 - [INTERACTION_REFERENCE.md](references/INTERACTION_REFERENCE.md) — click, fill, type, press, drag, check/uncheck, select, upload, mouse control, scroll, form filling patterns
 - [QUERY_REFERENCE.md](references/QUERY_REFERENCE.md) — get/is queries, wait operations, snapshot flags, screenshot options, eval, console/errors, data extraction patterns
-- [NETWORK_REFERENCE.md](references/NETWORK_REFERENCE.md) — network interception (route/unroute/requests), cookies, storage, tabs, frames, windows, dialogs, browser config, state save/load
+- [NETWORK_REFERENCE.md](references/NETWORK_REFERENCE.md) — network interception (route/unroute/watch), cookies, storage, tabs, frames, windows, dialogs, browser config, state save/load
 
 ## Known Limitations & Error Handling
 

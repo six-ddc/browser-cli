@@ -54,6 +54,7 @@ export class WsServer {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private pending = new Map<string, PendingRequest>();
   private events: EventMessage[] = [];
+  private eventListeners: Array<(msg: EventMessage) => void> = [];
   /** Maps persistent clientId → friendly sessionId */
   private clientSessionMap: Map<string, string>;
   private onSessionMapChange?: (map: Map<string, string>) => void;
@@ -294,10 +295,25 @@ export class WsServer {
     }
   }
 
+  /** Subscribe to real-time events. Returns an unsubscribe function. */
+  addEventListener(fn: (msg: EventMessage) => void): () => void {
+    this.eventListeners.push(fn);
+    return () => {
+      this.eventListeners = this.eventListeners.filter((l) => l !== fn);
+    };
+  }
+
   private storeEvent(msg: EventMessage) {
     this.events.push(msg);
     if (this.events.length > MAX_STORED_EVENTS) {
       this.events.splice(0, this.events.length - MAX_STORED_EVENTS);
+    }
+    for (const fn of this.eventListeners) {
+      try {
+        fn(msg);
+      } catch {
+        // Listener errors should not break event processing
+      }
     }
   }
 

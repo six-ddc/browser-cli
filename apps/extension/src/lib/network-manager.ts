@@ -9,14 +9,13 @@
  *   extension reload.
  */
 
-import type { NetworkRoute, NetworkRequest } from '@browser-cli/shared';
+import type { NetworkRoute } from '@browser-cli/shared';
 
 const IS_FIREFOX = import.meta.env.FIREFOX;
 const RULE_ID_OFFSET = 10000; // Start rule IDs at 10000 to avoid conflicts
 
 export class NetworkManager {
   private routes: Map<number, NetworkRoute> = new Map();
-  private requests: NetworkRequest[] = [];
   private nextRouteId = 1;
   private requestListener:
     | ((
@@ -38,39 +37,20 @@ export class NetworkManager {
   private initRequestTracking() {
     this.requestListener = (details) => {
       try {
-        const request: NetworkRequest = {
-          id: details.requestId,
-          url: details.url,
-          method: details.method,
-          type: details.type,
-          timestamp: details.timeStamp,
-          tabId: details.tabId,
-        };
-
-        // Check if this request matches any block/redirect routes
+        // Check if this request matches any block/redirect routes (Firefox only)
         for (const route of this.routes.values()) {
           if (this.matchesPattern(details.url, route.pattern)) {
             if (route.action === 'block') {
-              request.blocked = true;
               if (IS_FIREFOX) {
-                this.requests.push(request);
-                this.trimRequests();
                 return { cancel: true };
               }
             } else if (route.redirectUrl) {
-              // action === 'redirect'
-              request.redirectedTo = route.redirectUrl;
               if (IS_FIREFOX) {
-                this.requests.push(request);
-                this.trimRequests();
                 return { redirectUrl: route.redirectUrl };
               }
             }
           }
         }
-
-        this.requests.push(request);
-        this.trimRequests();
       } catch (err) {
         console.error('[browser-cli] NetworkManager request listener error:', err);
       }
@@ -112,12 +92,6 @@ export class NetworkManager {
       [],
     );
     this.blockingMode = false;
-  }
-
-  private trimRequests() {
-    if (this.requests.length > 1000) {
-      this.requests = this.requests.slice(-1000);
-    }
   }
 
   /**
@@ -221,48 +195,6 @@ export class NetworkManager {
   }
 
   /**
-   * Get tracked requests with optional filters.
-   */
-  getRequests(filters?: {
-    pattern?: string;
-    tabId?: number;
-    blockedOnly?: boolean;
-    limit?: number;
-  }): { requests: NetworkRequest[]; total: number } {
-    let filtered = [...this.requests];
-
-    if (filters?.pattern) {
-      const regex = this.patternToRegex(filters.pattern);
-      filtered = filtered.filter((req) => regex.test(req.url));
-    }
-
-    if (filters?.tabId !== undefined) {
-      filtered = filtered.filter((req) => req.tabId === filters.tabId);
-    }
-
-    if (filters?.blockedOnly) {
-      filtered = filtered.filter((req) => req.blocked || req.redirectedTo);
-    }
-
-    const total = filtered.length;
-
-    if (filters?.limit !== undefined && filters.limit > 0) {
-      filtered = filtered.slice(-filters.limit);
-    }
-
-    return { requests: filtered, total };
-  }
-
-  /**
-   * Clear all tracked requests.
-   */
-  clearRequests(): number {
-    const count = this.requests.length;
-    this.requests = [];
-    return count;
-  }
-
-  /**
    * Convert a simple pattern (with wildcards) to URLFilter format.
    * @example "*.google.com" becomes "*google.com*"
    * @example "/api/..." becomes "*" + "/api/..."
@@ -319,6 +251,5 @@ export class NetworkManager {
     }
 
     this.routes.clear();
-    this.requests = [];
   }
 }

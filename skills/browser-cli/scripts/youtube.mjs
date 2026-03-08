@@ -206,40 +206,6 @@ function toSrt(segments) {
     .join('\n\n');
 }
 
-/** Find a timedtext URL with POT from captured network requests.
- * POT is per-video, so we can reuse any captured POT URL and swap the lang param.
- * @param {string} videoId — current video ID to filter by
- * @returns {string|null} Full URL with POT for the requested language, or null */
-async function findTimedtextUrl(browser, { videoId, lang, kind } = {}) {
-  const { requests } = await browser.getRequests({ pattern: '*timedtext*', limit: 50 });
-  // Only consider requests with POT token for the current video
-  const withPot = requests.filter(
-    (r) => r.url.includes('pot=') && (!videoId || r.url.includes(`v=${videoId}`)),
-  );
-  if (withPot.length === 0) return null;
-
-  if (lang) {
-    // Look for exact lang match first
-    const exact = withPot.find((r) => {
-      const u = new URL(r.url);
-      return u.searchParams.get('lang') === lang;
-    });
-    if (exact) return exact.url;
-
-    // POT is per-video — reuse any captured URL, swap lang (and kind if needed)
-    const donor = withPot[withPot.length - 1];
-    const u = new URL(donor.url);
-    u.searchParams.set('lang', lang);
-    if (kind) {
-      u.searchParams.set('kind', kind);
-    } else {
-      u.searchParams.delete('kind');
-    }
-    return u.toString();
-  }
-  return withPot[withPot.length - 1].url;
-}
-
 /** Ensure the timedtext URL has fmt=json3 parameter */
 function ensureJson3(url) {
   if (url.includes('fmt=json3')) return url;
@@ -267,7 +233,47 @@ async function fetchTimedtext(browser, url) {
   }
 }
 
-/** Extract transcript via API (network capture + in-page fetch)
+/** Capture a timedtext URL with POT via network watch.
+ * Reloads the page to trigger fresh timedtext requests with POT tokens.
+ * @returns {string|null} timedtext URL with POT, or null */
+async function captureTimedtextUrl(browser, { targetLang, videoId }) {
+  const currentUrl = await browser.getUrl();
+
+  // Start watching for timedtext requests, then reload to trigger fresh requests
+  await browser.networkWatch({ pattern: '*timedtext*', timeout: 15000 });
+  await browser.navigate({ url: currentUrl.url });
+  await browser.wait({ duration: 5000 });
+
+  // Stop watch and get captured URLs
+  const watchResult = await browser.networkUnwatch();
+  const captured = (watchResult.requests || []).filter(
+    (r) => r.url.includes('timedtext') && r.url.includes('pot='),
+  );
+
+  if (captured.length === 0) return null;
+
+  // Find exact lang match, or reuse any captured URL and swap lang
+  const exact = captured.find((r) => {
+    try {
+      return new URL(r.url).searchParams.get('lang') === targetLang;
+    } catch {
+      return false;
+    }
+  });
+  if (exact) return exact.url;
+
+  // POT is per-video — reuse any captured URL, swap lang param
+  const donor = captured[captured.length - 1];
+  try {
+    const u = new URL(donor.url);
+    u.searchParams.set('lang', targetLang);
+    return u.toString();
+  } catch {
+    return donor.url;
+  }
+}
+
+/** Extract transcript via network-watch capture + in-page fetch
  * @param {object} opts
  * @param {string} [opts.lang] — language code (e.g. "en", "ja")
  * @param {boolean} [opts.text] — if true, return plain text only (no timestamps/formatting)
@@ -298,27 +304,14 @@ export async function extractTranscript(browser, { lang, text: textOnly } = {}) 
       auto.find((t) => t.lang.startsWith('en')) ||
       tracks.tracks[0];
   const targetLang = track.lang;
-  const targetKind = track.kind || undefined;
 
-  // Step 1: Find a captured timedtext URL with POT (reuses POT across languages)
-  let url = await findTimedtextUrl(browser, { videoId, lang: targetLang, kind: targetKind });
+  // Capture timedtext URL with POT via network watch
+  console.log('Capturing timedtext URL via network watch...');
+  let url = await captureTimedtextUrl(browser, { targetLang, videoId });
 
-  // Step 2: If no POT captured yet, trigger caption loading to generate one
-  if (!url) {
-    console.log('No captured POT, triggering caption load...');
-    await browser.evaluate({
-      expression: `(() => {
-        const player = document.querySelector("#movie_player");
-        player?.setOption?.("captions", "track", { languageCode: "${targetLang}" });
-      })()`,
-    });
-    await browser.wait({ duration: 2000 });
-    url = await findTimedtextUrl(browser, { videoId, lang: targetLang, kind: targetKind });
-  }
-
-  // Step 3: Last resort — use baseUrl directly (may fail without POT)
+  // Fallback to baseUrl if network capture failed
   if (!url && track.baseUrl) {
-    console.log('No POT available, trying baseUrl directly...');
+    console.log('Network capture failed, trying baseUrl directly...');
     url = track.baseUrl;
   }
 
@@ -326,7 +319,7 @@ export async function extractTranscript(browser, { lang, text: textOnly } = {}) 
     return { error: 'Could not obtain timedtext URL. Video may not have captions.' };
   }
 
-  // Step 4: Fetch and parse JSON3 transcript data
+  // Fetch and parse JSON3 transcript data
   console.log('Fetching transcript data...');
   const data = await fetchTimedtext(browser, url);
   if (!data) {

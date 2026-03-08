@@ -43,25 +43,6 @@ browser-cli network unroute <routeId>
 browser-cli network routes
 ```
 
-### requests - List Tracked Requests
-
-```bash
-browser-cli network requests [options]
-```
-
-| Option                | Description                  | Default |
-| --------------------- | ---------------------------- | ------- |
-| `--pattern <pattern>` | Filter by URL pattern        | -       |
-| `--tab <tabId>`       | Filter by tab ID             | -       |
-| `--blocked`           | Only show blocked/redirected | `false` |
-| `--limit <n>`         | Max results                  | `50`    |
-
-### clear - Clear Tracked Requests
-
-```bash
-browser-cli network clear
-```
-
 ### Common Patterns
 
 ```bash
@@ -72,12 +53,10 @@ browser-cli network route '*analytics*' --abort
 
 # Navigate and verify
 browser-cli navigate https://example.com
-browser-cli network requests --blocked
+browser-cli network routes                    # List active routes
 
 # Clean up
-browser-cli network routes                    # List active routes
 browser-cli network unroute 1                 # Remove by ID
-browser-cli network clear                     # Clear request log
 ```
 
 ---

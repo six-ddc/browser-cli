@@ -79,67 +79,6 @@ test.describe('network unroute', () => {
   });
 });
 
-test.describe('network requests', () => {
-  test('lists tracked requests', async ({ bcli, navigateAndWait }) => {
-    await navigateAndWait(PAGES.HOME);
-    await sleep(2000);
-
-    const r = bcli('network', 'requests');
-    expect(r).toBcliSuccess();
-    // After navigating, there should be at least one request containing the page URL
-    expect(r.stdout).toContain('localhost');
-  });
-
-  test('limits number of results with --limit', async ({ bcli, navigateAndWait }) => {
-    await navigateAndWait(PAGES.HOME);
-    await sleep(2000);
-
-    const r = bcli('network', 'requests', '--limit', '5');
-    expect(r).toBcliSuccess();
-  });
-
-  test('filters by URL pattern with --pattern', async ({ bcli, navigateAndWait }) => {
-    await navigateAndWait(PAGES.HOME);
-    await sleep(2000);
-
-    const r = bcli('network', 'requests', '--pattern', '*localhost*');
-    expect(r).toBcliSuccess();
-    // Filtered results should contain localhost since we navigated to localhost
-    expect(r.stdout).toContain('localhost');
-  });
-
-  test('shows only blocked requests with --blocked', async ({ bcli, navigateAndWait }) => {
-    await navigateAndWait(PAGES.HOME);
-
-    const r = bcli('network', 'requests', '--blocked');
-    expect(r).toBcliSuccess();
-  });
-
-  test('filters by tab ID with --tab', async ({ bcli, navigateAndWait }) => {
-    await navigateAndWait(PAGES.HOME);
-    await sleep(2000);
-
-    const tabOutput = bcli('tab', 'list');
-    expect(tabOutput).toBcliSuccess();
-    const tabIdMatch = tabOutput.stdout.match(/\[(\d+)\]/);
-    expect(tabIdMatch).toBeTruthy();
-
-    const r = bcli('network', 'requests', '--tab', tabIdMatch![1]);
-    expect(r).toBcliSuccess();
-  });
-});
-
-test.describe('network clear', () => {
-  test('clears tracked requests', async ({ bcli, navigateAndWait }) => {
-    await navigateAndWait(PAGES.HOME);
-    await sleep(1000);
-
-    const r = bcli('network', 'clear');
-    expect(r).toBcliSuccess();
-    expect(r.stdout).toContain('Cleared');
-  });
-});
-
 test.describe('network integration', () => {
   test('add route, navigate, check blocked requests', async ({ bcli, navigateAndWait }) => {
     test.fixme(true, 'network route fails: Rule with id 10001 does not have a unique ID');

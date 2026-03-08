@@ -1,6 +1,7 @@
 import { COMMAND_TIMEOUT_MS } from '@browser-cli/shared';
 import type { DaemonRequest, DaemonResponse, RequestMessage } from '@browser-cli/shared';
 import type { WsServer } from './ws-server.js';
+import type { WatchManager } from './watch-manager.js';
 import { logger } from '../util/logger.js';
 
 /**
@@ -9,7 +10,24 @@ import { logger } from '../util/logger.js';
  * and converts ResponseMessage → DaemonResponse.
  */
 export class Bridge {
+  private watchManager: WatchManager | null = null;
+
   constructor(private wsServer: WsServer) {}
+
+  /** Inject WatchManager (called from daemon/index.ts after construction) */
+  setWatchManager(wm: WatchManager): void {
+    this.watchManager = wm;
+  }
+
+  /** Helper to send a request to the extension via WsServer */
+  private sendToExtension(msg: RequestMessage, sessionId?: string): Promise<unknown> {
+    return this.wsServer.sendRequest(msg, COMMAND_TIMEOUT_MS, sessionId).then((resp) => {
+      if (!resp.success) {
+        throw new Error(resp.error?.message || 'Extension command failed');
+      }
+      return resp.data;
+    });
+  }
 
   async handleRequest(req: DaemonRequest): Promise<DaemonResponse> {
     // If a specific session is requested, check that connection
@@ -34,6 +52,37 @@ export class Bridge {
             "Extension is not connected. Please ensure the Browser-CLI extension is installed and enabled. Check that the Browser-CLI extension is installed, enabled, and the browser is open. Run 'browser-cli status' to verify.",
         },
       };
+    }
+
+    // Intercept networkWatch / networkUnwatch — handled by WatchManager
+    if (req.command.action === 'networkWatch' && this.watchManager) {
+      try {
+        const params = req.command.params as {
+          pattern?: string;
+          timeout?: number;
+          body?: boolean;
+          method?: string;
+        };
+        const result = await this.watchManager.startWatch(req.tabId ?? 0, params, (msg) =>
+          this.sendToExtension(msg, req.sessionId),
+        );
+        return { id: req.id, success: true, data: result };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { id: req.id, success: false, error: { message: msg } };
+      }
+    }
+
+    if (req.command.action === 'networkUnwatch' && this.watchManager) {
+      try {
+        const result = await this.watchManager.stopWatch(req.tabId, (msg) =>
+          this.sendToExtension(msg, req.sessionId),
+        );
+        return { id: req.id, success: true, data: result };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { id: req.id, success: false, error: { message: msg } };
+      }
     }
 
     const wsRequest: RequestMessage = {

@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { sendCommand } from './shared.js';
 
 const networkCmd = new Command('network').description(
-  'Network interception — block/redirect/track requests (subcommands: route, unroute, routes, requests, clear)',
+  'Network interception — block/redirect/watch requests (subcommands: route, unroute, routes, watch, unwatch)',
 );
 
 networkCmd
@@ -88,76 +88,64 @@ networkCmd
   });
 
 networkCmd
-  .command('requests')
-  .description('List tracked network requests')
-  .option('--pattern <pattern>', 'Filter by URL pattern')
-  .option('--tab <tabId>', 'Filter by tab ID')
-  .option('--blocked', 'Only show blocked/redirected requests')
-  .option('--limit <n>', 'Limit number of results', '50')
+  .command('watch [pattern]')
+  .description('Monitor API requests/responses via CDP (non-blocking, writes to file)')
+  .option('--timeout <ms>', 'Auto-stop after ms', '30000')
+  .option('--body', 'Capture response bodies (skips binary)')
+  .option('--method <method>', 'Filter by HTTP method')
   .action(
     async (
-      opts: { pattern?: string; tab?: string; blocked?: boolean; limit: string },
+      pattern: string | undefined,
+      opts: { timeout: string; body?: boolean; method?: string },
       cmd: Command,
     ) => {
       const result = await sendCommand(cmd, {
-        action: 'getRequests',
+        action: 'networkWatch',
         params: {
-          pattern: opts.pattern,
-          tabId: opts.tab ? parseInt(opts.tab, 10) : undefined,
-          blockedOnly: opts.blocked,
-          limit: parseInt(opts.limit, 10),
+          pattern,
+          timeout: parseInt(opts.timeout, 10),
+          body: opts.body,
+          method: opts.method,
         },
       });
 
       if (result) {
-        const data = result as {
-          requests: Array<{
-            id: string;
-            url: string;
-            method: string;
-            type: string;
-            timestamp: number;
-            tabId: number;
-            blocked?: boolean;
-            redirectedTo?: string;
-          }>;
-          total: number;
+        const r = result as {
+          watchId: string;
+          tabId: number;
+          pattern: string;
+          timeout: number;
+          filePath: string;
         };
-        const { requests, total } = data;
-
-        if (requests.length === 0) {
-          console.log('(no requests)');
-          return;
-        }
-
-        console.log(`Showing ${requests.length} of ${total} requests:\n`);
-
-        for (const req of requests) {
-          const status = req.blocked
-            ? '[BLOCKED]'
-            : req.redirectedTo
-              ? `[REDIRECT → ${req.redirectedTo}]`
-              : '';
-          const age = Math.floor((Date.now() - req.timestamp) / 1000);
-          console.log(`${req.method} ${req.url}`);
-          console.log(`  Type: ${req.type}  Tab: ${req.tabId}  ${status}  (${age}s ago)`);
-        }
+        const timeoutSec = Math.round(r.timeout / 1000);
+        console.log(
+          `Watching network requests matching "${r.pattern}" for ${timeoutSec}s (tab ${r.tabId})`,
+        );
+        console.log(`Results → ${r.filePath}`);
       }
     },
   );
 
 networkCmd
-  .command('clear')
-  .description('Clear all tracked requests')
+  .command('unwatch')
+  .description('Stop an active network watch (use --tab to target specific tab)')
   .action(async (opts: unknown, cmd: Command) => {
     const result = await sendCommand(cmd, {
-      action: 'clearRequests',
+      action: 'networkUnwatch',
       params: {},
     });
 
     if (result) {
-      const cleared = (result as { cleared: number }).cleared;
-      console.log(`Cleared ${cleared} requests`);
+      const r = result as {
+        watchId: string;
+        requestCount: number;
+        duration: number;
+        filePath: string;
+      };
+      console.log(
+        `Watch ${r.watchId} stopped — ${r.requestCount} requests captured in ${r.duration}s`,
+      );
+      console.log(`Results → ${r.filePath}`);
     }
   });
 

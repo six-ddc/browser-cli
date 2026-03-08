@@ -15,6 +15,20 @@ interface ChromeDebuggerDebuggee {
   targetId?: string;
 }
 
+interface ChromeDebuggerEvent {
+  addListener(
+    fn: (source: ChromeDebuggerDebuggee, method: string, params?: Record<string, unknown>) => void,
+  ): void;
+  removeListener(
+    fn: (source: ChromeDebuggerDebuggee, method: string, params?: Record<string, unknown>) => void,
+  ): void;
+}
+
+interface ChromeDebuggerDetachEvent {
+  addListener(fn: (source: ChromeDebuggerDebuggee, reason: string) => void): void;
+  removeListener(fn: (source: ChromeDebuggerDebuggee, reason: string) => void): void;
+}
+
 interface ChromeDebuggerAPI {
   attach(target: ChromeDebuggerDebuggee, requiredVersion: string, callback?: () => void): void;
   detach(target: ChromeDebuggerDebuggee, callback?: () => void): void;
@@ -24,6 +38,8 @@ interface ChromeDebuggerAPI {
     commandParams?: Record<string, unknown>,
     callback?: (result: unknown) => void,
   ): void;
+  onEvent: ChromeDebuggerEvent;
+  onDetach: ChromeDebuggerDetachEvent;
 }
 
 // Extend the chrome namespace with runtime.lastError (used by chrome.debugger callbacks)

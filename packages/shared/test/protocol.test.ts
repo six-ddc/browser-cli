@@ -287,9 +287,15 @@ describe('schemas - command', () => {
       }),
     ).toBeTruthy();
     expect(commandSchema.parse({ action: 'unroute', params: { routeId: 1 } })).toBeTruthy();
-    expect(commandSchema.parse({ action: 'getRequests', params: {} })).toBeTruthy();
     expect(commandSchema.parse({ action: 'getRoutes', params: {} })).toBeTruthy();
-    expect(commandSchema.parse({ action: 'clearRequests', params: {} })).toBeTruthy();
+    expect(commandSchema.parse({ action: 'networkWatch', params: {} })).toBeTruthy();
+    expect(
+      commandSchema.parse({
+        action: 'networkWatch',
+        params: { pattern: '*api*', timeout: 10000, body: true, method: 'POST' },
+      }),
+    ).toBeTruthy();
+    expect(commandSchema.parse({ action: 'networkUnwatch', params: {} })).toBeTruthy();
   });
 
   // ─── Upload command ───────────────────────────────────────────────

@@ -9,6 +9,7 @@ import { DEFAULT_WS_PORT, DEFAULT_WS_HOST } from '@browser-cli/shared';
 import { WsServer } from './ws-server.js';
 import { SocketServer } from './socket-server.js';
 import { Bridge } from './bridge.js';
+import { WatchManager } from './watch-manager.js';
 import { writeDaemonPid, cleanupPidFile } from './process.js';
 import { isNonLoopback, generateAuthToken, writeAuthToken, cleanupAuthToken } from './auth.js';
 import { getSocketPath, getAppDir } from '../util/paths.js';
@@ -76,6 +77,8 @@ async function main() {
     authToken,
   });
   const bridge = new Bridge(wsServer);
+  const watchManager = new WatchManager(wsServer);
+  bridge.setWatchManager(watchManager);
   const socketServer = new SocketServer(
     (req) => bridge.handleRequest(req),
     () => ({
@@ -100,6 +103,7 @@ async function main() {
   // Graceful shutdown
   const shutdown = async () => {
     logger.info('Shutting down daemon...');
+    await watchManager.stopAll((msg) => wsServer.sendRequest(msg, 5000).then((resp) => resp.data));
     await socketServer.stop();
     await wsServer.stop();
     cleanupPidFile();

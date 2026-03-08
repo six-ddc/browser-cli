@@ -224,9 +224,8 @@ browser-cli --tab <tabId> script scripts/youtube.mjs --call extractTranscriptTex
 browser-cli --tab <tabId> script scripts/youtube.mjs --call extractTranscript -- --lang ja
 ```
 
-> **How it works**: The recipe captures the POT (Proof of Origin Token) from YouTube's
-> automatic timedtext network requests, then reuses that POT to fetch any language track
-> via in-page `fetch()`. No UI interaction needed — pure API-based extraction.
+> **How it works**: The recipe uses caption track baseUrls from YouTube's player config
+> to fetch transcript data via in-page `fetch()`. No UI interaction needed — pure API-based extraction.
 
 ### Enable/Disable Captions
 

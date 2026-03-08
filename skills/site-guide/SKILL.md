@@ -35,7 +35,7 @@ All paths are relative to `skills/browser-cli/` within the project root.
 
 1. **Prepare** — start daemon, open target site in a dedicated tab
 2. **Explore** — identify page types; try `markdown` as a first pass for content pages
-3. **Discover Selectors** — scan live DOM for testids, containers, field selectors; check network requests for API-heavy SPAs
+3. **Discover Selectors** — scan live DOM for testids, containers, field selectors; use network watch for API-heavy SPAs
 4. **Build & Validate** — write extraction scripts incrementally, test on real data
 5. **Write Recipe Script** — create the `.mjs` file with reusable functions
 6. **Write Guide** — create the `.md` file with selector tables and boilerplate
@@ -144,14 +144,15 @@ EOF
 browser-cli --tab <tabId> eval 'document.querySelector("<container> <field-sel>")?.innerText'
 ```
 
-### 3c. Check network requests for API-heavy SPAs
+### 3c. Monitor network traffic for API-heavy SPAs
 
-For sites built on React/Vue/Angular that fetch data via XHR/fetch, network requests often expose cleaner extraction paths than DOM scraping:
+For sites built on React/Vue/Angular that fetch data via XHR/fetch, use `network watch` to capture API traffic:
 
 ```bash
-# After navigating to the page, inspect captured API calls
-browser-cli --tab <tabId> network requests --pattern '*api*' --limit 20
-browser-cli --tab <tabId> network requests --pattern '*graphql*' --limit 10
+# Start monitoring API calls (non-blocking, writes to file)
+browser-cli --tab <tabId> network watch '*api*' --timeout 10000 --body
+# Navigate or interact to trigger requests, then stop
+browser-cli --tab <tabId> network unwatch
 ```
 
 If an endpoint returns clean JSON, extract via in-page `fetch()`:
@@ -164,8 +165,6 @@ browser-cli --tab <tabId> eval --stdin <<'EOF'
 })()
 EOF
 ```
-
-For sites where API URLs include auth tokens (e.g., YouTube's POT), capture the full URL from network requests, mutate query params as needed, and re-fetch. Reference: `scripts/youtube.mjs` → `findTimedtextUrl`.
 
 ### Selector preference order
 
@@ -300,7 +299,7 @@ export default async function (browser, args) {
 For complex sites, these patterns from existing scripts are worth adapting:
 
 - **Virtual scroll accumulator** — when items are removed from the DOM as you scroll (virtualized lists), inject `window` globals to track seen items across scroll batches. Reference: `scripts/xhs.mjs` → `initScrollCollector` / `scrollAndCollect` / `getCollected`.
-- **Network capture for API extraction** — for sites with auth-bearing XHR URLs, capture the full URL from network requests and re-fetch via in-page `fetch()`. More stable than DOM selectors for data-heavy SPAs. Reference: `scripts/youtube.mjs` → `findTimedtextUrl` / `fetchTimedtext`.
+- **Network watch for API extraction** — for sites with auth-bearing XHR URLs, use `network watch` to capture traffic, then re-fetch via in-page `fetch()`. More stable than DOM selectors for data-heavy SPAs. Reference: `scripts/youtube.mjs` → `fetchTimedtext`.
 - **contentEditable input** — rich text editors don't respond to `fill`. Use `document.execCommand('insertText')` after focusing the element. Reference: `scripts/xhs.mjs` → `postComment`.
 
 ### Testing the script

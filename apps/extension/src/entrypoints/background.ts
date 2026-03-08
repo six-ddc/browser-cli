@@ -5,6 +5,7 @@ import { classifyError } from '../lib/error-classifier';
 import { NetworkManager } from '../lib/network-manager';
 import { frameManager } from '../lib/frame-manager';
 import { sendToContentScript } from '../lib/send-to-content-script';
+import { setNetworkWatcherSendEvent } from '../lib/network-watcher';
 
 let wsClient: WsClient | null = null;
 let networkManager: NetworkManager | null = null;
@@ -47,11 +48,11 @@ const BG_ACTIONS = new Set([
   'cookiesSet',
   'cookiesClear',
   'screenshot',
+  'networkWatch',
+  'networkUnwatch',
   'route',
   'unroute',
-  'getRequests',
   'getRoutes',
-  'clearRequests',
   'windowNew',
   'windowList',
   'windowClose',
@@ -214,6 +215,11 @@ async function ensureInitialized(): Promise<void> {
         });
         updateBadge('auth_failed');
       },
+    });
+
+    // Wire up network watcher to send events via this WsClient
+    setNetworkWatcherSendEvent((event, data, tabId) => {
+      wsClient?.sendEvent(event, data, tabId);
     });
 
     wsClient.start();

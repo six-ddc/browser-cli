@@ -588,21 +588,6 @@ describe('AgentBrowser CLI syntax compatibility', () => {
       await parseArgs('network', 'routes');
       expectCommand('getRoutes', {});
     });
-
-    it('network requests', async () => {
-      await parseArgs('network', 'requests');
-      expectCommand('getRequests', {});
-    });
-
-    it('network requests --pattern *.js --blocked', async () => {
-      await parseArgs('network', 'requests', '--pattern', '*.js', '--blocked');
-      expectCommand('getRequests', { pattern: '*.js', blockedOnly: true });
-    });
-
-    it('network clear', async () => {
-      await parseArgs('network', 'clear');
-      expectCommand('clearRequests', {});
-    });
   });
 
   // ─── Get (data queries) ───────────────────────────────────────────

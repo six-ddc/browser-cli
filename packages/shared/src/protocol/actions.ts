@@ -408,6 +408,27 @@ export interface GetCurrentFrameResult {
   };
 }
 
+// ─── Network Watch (CDP) ─────────────────────────────────────────────
+
+export type NetworkWatchParams = z.infer<typeof schemas.networkWatchParamsSchema>;
+export interface NetworkWatchResult {
+  watchId: string;
+  tabId: number;
+  pattern: string;
+  timeout: number;
+  filePath: string;
+}
+
+export type NetworkUnwatchParams = z.infer<typeof schemas.networkUnwatchParamsSchema>;
+export interface NetworkUnwatchResult {
+  watchId: string;
+  requestCount: number;
+  duration: number;
+  filePath: string;
+  /** Captured request URLs with method info (for programmatic use in scripts) */
+  requests: Array<{ method: string; url: string }>;
+}
+
 // ─── Network ─────────────────────────────────────────────────────────
 
 export type RouteParams = z.infer<typeof schemas.routeParamsSchema>;
@@ -422,21 +443,6 @@ export interface UnrouteResult {
   removed: true;
 }
 
-export type GetRequestsParams = z.infer<typeof schemas.getRequestsParamsSchema>;
-export interface GetRequestsResult {
-  requests: Array<{
-    id: string;
-    url: string;
-    method: string;
-    type: string;
-    timestamp: number;
-    tabId: number;
-    blocked?: boolean;
-    redirectedTo?: string;
-  }>;
-  total: number;
-}
-
 export type GetRoutesParams = z.infer<typeof schemas.getRoutesParamsSchema>;
 export interface GetRoutesResult {
   routes: Array<{
@@ -446,11 +452,6 @@ export interface GetRoutesResult {
     redirectUrl?: string;
     createdAt: number;
   }>;
-}
-
-export type ClearRequestsParams = z.infer<typeof schemas.clearRequestsParamsSchema>;
-export interface ClearRequestsResult {
-  cleared: number;
 }
 
 // ─── Window Management ──────────────────────────────────────────────
@@ -723,12 +724,13 @@ export type ActionDef =
   | { action: 'switchFrame'; params: SwitchFrameParams; result: SwitchFrameResult }
   | { action: 'listFrames'; params: ListFramesParams; result: ListFramesResult }
   | { action: 'getCurrentFrame'; params: GetCurrentFrameParams; result: GetCurrentFrameResult }
+  // Network Watch (CDP)
+  | { action: 'networkWatch'; params: NetworkWatchParams; result: NetworkWatchResult }
+  | { action: 'networkUnwatch'; params: NetworkUnwatchParams; result: NetworkUnwatchResult }
   // Network
   | { action: 'route'; params: RouteParams; result: RouteResult }
   | { action: 'unroute'; params: UnrouteParams; result: UnrouteResult }
-  | { action: 'getRequests'; params: GetRequestsParams; result: GetRequestsResult }
   | { action: 'getRoutes'; params: GetRoutesParams; result: GetRoutesResult }
-  | { action: 'clearRequests'; params: ClearRequestsParams; result: ClearRequestsResult }
   // Window
   | { action: 'windowNew'; params: WindowNewParams; result: WindowNewResult }
   | { action: 'windowList'; params: WindowListParams; result: WindowListResult }

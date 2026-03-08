@@ -7,6 +7,7 @@
 import type { RequestMessage, ResponseMessage, Command } from '@browser-cli/shared';
 import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
+import { startWatch, stopWatch, getActiveWatchTabId } from './network-watcher';
 
 /** Firefox contextualIdentities API (not in WXT/Chrome types) */
 interface ContextualIdentity {
@@ -566,6 +567,22 @@ async function routeCommand(
       }
     }
 
+    // ─── Network Watch (CDP) ──────────────────────────────────
+    case 'networkWatch': {
+      const { pattern, body, method } = command.params;
+      const result = await startWatch(targetTabId, {
+        pattern,
+        captureBody: body,
+        method,
+      });
+      return result;
+    }
+    case 'networkUnwatch': {
+      const tabId = getActiveWatchTabId() ?? targetTabId;
+      await stopWatch(tabId);
+      return { stopped: true };
+    }
+
     // ─── Network ───────────────────────────────────────────────
     case 'route': {
       if (!networkManager) throw new Error('NetworkManager not initialized');
@@ -580,23 +597,11 @@ async function routeCommand(
       if (!removed) throw new Error(`Route ${routeId} not found`);
       return { removed: true };
     }
-    case 'getRequests': {
-      if (!networkManager) throw new Error('NetworkManager not initialized');
-      const { pattern, tabId, blockedOnly, limit } = command.params;
-      const result = networkManager.getRequests({ pattern, tabId, blockedOnly, limit });
-      return result;
-    }
     case 'getRoutes': {
       if (!networkManager) throw new Error('NetworkManager not initialized');
       const routes = networkManager.getRoutes();
       return { routes };
     }
-    case 'clearRequests': {
-      if (!networkManager) throw new Error('NetworkManager not initialized');
-      const cleared = networkManager.clearRequests();
-      return { cleared };
-    }
-
     // ─── Window Management ─────────────────────────────────────
     case 'windowNew': {
       const { url } = command.params;

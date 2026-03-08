@@ -11,6 +11,7 @@
 
 import type { Command } from '@browser-cli/shared';
 import { sendToContentScript } from './send-to-content-script';
+import { isWatchingTab } from './network-watcher';
 
 // ─── Typed access to chrome.debugger (reserved keyword) ─────────────
 
@@ -54,7 +55,8 @@ function cdpSend(
   });
 }
 
-/** Attach debugger, run fn, detach — always detaches even on error */
+/** Attach debugger, run fn, detach — always detaches even on error.
+ *  If a network watch is active on this tab, reuses the existing debugger session. */
 async function withDebugger<T>(
   tabId: number,
   fn: (target: ChromeDebuggerDebuggee) => Promise<T>,
@@ -63,26 +65,32 @@ async function withDebugger<T>(
   if (!dbg) throw new Error('chrome.debugger API not available');
 
   const target: ChromeDebuggerDebuggee = { tabId };
-  await new Promise<void>((resolve, reject) => {
-    dbg.attach(target, '1.3', () => {
-      const lastError = getChromeLastError();
-      if (lastError) {
-        reject(new Error(lastError.message));
-      } else {
-        resolve();
-      }
+  const watchActive = isWatchingTab(tabId);
+
+  if (!watchActive) {
+    await new Promise<void>((resolve, reject) => {
+      dbg.attach(target, '1.3', () => {
+        const lastError = getChromeLastError();
+        if (lastError) {
+          reject(new Error(lastError.message));
+        } else {
+          resolve();
+        }
+      });
     });
-  });
+  }
   try {
     return await fn(target);
   } finally {
-    await new Promise<void>((resolve) => {
-      dbg.detach(target, () => {
-        // Ignore detach errors (tab may have closed)
-        getChromeLastError();
-        resolve();
+    if (!watchActive) {
+      await new Promise<void>((resolve) => {
+        dbg.detach(target, () => {
+          // Ignore detach errors (tab may have closed)
+          getChromeLastError();
+          resolve();
+        });
       });
-    });
+    }
   }
 }
 

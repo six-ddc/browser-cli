@@ -42,8 +42,8 @@ EOF
 # Check container count
 browser-cli --tab <tabId> eval 'document.querySelectorAll("<selector>").length'
 
-# For API-heavy SPAs, check network requests instead of DOM scraping
-browser-cli --tab <tabId> network requests --pattern '*api*' --limit 20
+# For API-heavy SPAs, use network watch to capture API traffic
+browser-cli --tab <tabId> network watch '*api*' --timeout 10000
 ```
 
 ## Recipe script conventions
