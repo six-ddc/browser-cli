@@ -199,14 +199,16 @@ Get accessibility tree snapshot (`-i` interactive, `-c` compact, `-C` cursor, `-
 browser-cli snapshot [options]
 ```
 
-| Flag                   | Description                                             |
-| ---------------------- | ------------------------------------------------------- |
-| `-i, --interactive`    | Only interactive elements                               |
-| `-c, --compact`        | Compact output                                          |
-| `-C, --cursor`         | Include cursor-interactive elements (cursor:pointer)    |
-| `-d, --depth <n>`      | Max tree depth                                          |
-| `-s, --selector <sel>` | Scope to element                                        |
-| `-f, --filter <role>`  | Only show nodes with this ARIA role and their ancestors |
+| Flag                   | Description                                                              |
+| ---------------------- | ------------------------------------------------------------------------ |
+| `-i, --interactive`    | Only interactive elements                                                |
+| `-c, --compact`        | Compact output                                                           |
+| `-C, --cursor`         | Include cursor-interactive elements (cursor:pointer)                     |
+| `-d, --depth <n>`      | Max tree depth                                                           |
+| `-s, --selector <sel>` | Scope to element                                                         |
+| `-f, --filter <role>`  | Only show nodes with this ARIA role and their ancestors                  |
+| `--save <path>`        | Save snapshot baseline to text file (refs stripped, still prints output) |
+| `--base <path>`        | Diff current snapshot against saved baseline (unified diff output)       |
 
 **Best practice**: Use `snapshot -ic` for a concise view of interactive elements. Use element refs (`@e1`, `@e2`) from snapshot output in subsequent commands.
 
@@ -217,6 +219,24 @@ browser-cli --tab 12345 snapshot -ic        # full page, get refs
 browser-cli --tab 12345 snapshot -ic -s @e3 # only elements inside @e3
 browser-cli --tab 12345 snapshot -ic -s @e5 # @e3's ref still valid, explore another area
 ```
+
+**Diffing snapshots**: After performing an action (click, fill, navigate), you often need to know **what changed** on the page. Instead of re-reading the entire snapshot, save a baseline before the action and diff afterward — the output shows only the changed lines in unified diff format, with `+` lines carrying element refs so you can immediately interact with new elements:
+
+```bash
+# 1. Save baseline before action (plain text, refs stripped)
+browser-cli --tab 12345 snapshot -ic --save baseline.txt
+# 2. Perform action
+browser-cli --tab 12345 click @e5
+# 3. See what changed (new elements, removed elements, text changes)
+browser-cli --tab 12345 snapshot -ic --base baseline.txt
+# Output example:
+#   -  link "Cart (0)"
+#   +  link "Cart (1)" [@e3]      ← ref on + lines, ready to use
+#   +  alert "Item added!" [@e20]  ← new element appeared
+#   (1 added, 0 removed, 1 changed; 21 interactive elements)
+```
+
+The saved file is plain text (the snapshot tree with refs stripped), readable with `cat`. Use `--json` with `--base` for machine-readable diff output (`{ diff, summary, refCount }`).
 
 **Filtering by ARIA role**: use `--filter <role>` to show only nodes with a specific role and their ancestor path. Useful for finding all buttons, navigation landmarks, headings, etc. without losing structural context:
 
