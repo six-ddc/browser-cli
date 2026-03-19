@@ -108,40 +108,9 @@ export async function extractPostDetail(browser) {
 export async function extractComments(browser) {
   console.log('Extracting comments...');
   const results = await browser.evaluate({
-    expression: `JSON.stringify([...document.querySelectorAll('.comtr')].map(el => {
-      const depth = parseInt(el.querySelector('.ind')?.getAttribute('indent') || '0');
-      const ct = el.querySelector('.commtext');
-      const parts = [];
-      if (ct) {
-        for (const node of ct.childNodes) {
-          const t = node.nodeType === 3 ? node.textContent.trim()
-            : (node.innerText?.trim() || node.textContent?.trim() || '');
-          if (t) parts.push(t);
-        }
-      }
-      return {
-        id: el.id,
-        depth,
-        user: el.querySelector('.hnuser')?.innerText || '[deleted]',
-        age: el.querySelector('.age a')?.innerText || '',
-        text: parts.join('\\n\\n'),
-      };
-    }))`,
-  });
-  console.log(`Extracted ${results.length} comments`);
-  return results;
-}
-
-/** Format comment tree (human-readable indented tree text) → string
- * @requires Current page is a HN post detail page */
-export async function formatCommentTree(browser) {
-  console.log('Formatting comment tree...');
-  const result = await browser.evaluate({
-    expression: `(() => {
-      const comments = [...document.querySelectorAll('.comtr')];
-      const lines = comments.map(el => {
+    expression: `JSON.stringify((() => {
+      const flat = [...document.querySelectorAll('.comtr')].map(el => {
         const depth = parseInt(el.querySelector('.ind')?.getAttribute('indent') || '0');
-        const user = el.querySelector('.hnuser')?.innerText || '[deleted]';
         const ct = el.querySelector('.commtext');
         const parts = [];
         if (ct) {
@@ -151,15 +120,51 @@ export async function formatCommentTree(browser) {
             if (t) parts.push(t);
           }
         }
-        const text = parts.join(' ') || '[deleted]';
-        const prefix = depth === 0 ? '' : '\u2502' + '  \u2502'.repeat(depth - 1) + '  \u251c\u2500 ';
-        return prefix + '[' + user + ']: ' + text;
+        return {
+          id: el.id,
+          depth,
+          user: el.querySelector('.hnuser')?.innerText || '[deleted]',
+          age: el.querySelector('.age a')?.innerText || '',
+          text: parts.join('\\n\\n'),
+          children: [],
+        };
       });
-      return lines.join('\\n');
-    })()`,
+      const roots = [];
+      const stack = [];
+      for (const node of flat) {
+        while (stack.length > node.depth) stack.pop();
+        if (stack.length === 0) {
+          roots.push(node);
+        } else {
+          stack[stack.length - 1].children.push(node);
+        }
+        stack.push(node);
+      }
+      return roots;
+    })())`,
   });
+  const count = (nodes) => nodes.reduce((n, c) => n + 1 + count(c.children), 0);
+  console.log(`Extracted ${count(results)} comments (${results.length} top-level)`);
+  return results;
+}
+
+/** Format comment tree (human-readable indented tree text) → string
+ * @requires Current page is a HN post detail page */
+export async function formatCommentTree(browser) {
+  console.log('Formatting comment tree...');
+  const tree = await extractComments(browser);
+  const lines = [];
+  const render = (nodes, depth) => {
+    for (const c of nodes) {
+      const text = (c.text || '[deleted]').replace(/\n/g, ' ');
+      const prefix = depth === 0 ? '' : '\u2502' + '  \u2502'.repeat(depth - 1) + '  \u251c\u2500 ';
+      lines.push(prefix + '[' + c.user + ']: ' + text);
+      render(c.children, depth + 1);
+    }
+  };
+  render(tree, 0);
   console.log('Comment tree formatted');
-  return result;
+  return lines.join('\n');
 }
 
 /** Click the "More" link at the bottom of the list page to go to the next page

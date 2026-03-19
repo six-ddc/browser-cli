@@ -118,21 +118,35 @@ export async function extractPostDetail(browser) {
 export async function extractComments(browser) {
   console.log('Extracting comments...');
   const results = await browser.evaluate({
-    expression: `JSON.stringify([...document.querySelectorAll('shreddit-comment')].map((c, i) => {
-      const bodySlot = [...c.children].find(ch => ch.getAttribute('slot') === 'comment');
-      return {
-        index: i + 1,
-        author: c.getAttribute('author'),
-        score: c.getAttribute('score'),
-        depth: parseInt(c.getAttribute('depth')),
-        thingId: c.getAttribute('thingid'),
-        created: c.getAttribute('created'),
-        permalink: c.getAttribute('permalink'),
-        text: bodySlot?.innerText?.trim() || '',
-      };
-    }))`,
+    expression: `JSON.stringify((() => {
+      const flat = [...document.querySelectorAll('shreddit-comment')].map(c => {
+        const bodySlot = [...c.children].find(ch => ch.getAttribute('slot') === 'comment');
+        return {
+          author: c.getAttribute('author'),
+          score: c.getAttribute('score'),
+          depth: parseInt(c.getAttribute('depth')),
+          thingId: c.getAttribute('thingid'),
+          created: c.getAttribute('created'),
+          text: bodySlot?.innerText?.trim() || '',
+          children: [],
+        };
+      });
+      const roots = [];
+      const stack = [];
+      for (const node of flat) {
+        while (stack.length > node.depth) stack.pop();
+        if (stack.length === 0) {
+          roots.push(node);
+        } else {
+          stack[stack.length - 1].children.push(node);
+        }
+        stack.push(node);
+      }
+      return roots;
+    })())`,
   });
-  console.log(`Extracted ${results.length} comments`);
+  const count = (nodes) => nodes.reduce((n, c) => n + 1 + count(c.children), 0);
+  console.log(`Extracted ${count(results)} comments (${results.length} top-level)`);
   return results;
 }
 
@@ -140,23 +154,19 @@ export async function extractComments(browser) {
  * @requires Current page is a post detail page with comments loaded */
 export async function formatCommentTree(browser) {
   console.log('Formatting comment tree...');
-  const result = await browser.evaluate({
-    expression: `(() => {
-      const comments = [...document.querySelectorAll('shreddit-comment')];
-      const lines = comments.map(c => {
-        const bodySlot = [...c.children].find(ch => ch.getAttribute('slot') === 'comment');
-        const depth = parseInt(c.getAttribute('depth'));
-        const author = c.getAttribute('author');
-        const score = c.getAttribute('score');
-        const text = (bodySlot?.innerText?.trim() || '[GIF/media]').split('\\n').join(' ');
-        const prefix = depth === 0 ? '' : '\u2502' + '  \u2502'.repeat(depth - 1) + '  \u251c\u2500 ';
-        return prefix + '[' + score + '\u2191] ' + author + ': ' + text;
-      });
-      return lines.join('\\n');
-    })()`,
-  });
+  const tree = await extractComments(browser);
+  const lines = [];
+  const render = (nodes, depth) => {
+    for (const c of nodes) {
+      const text = (c.text || '[GIF/media]').replace(/\n/g, ' ');
+      const prefix = depth === 0 ? '' : '\u2502' + '  \u2502'.repeat(depth - 1) + '  \u251c\u2500 ';
+      lines.push(prefix + '[' + c.score + '\u2191] ' + c.author + ': ' + text);
+      render(c.children, depth + 1);
+    }
+  };
+  render(tree, 0);
   console.log('Comment tree formatted');
-  return result;
+  return lines.join('\n');
 }
 
 /** Inject global post collector (for virtual scrolling pages) → { collected }
