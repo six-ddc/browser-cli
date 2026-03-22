@@ -21,6 +21,12 @@ export default defineContentScript({
         _sender: Browser.runtime.MessageSender,
         sendResponse: (response: unknown) => void,
       ) => {
+        // Ping handler — background script uses this to verify content script is ready
+        if (message.type === 'browser-cli-ping') {
+          sendResponse({ ready: true });
+          return false;
+        }
+
         if (message.type !== 'browser-cli-command') return false;
 
         // Validate the command against the schema

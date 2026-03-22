@@ -150,8 +150,9 @@ async function routeCommand(
       const { url } = command.params;
       assertSafeUrl(url);
       await browser.tabs.update(targetTabId, { url });
-      // Wait for navigation to complete
+      // Wait for navigation to complete and content script to be ready
       await waitForTabLoad(targetTabId);
+      await waitForContentScriptReady(targetTabId);
       const tab = await browser.tabs.get(targetTabId);
       return { url: tab.url, title: tab.title };
     }
@@ -162,6 +163,7 @@ async function routeCommand(
         func: () => history.back(),
       });
       await waitForUrlChange(targetTabId, beforeBack.url || '');
+      await waitForContentScriptReady(targetTabId);
       const tab = await browser.tabs.get(targetTabId);
       return { url: tab.url };
     }
@@ -172,12 +174,14 @@ async function routeCommand(
         func: () => history.forward(),
       });
       await waitForUrlChange(targetTabId, beforeFwd.url || '');
+      await waitForContentScriptReady(targetTabId);
       const tab = await browser.tabs.get(targetTabId);
       return { url: tab.url };
     }
     case 'reload': {
       await browser.tabs.reload(targetTabId);
       await waitForTabLoad(targetTabId);
+      await waitForContentScriptReady(targetTabId);
       const tab = await browser.tabs.get(targetTabId);
       return { url: tab.url, title: tab.title };
     }
@@ -198,6 +202,10 @@ async function routeCommand(
       if (container) {
         if (!import.meta.env.FIREFOX) {
           const tab = await browser.tabs.create({ url: url || 'about:blank' });
+          if (url && tab.id) {
+            await waitForTabLoad(tab.id);
+            await waitForContentScriptReady(tab.id);
+          }
           const result: Record<string, unknown> = {
             tabId: tab.id,
             url: tab.url || url || 'about:blank',
@@ -225,6 +233,10 @@ async function routeCommand(
         url: url || 'about:blank',
         ...((cookieStoreId != null ? { cookieStoreId } : {}) as Record<string, unknown>),
       } as Browser.tabs.CreateProperties);
+      if (url && tab.id) {
+        await waitForTabLoad(tab.id);
+        await waitForContentScriptReady(tab.id);
+      }
       const result: Record<string, unknown> = {
         tabId: tab.id,
         url: tab.url || url || 'about:blank',
@@ -1094,6 +1106,38 @@ function waitForUrlChange(tabId: number, previousUrl: string, timeoutMs = 15_000
     };
 
     browser.tabs.onUpdated.addListener(listener);
+  });
+}
+
+/**
+ * Ping the content script to verify it's ready to receive commands.
+ * Used after navigation to ensure the new page's content script is injected.
+ * Resolves (never rejects) — special pages (chrome://, about:, PDF) may never
+ * have a content script, so we don't want to block the command flow.
+ */
+function waitForContentScriptReady(tabId: number, timeoutMs = 5_000): Promise<void> {
+  const POLL_INTERVAL = 200;
+  return new Promise((resolve) => {
+    const deadline = Date.now() + timeoutMs;
+    const attempt = () => {
+      if (Date.now() > deadline) {
+        resolve();
+        return;
+      }
+      browser.tabs
+        .sendMessage(tabId, { type: 'browser-cli-ping' }, { frameId: 0 })
+        .then((response: unknown) => {
+          if (response && (response as { ready?: boolean }).ready) {
+            resolve();
+          } else {
+            setTimeout(attempt, POLL_INTERVAL);
+          }
+        })
+        .catch(() => {
+          setTimeout(attempt, POLL_INTERVAL);
+        });
+    };
+    attempt();
   });
 }
 
