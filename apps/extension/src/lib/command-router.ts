@@ -621,6 +621,10 @@ async function routeCommand(
       const win = await browser.windows.create({ url: url || 'about:blank' });
       if (!win) throw new Error('Failed to create window');
       const tab = win.tabs?.[0];
+      if (url && tab?.id) {
+        await waitForTabLoad(tab.id);
+        await waitForContentScriptReady(tab.id);
+      }
       return {
         windowId: win.id,
         tabId: tab?.id,
