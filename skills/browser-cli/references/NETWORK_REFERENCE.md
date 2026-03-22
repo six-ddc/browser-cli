@@ -43,6 +43,62 @@ browser-cli network unroute <routeId>
 browser-cli network routes
 ```
 
+### watch - Monitor Network Traffic (CDP)
+
+Monitor API requests/responses with full request/response bodies via Chrome DevTools Protocol. The command returns immediately; captured traffic is written to a file in `~/.browser-cli/watches/`.
+
+```bash
+browser-cli network watch [pattern] [options]
+```
+
+| Option              | Description                                |
+| ------------------- | ------------------------------------------ |
+| `--timeout <ms>`    | Auto-stop after ms (default: `30000`)      |
+| `--body`            | Capture response bodies (skips binary)     |
+| `--method <method>` | Filter by HTTP method (e.g. `GET`, `POST`) |
+
+**Pattern**: Optional URL filter (glob-style). Without a pattern, all requests are captured.
+
+**Examples:**
+
+```bash
+# Start watching API calls
+browser-cli network watch '/api/*' --timeout 30000 --body
+
+# Perform actions that trigger network requests
+browser-cli click '#submit'
+
+# Stop watching (or wait for timeout)
+browser-cli network unwatch
+
+# View captured traffic
+cat ~/.browser-cli/watches/watch-*.txt
+```
+
+**Output format:** HTTP-readable text (httpie-style), one request/response pair per block:
+
+```
+>>> POST https://api.example.com/users  [XHR, 142ms]
+Content-Type: application/json
+
+{"name": "Alice"}
+
+<<< 200 OK  (256B)
+Content-Type: application/json
+
+{"id": 1, "name": "Alice"}
+```
+
+### unwatch - Stop Network Watch
+
+```bash
+browser-cli network unwatch
+```
+
+Stop an active network watch. Use `--tab` to target a specific tab's watch.
+
+**Note:** `watch`/`unwatch` uses `chrome.debugger` API — Chrome only, not available on Firefox. Cannot be used while Chrome DevTools is open on the target tab (only one debugger can attach at a time).
+
 ### Common Patterns
 
 ```bash
@@ -57,6 +113,13 @@ browser-cli network routes                    # List active routes
 
 # Clean up
 browser-cli network unroute 1                 # Remove by ID
+
+# Capture API traffic during a form submission
+browser-cli network watch '/api/*' --body --method POST
+browser-cli fill '#email' 'user@example.com'
+browser-cli click '#submit'
+browser-cli network unwatch
+cat ~/.browser-cli/watches/watch-*.txt        # Inspect captured requests
 ```
 
 ---

@@ -29,7 +29,7 @@ The CLI sends commands to a background daemon, which relays them over WebSocket 
 
 - Navigate (goto, back, forward, reload), take screenshots
 - Extract clean readable Markdown via [Defuddle](https://github.com/nickersoft/defuddle) — strips nav, ads, and boilerplate
-- Accessibility snapshots with element refs (`@e1`, `@e2`) for precise interaction
+- Accessibility snapshots with element refs (`@e1`, `@e2`), baseline saving & diffing to detect page changes
 - Evaluate JavaScript in page context
 
 **Interaction**

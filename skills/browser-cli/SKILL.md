@@ -643,26 +643,29 @@ browser-cli --tab 12345 get attr '.product-item:first-child a' href
 ### Fill a multi-step form
 
 ```bash
+browser-cli tab new https://app.example.com/signup --group browser-cli
+# Output: Tab 12345: ...
+
 # Step 1
-browser-cli find 'label="First Name"' fill John
-browser-cli find 'label="Last Name"' fill Doe
-browser-cli find 'role=button[name="Next"]'
+browser-cli --tab 12345 find 'label="First Name"' fill John
+browser-cli --tab 12345 find 'label="Last Name"' fill Doe
+browser-cli --tab 12345 find 'role=button[name="Next"]'
 
 # Step 2
-browser-cli wait 'text=Address'
-browser-cli find 'label=Address' fill "123 Main St"
-browser-cli find 'label=City' fill "San Francisco"
-browser-cli select 'select[name="state"]' CA
-browser-cli find 'role=button[name="Submit"]'
+browser-cli --tab 12345 wait 'text=Address'
+browser-cli --tab 12345 find 'label=Address' fill "123 Main St"
+browser-cli --tab 12345 find 'label=City' fill "San Francisco"
+browser-cli --tab 12345 select 'select[name="state"]' CA
+browser-cli --tab 12345 find 'role=button[name="Submit"]'
 ```
 
 ### Work with iframes
 
 ```bash
-browser-cli frame list                      # See all frames
-browser-cli frame '#payment-iframe'         # Switch to iframe
-browser-cli fill 'input[name="card"]' 4111111111111111
-browser-cli frame main                      # Back to main page
+browser-cli --tab 12345 frame list                      # See all frames
+browser-cli --tab 12345 frame '#payment-iframe'         # Switch to iframe
+browser-cli --tab 12345 fill 'input[name="card"]' 4111111111111111
+browser-cli --tab 12345 frame main                      # Back to main page
 ```
 
 ### Block analytics and ads
@@ -710,7 +713,7 @@ commands. Check for a matching guide before using generic extraction.
 
 When no guide exists, fall back to: `snapshot -ic` → `markdown` → `eval`.
 
-To add a new site guide, use the `site-guide` skill (invoke with `/site-guide <domain>`). See [sites/CONTRIBUTING.md](references/sites/CONTRIBUTING.md) for format conventions.
+To add a new site guide, use the `browser-cli-site-guide` skill (invoke with `/browser-cli-site-guide <domain>`). See [sites/CONTRIBUTING.md](references/sites/CONTRIBUTING.md) for format conventions.
 
 ## Detailed References
 

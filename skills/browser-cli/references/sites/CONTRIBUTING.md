@@ -1,11 +1,11 @@
 # Contributing Site-Specific Guides
 
-> **Use the `site-guide` skill** to create new guides. It provides the full
+> **Use the `browser-cli-site-guide` skill** to create new guides. It provides the full
 > interactive workflow: navigate the live site, discover selectors from the real
 > DOM, build and test recipe scripts, then write the guide. Invoke it with:
 >
 > ```
-> /site-guide <domain>
+> /browser-cli-site-guide <domain>
 > ```
 
 ## What a guide consists of

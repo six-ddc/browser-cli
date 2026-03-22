@@ -11,7 +11,11 @@
       "description": "Automate a real browser from the command line — navigate, interact, query, manage tabs/cookies/storage, intercept network requests, and capture snapshots/screenshots. Uses a Chrome/Firefox extension + daemon architecture (no Playwright required).",
       "strict": false,
       "keywords": ["browser", "automation", "cli", "chrome", "extension", "scraping"],
-      "skills": ["./skills/browser-cli"]
+      "skills": [
+        "./skills/browser-cli",
+        "./skills/browser-cli-research",
+        "./skills/browser-cli-site-guide"
+      ]
     }
   ],
   "metadata": {

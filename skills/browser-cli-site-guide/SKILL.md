@@ -1,5 +1,5 @@
 ---
-name: site-guide
+name: browser-cli-site-guide
 description: >
   Create browser-cli site-specific guides by exploring live website DOM with browser-cli.
   Use when asked to create, add, or write a new site guide (site reference, site-specific
@@ -7,7 +7,9 @@ description: >
   real CSS selectors from the live DOM, build and validate extraction scripts interactively,
   then write a tested guide file. Triggers on: "add a site guide for github.com",
   "create browser-cli reference for reddit", "write selectors for youtube.com",
-  "make a new site guide".
+  "make a new site guide", "add browser-cli support for X", "create a scraper for Y",
+  "write extraction scripts for Z". Also trigger when the user mentions wanting to
+  automate data extraction from a specific website that doesn't have an existing guide.
 allowed-tools: Bash(browser-cli:*), Bash(cat *), Bash(mktemp *), Bash(TMP=*)
 argument-hint: '<domain to create guide for, e.g. github.com>'
 ---
@@ -169,10 +171,12 @@ EOF
 ### Selector preference order
 
 1. `[data-testid="..."]` — most stable, explicitly for testing
-2. `#id` — unique IDs
-3. `[role="..."]`, `[aria-label="..."]` — semantic attributes
-4. `.semantic-class` — human-readable class names (e.g., `.hnuser`, `.score`)
-5. Avoid: auto-generated classes (`.css-1a2b3c`), deep nesting
+2. Custom element tag + attributes — Web Components store data in attributes (e.g., Reddit's `shreddit-post` with `getAttribute("post-title")`); no need to pierce shadow DOM
+3. `#id` — unique IDs
+4. `[role="..."]`, `[aria-label="..."]` — semantic attributes
+5. `.semantic-class` — human-readable class names (e.g., `.hnuser`, `.score`)
+6. `[class*="partial"]` — CSS Module fuzzy match for hashed class names (e.g., `[class*=_detail_]` on Weibo); use when class names have random suffixes
+7. Avoid: exact auto-generated classes (`.css-1a2b3c`), deep nesting
 
 ## Step 4: Build & Validate Extraction Scripts
 
@@ -298,9 +302,12 @@ export default async function (browser, args) {
 
 For complex sites, these patterns from existing scripts are worth adapting:
 
+- **Web Components with attribute-based data** — some sites (e.g., Reddit) use custom elements where data is in element attributes rather than inner DOM. Extract via `el.getAttribute("post-title")` instead of `el.querySelector(...)?.innerText`. Shadow DOM children are accessed via slot: `[...el.children].find(ch => ch.getAttribute('slot') === 'comment')`. Reference: `scripts/reddit.mjs` → `extractFeed` / `extractComments`.
+- **CSS Module fuzzy matching** — sites using CSS Modules have hashed class names (e.g., `_detail_zsq3w`). Use `[class*=_detail_]` partial match instead of exact class names. Reference: `scripts/weibo.mjs` selectors throughout.
 - **Virtual scroll accumulator** — when items are removed from the DOM as you scroll (virtualized lists), inject `window` globals to track seen items across scroll batches. Reference: `scripts/xhs.mjs` → `initScrollCollector` / `scrollAndCollect` / `getCollected`.
 - **Network watch for API extraction** — for sites with auth-bearing XHR URLs, use `network watch` to capture traffic, then re-fetch via in-page `fetch()`. More stable than DOM selectors for data-heavy SPAs. Reference: `scripts/youtube.mjs` → `fetchTimedtext`.
 - **contentEditable input** — rich text editors don't respond to `fill`. Use `document.execCommand('insertText')` after focusing the element. Reference: `scripts/xhs.mjs` → `postComment`.
+- **Draft.js / contentEditable search** — some inputs (e.g., Discord search) are `contentEditable` divs, not `<input>`. Use CDP key dispatch (`press --debugger`) for character-by-character input. Reference: `scripts/discord.mjs` → `searchMessages`.
 
 ### Testing the script
 
@@ -447,11 +454,14 @@ Before finishing, confirm:
 
 ## Existing Guides (read one before writing)
 
-| Guide                                                                              | Script                                            | Best for learning                               |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------- |
-| [news.ycombinator.com.md](../browser-cli/references/sites/news.ycombinator.com.md) | [hn.mjs](../browser-cli/scripts/hn.mjs)           | Simple selectors, static HTML, comment tree     |
-| [google.com.md](../browser-cli/references/sites/google.com.md)                     | [google.mjs](../browser-cli/scripts/google.mjs)   | Search flow, multiple result types, time filter |
-| [x.com.md](../browser-cli/references/sites/x.com.md)                               | [x.mjs](../browser-cli/scripts/x.mjs)             | `data-testid` selectors, login detection, SPA   |
-| [xiaohongshu.com.md](../browser-cli/references/sites/xiaohongshu.com.md)           | [xhs.mjs](../browser-cli/scripts/xhs.mjs)         | Virtual scroll, contentEditable, SVG state      |
-| [mail.google.com.md](../browser-cli/references/sites/mail.google.com.md)           | [gmail.mjs](../browser-cli/scripts/gmail.mjs)     | CSP handling, inbox extraction                  |
-| [youtube.com.md](../browser-cli/references/sites/youtube.com.md)                   | [youtube.mjs](../browser-cli/scripts/youtube.mjs) | Player API, transcript/captions, SPA            |
+| Guide                                                                              | Script                                            | Best for learning                                      |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------ |
+| [news.ycombinator.com.md](../browser-cli/references/sites/news.ycombinator.com.md) | [hn.mjs](../browser-cli/scripts/hn.mjs)           | Simple selectors, static HTML, comment tree            |
+| [google.com.md](../browser-cli/references/sites/google.com.md)                     | [google.mjs](../browser-cli/scripts/google.mjs)   | Search flow, multiple result types, time filter        |
+| [x.com.md](../browser-cli/references/sites/x.com.md)                               | [x.mjs](../browser-cli/scripts/x.mjs)             | `data-testid` selectors, login detection, SPA          |
+| [xiaohongshu.com.md](../browser-cli/references/sites/xiaohongshu.com.md)           | [xhs.mjs](../browser-cli/scripts/xhs.mjs)         | Virtual scroll, contentEditable, SVG state             |
+| [mail.google.com.md](../browser-cli/references/sites/mail.google.com.md)           | [gmail.mjs](../browser-cli/scripts/gmail.mjs)     | CSP handling, inbox extraction                         |
+| [youtube.com.md](../browser-cli/references/sites/youtube.com.md)                   | [youtube.mjs](../browser-cli/scripts/youtube.mjs) | Player API, transcript/captions, SPA                   |
+| [reddit.com.md](../browser-cli/references/sites/reddit.com.md)                     | [reddit.mjs](../browser-cli/scripts/reddit.mjs)   | Web Components, Shadow DOM, attribute-based extraction |
+| [weibo.com.md](../browser-cli/references/sites/weibo.com.md)                       | [weibo.mjs](../browser-cli/scripts/weibo.mjs)     | CSS Module fuzzy match, Chinese guide, comment scroll  |
+| [discord.com.md](../browser-cli/references/sites/discord.com.md)                   | [discord.mjs](../browser-cli/scripts/discord.mjs) | aria-label/role selectors, Draft.js input handling     |

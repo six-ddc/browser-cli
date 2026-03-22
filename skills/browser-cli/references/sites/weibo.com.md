@@ -35,7 +35,22 @@
 >
 > Agent 执行时将 `scripts/weibo.mjs` 替换为绝对路径（基于 SKILL.md 所在目录推导）。
 
-> **Recipe 调试**: 复制函数修改选择器后通过 `script -` 重跑，或用 `eval` 单步调试选择器。
+> **Recipe 调试**: 如果 recipe 函数失败（例如选择器变更），从 `scripts/weibo.mjs` 复制函数、修改选择器后通过 `script -`（stdin）重跑：
+>
+> ```bash
+> browser-cli --tab <tabId> script - <<'EOF'
+> export default async function(browser) {
+>   // 从 weibo.mjs extractFeed 复制并修改选择器
+>   return browser.evaluate({
+>     expression: `JSON.stringify([...document.querySelectorAll("article")].slice(0,3).map(el => ({ author: el.querySelector("a[class*=name]")?.innerText || "" })))`
+>   });
+> }
+> EOF
+> ```
+>
+> 也可用 `eval` 逐步调试选择器：`browser-cli --tab <tabId> eval 'document.querySelectorAll("article").length'`
+>
+> 参考下方选择器表格。
 
 ## 选择器参考
 

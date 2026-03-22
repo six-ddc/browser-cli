@@ -1,11 +1,12 @@
 ---
-name: research
+name: browser-cli-research
 description: >
   Deep research and information gathering using browser-cli to search, extract, and synthesize
   information from the real web. Covers Google search, YouTube transcript extraction, Reddit/HN
-  community discussions, LinkedIn professional insights, WeChat/Xiaohongshu Chinese-language sources,
-  X/Twitter social posts, Google Scholar academic papers, article content extraction (markdown),
-  and custom JS-based scraping for arbitrary websites.
+  community discussions, LinkedIn professional insights, WeChat/Xiaohongshu/Weibo Chinese-language
+  sources, X/Twitter social posts, Google Scholar academic papers, Quora Q&A, Discord tech
+  communities, article content extraction (markdown), and custom JS-based scraping for arbitrary
+  websites.
   Use this skill whenever the user wants to research a topic, investigate a question, gather
   opinions from multiple sources, find discussions or community sentiment, compare viewpoints,
   collect references, or do any kind of information retrieval that goes beyond what a simple
@@ -48,11 +49,12 @@ Before touching the browser, decompose the research question:
 3. **Select sources** — For each sub-question, decide which sources are most likely to have
    good answers:
    - **Factual/technical**: Google → articles (markdown) → Google Scholar
-   - **Community opinion**: Reddit, HN, X/Twitter
+   - **Community opinion**: Reddit, HN, X/Twitter, Quora
    - **Professional/industry**: LinkedIn content search, LinkedIn company pages
-   - **Chinese perspective**: WeChat, Xiaohongshu
+   - **Chinese perspective**: WeChat, Xiaohongshu, Weibo
    - **Expert explanation**: YouTube transcripts
-   - **Current events**: Google News, X/Twitter
+   - **Current events**: Google News, X/Twitter, Weibo trending
+   - **Tech communities**: HN, Discord (open-source projects, dev communities)
 4. **Report the plan** — Tell the user: "I'll research X by looking into [sub-questions]
    across [sources]. Let me get started."
 
@@ -140,7 +142,7 @@ use the absolute path derived from this SKILL.md's location:
 SCRIPT_PATH = <this SKILL.md's directory>/../browser-cli/scripts
 ```
 
-For example, if this file is at `/Users/me/skills/research/SKILL.md`, then:
+For example, if this file is at `/Users/me/skills/browser-cli-research/SKILL.md`, then:
 `SCRIPT_PATH=/Users/me/skills/browser-cli/scripts`
 
 ### 1. Article Content Extraction (any website)
@@ -302,22 +304,30 @@ No login required for reading.
 **Script path**: `SCRIPT_PATH/hn.mjs`
 
 ```bash
-# Browse categories
-browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/'       # Top stories
-browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/ask'    # Ask HN
-browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/show'   # Show HN
+# Browse categories (or use navigateTo: top/new/ask/show/jobs)
+browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call navigateTo -- --category "top"
 browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call extractPosts
 
-# Read a discussion
-browser-cli --tab <tabId> navigate 'https://news.ycombinator.com/item?id=<id>'
+# Next page of posts
+browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call nextPage
+browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call extractPosts
+
+# Navigate to a specific post and get metadata
+browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call navigateToPost -- --id "<postId>"
+browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call extractPostDetail
+
+# Extract comments (structured tree with depth)
 browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call extractComments
+# Or as a human-readable indented tree (ideal for research reports):
+browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call formatCommentTree
 ```
 
 **Research workflow**:
 
 1. Search Google with `site:news.ycombinator.com <topic>` to find relevant threads
 2. Or use HN's built-in search: `https://hn.algolia.com/?q=<query>`
-3. Extract comments from high-engagement threads for expert opinions
+3. Navigate to the post with `navigateToPost`, get metadata with `extractPostDetail`
+4. Extract comments — use `formatCommentTree` for a readable indented view with usernames
 
 ### 7. LinkedIn (Professional & Industry Insights)
 
@@ -330,19 +340,26 @@ industry trends, and professional discussions. Login required.
 # Check login (required)
 browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call detectLogin
 
-# Search for content/posts on a topic
-browser-cli --tab <tabId> navigate 'https://www.linkedin.com/search/results/content/?keywords=<encoded-query>'
-browser-cli --tab <tabId> wait 3000
+# Search for content/posts on a topic (with extraction)
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call searchContent -- --keywords "AI trends 2025"
 
 # Search for people (experts in a field)
 browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call searchPeople -- --keywords "AI researcher"
 
+# Extract a person's profile
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call navigateProfile -- --username "johndoe"
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call extractProfile
+
 # Search for companies
-browser-cli --tab <tabId> navigate 'https://www.linkedin.com/search/results/companies/?keywords=<encoded-query>'
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call searchCompanies -- --keywords "autonomous driving"
 
 # Extract company info
-browser-cli --tab <tabId> navigate 'https://www.linkedin.com/company/<slug>/'
-browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call extractCompanyInfo
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call navigateCompany -- --slug "openai"
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call extractCompany
+
+# Job market research
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call searchJobs -- --keywords "ML engineer" --location "San Francisco"
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call extractJobDetail
 
 # Extract feed posts (industry discussions)
 browser-cli --tab <tabId> navigate 'https://www.linkedin.com/feed/'
@@ -351,10 +368,10 @@ browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call extractFeed
 
 **Research use cases**:
 
-- Company due diligence: company page → about, size, industry, recent posts
-- Expert identification: people search → profile extraction
-- Industry trends: content search → post extraction with engagement metrics
-- Job market research: job search → listings and descriptions
+- Company due diligence: `searchCompanies` → `navigateCompany` → `extractCompany`
+- Expert identification: `searchPeople` → `navigateProfile` → `extractProfile`
+- Industry trends: `searchContent` → post extraction with engagement metrics
+- Job market research: `searchJobs` → `extractJobDetail` for listings and descriptions
 
 **Notes**: Login required for all LinkedIn pages. If not logged in, ask the user to log in first.
 
@@ -422,7 +439,115 @@ browser-cli --tab <tabId> navigate 'https://x.com/<handle>'
 browser-cli --tab <tabId> script SCRIPT_PATH/x.mjs --call extractTweets
 ```
 
-### 11. Visual Evidence (Screenshots)
+### 11. Weibo (Chinese Public Discourse + Trending)
+
+Weibo is China's largest microblogging platform — essential for Chinese public opinion, trending
+topics, breaking news, and celebrity/brand discussions. Login required for full access.
+
+**Script path**: `SCRIPT_PATH/weibo.mjs`
+
+```bash
+# Check login
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call detectLogin
+
+# Search for a topic
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call search -- --keyword "人工智能"
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call extractSearchResults
+
+# Extract trending topics (热搜榜)
+browser-cli --tab <tabId> navigate 'https://weibo.com/hot/search'
+browser-cli --tab <tabId> wait 3000
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call extractTrending
+
+# Extract feed posts (homepage or hot)
+browser-cli --tab <tabId> navigate 'https://weibo.com/hot'
+browser-cli --tab <tabId> wait 3000
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call extractFeed
+
+# Read a post's comments
+browser-cli --tab <tabId> navigate '<post-detail-url>'
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call openComments
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call extractComments
+```
+
+**Research workflow**:
+
+1. Check `extractTrending` for what's currently hot in China
+2. Search specific topics with `search` + `extractSearchResults`
+3. For deeper sentiment, read comments on popular posts
+4. Comments use virtual scrolling — use `scrollComments` + `getComments` for more
+
+**Notes**: Weibo has strong anti-bot measures. All interactions must go through page clicks
+(not API calls). Add delays (500-2000ms) between operations. Login required.
+
+### 12. Quora (Q&A Knowledge)
+
+Quora is useful for expert answers, explanations, and diverse perspectives on questions.
+
+**Script path**: `SCRIPT_PATH/quora.mjs`
+
+```bash
+# Search for questions
+browser-cli --tab <tabId> script SCRIPT_PATH/quora.mjs --call navigateToSearch -- --query "best practices for X"
+browser-cli --tab <tabId> script SCRIPT_PATH/quora.mjs --call extractSearchResults
+
+# Read answers on a specific question
+browser-cli --tab <tabId> script SCRIPT_PATH/quora.mjs --call navigateToQuestion -- --url "<question-url>"
+browser-cli --tab <tabId> script SCRIPT_PATH/quora.mjs --call extractQuestionMeta
+browser-cli --tab <tabId> script SCRIPT_PATH/quora.mjs --call expandAllAnswers
+browser-cli --tab <tabId> script SCRIPT_PATH/quora.mjs --call extractAnswers
+
+# Load more answers if needed
+browser-cli --tab <tabId> script SCRIPT_PATH/quora.mjs --call loadMoreAnswers
+browser-cli --tab <tabId> script SCRIPT_PATH/quora.mjs --call extractAnswers
+```
+
+**Research workflow**:
+
+1. Search Google with `site:quora.com <topic>` or use `navigateToSearch` directly
+2. Navigate to high-quality questions, expand all answers
+3. Extract answers with upvote counts and author credentials
+
+### 13. Discord (Tech Communities + Open Source)
+
+Discord communities are valuable for real-time discussions in open-source projects, dev tools,
+crypto, gaming, and niche tech communities. Login required; read-only operations.
+
+**Script path**: `SCRIPT_PATH/discord.mjs`
+
+```bash
+# Check login
+browser-cli --tab <tabId> script SCRIPT_PATH/discord.mjs --call detectLogin
+
+# List joined servers
+browser-cli --tab <tabId> script SCRIPT_PATH/discord.mjs --call listServers
+
+# Navigate to a server and list channels
+browser-cli --tab <tabId> script SCRIPT_PATH/discord.mjs --call navigateServer -- --name "Open WebUI"
+browser-cli --tab <tabId> script SCRIPT_PATH/discord.mjs --call listChannels
+
+# Read messages in a channel
+browser-cli --tab <tabId> script SCRIPT_PATH/discord.mjs --call navigateChannel -- --url "<channel-url>"
+browser-cli --tab <tabId> script SCRIPT_PATH/discord.mjs --call extractMessages
+
+# Search messages across the server
+browser-cli --tab <tabId> script SCRIPT_PATH/discord.mjs --call searchMessages -- --query "bug report"
+
+# View pinned messages
+browser-cli --tab <tabId> script SCRIPT_PATH/discord.mjs --call extractPinnedMessages
+```
+
+**Research workflow**:
+
+1. Navigate to the relevant server and channel
+2. Search for topic-specific messages with `searchMessages`
+3. Extract messages and pinned messages for context
+4. Check member list with `extractMembers` for community size/roles
+
+**Notes**: Login required. Discord search uses Draft.js contentEditable input (handled by
+the recipe script). Read-only operations only.
+
+### 14. Visual Evidence (Screenshots)
 
 For research involving charts, infographics, or visual data that `markdown` can't capture:
 
@@ -434,7 +559,7 @@ browser-cli --tab <tabId> screenshot --path /tmp/research-evidence.png
 browser-cli --tab <tabId> screenshot --selector '.chart-container' --path /tmp/chart.png
 ```
 
-### 12. Custom JS Extraction (Arbitrary Websites)
+### 15. Custom JS Extraction (Arbitrary Websites)
 
 For websites without a dedicated site guide, use `eval` or `script -` to extract data directly.
 
@@ -482,6 +607,10 @@ When a source fails, don't stop — fall back to alternatives:
 | X/Twitter requires login         | Search Google with `site:x.com <topic>` for indexed tweets                                  |
 | WeChat article expired           | Search for the article title on Google or Baidu for cached versions                         |
 | LinkedIn not logged in           | Ask user to log in; meanwhile use Google `site:linkedin.com` for public profiles            |
+| Discord not logged in            | Ask user to log in; no public fallback available                                            |
+| Weibo anti-bot blocks            | Add longer delays (2-5s) between operations; avoid rapid sequential requests                |
+| Scholar CAPTCHA triggered        | Wait 30-60s and retry; reduce query frequency; try alternative search terms                 |
+| Quora blocks extraction          | Search Google with `site:quora.com <topic>` and read via `markdown`                         |
 
 ## Handling Pagination
 
@@ -499,6 +628,22 @@ browser-cli --tab <tabId> navigate 'https://www.google.com/search?q=topic&start=
 
 # WeChat: use nextPage
 browser-cli --tab <tabId> script SCRIPT_PATH/weixin.mjs --call nextPage
+
+# HN: click "More" link for next page
+browser-cli --tab <tabId> script SCRIPT_PATH/hn.mjs --call nextPage
+
+# Scholar: next page of results
+browser-cli --tab <tabId> script SCRIPT_PATH/scholar.mjs --call nextPage
+
+# Weibo: use scroll collector for feed/search pages
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call initScrollCollector
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call scrollAndCollect
+browser-cli --tab <tabId> script SCRIPT_PATH/weibo.mjs --call getCollected
+
+# LinkedIn: use feed collector for infinite scroll
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call initFeedCollector
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call scrollAndCollect
+browser-cli --tab <tabId> script SCRIPT_PATH/linkedin.mjs --call getCollectedPosts
 
 # General infinite scroll: scroll + wait + extract
 browser-cli --tab <tabId> scroll down --amount 3000

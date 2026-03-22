@@ -1,6 +1,6 @@
 # discord.com
 
-> Discord — 社区沟通与协作平台。本指南聚焦于已登录状态下的只读社区维护操作。
+> Discord — community communication and collaboration platform. This guide focuses on read-only community maintenance operations (requires login).
 
 > **Tip**: To avoid disrupting user browsing, open a dedicated tab first:
 >

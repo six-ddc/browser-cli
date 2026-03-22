@@ -96,18 +96,6 @@
 | Collapse button        | `.togg`            | `[–]` button to collapse/expand comment thread          |
 | Navigation links       | `.comhead .navs a` | "next", "prev", "parent" links                          |
 
-### Category URLs
-
-| Category         | URL                                        |
-| ---------------- | ------------------------------------------ |
-| Top (default)    | `https://news.ycombinator.com/`            |
-| New              | `https://news.ycombinator.com/newest`      |
-| Past (yesterday) | `https://news.ycombinator.com/front`       |
-| Comments         | `https://news.ycombinator.com/newcomments` |
-| Ask HN           | `https://news.ycombinator.com/ask`         |
-| Show HN          | `https://news.ycombinator.com/show`        |
-| Jobs             | `https://news.ycombinator.com/jobs`        |
-
 ## Notes
 
 - **No data-testid attributes**: HN uses semantic class names (`.athing`, `.comtr`, `.hnuser`, etc.); selectors are stable.
