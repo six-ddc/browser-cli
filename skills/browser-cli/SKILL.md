@@ -708,6 +708,7 @@ commands. Check for a matching guide before using generic extraction.
 | scholar.google.com                                   | [sites/scholar.google.com.md](references/sites/scholar.google.com.md)       |
 | youtube.com                                          | [sites/youtube.com.md](references/sites/youtube.com.md)                     |
 | discord.com                                          | [sites/discord.com.md](references/sites/discord.com.md)                     |
+| arena.ai                                             | [sites/arena.ai.md](references/sites/arena.ai.md)                           |
 | quora.com                                            | [sites/quora.com.md](references/sites/quora.com.md)                         |
 | weibo.com                                            | [sites/weibo.com.md](references/sites/weibo.com.md)                         |
 
