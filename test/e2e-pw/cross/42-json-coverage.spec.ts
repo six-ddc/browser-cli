@@ -76,12 +76,42 @@ test.describe('--json select', () => {
 test.describe('--json screenshot', () => {
   test('--json screenshot succeeds', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
-    const r = bcli('--json', 'screenshot');
+    const tmpFile = '/tmp/browser-cli-e2e-screenshot.png';
+    const fs = await import('node:fs');
+    try {
+      fs.unlinkSync(tmpFile);
+    } catch {}
+
+    const r = bcli('--json', 'screenshot', '--path', tmpFile);
     expect(r).toBcliSuccess();
-    // Screenshot JSON may be very large (base64 image) and can exceed CLI stdout buffer,
-    // causing truncated JSON. Just verify the output starts with valid JSON structure.
-    expect(r.stdout).toMatch(/^\s*\{/);
-    expect(r.stdout).toMatch(/"success"\s*:\s*true/);
+    const parsed = JSON.parse(r.stdout);
+    expect(parsed.success).toBe(true);
+    // The base64 image must stay out of stdout unless --base64 is asked for.
+    expect(parsed.data.data).toBeUndefined();
+    expect(parsed.data.path).toBe(tmpFile);
+    expect(parsed.data.width).toBeGreaterThan(0);
+    expect(parsed.data.height).toBeGreaterThan(0);
+    expect(fs.existsSync(tmpFile)).toBe(true);
+    expect(fs.statSync(tmpFile).size).toBe(parsed.data.bytes);
+    fs.unlinkSync(tmpFile);
+  });
+
+  test('--json screenshot --base64 includes the image data on request', async ({
+    bcli,
+    navigateAndWait,
+  }) => {
+    await navigateAndWait(PAGES.HOME);
+    const tmpFile = '/tmp/browser-cli-e2e-screenshot-b64.png';
+    const r = bcli('--json', 'screenshot', '--path', tmpFile, '--base64');
+    expect(r).toBcliSuccess();
+    const parsed = JSON.parse(r.stdout);
+    expect(typeof parsed.data.data).toBe('string');
+    expect(parsed.data.data.length).toBeGreaterThan(0);
+
+    const fs = await import('node:fs');
+    try {
+      fs.unlinkSync(tmpFile);
+    } catch {}
   });
 });
 
@@ -305,12 +335,15 @@ test.describe('--json state', () => {
     expect(() => JSON.parse(r.stdout)).not.toThrow();
     const parsed = JSON.parse(r.stdout);
     expect(parsed.success).toBe(true);
+    expect(parsed.data.path).toBe(tmpFile);
 
-    // Clean up (file may not be created since --json exits before write)
+    // The side effect must happen even under --json.
     const fs = await import('node:fs');
-    try {
-      fs.unlinkSync(tmpFile);
-    } catch {}
+    expect(fs.existsSync(tmpFile)).toBe(true);
+    const saved = JSON.parse(fs.readFileSync(tmpFile, 'utf-8'));
+    expect(saved.version).toBe(1);
+    expect(Array.isArray(saved.cookies)).toBe(true);
+    fs.unlinkSync(tmpFile);
   });
 
   test('--json state load returns valid JSON', async ({ bcli, navigateAndWait }) => {
@@ -360,8 +393,8 @@ test.describe('--json status', () => {
     expect(r.exitCode).toBe(0);
     expect(() => JSON.parse(r.stdout)).not.toThrow();
     const parsed = JSON.parse(r.stdout);
-    // status command returns { daemon: true/false, ... } not { success: true }
-    expect(parsed.daemon).toBe(true);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data.daemon).toBe(true);
   });
 });
 

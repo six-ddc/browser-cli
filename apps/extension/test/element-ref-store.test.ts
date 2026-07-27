@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import type { BrowserCliError } from '@browser-cli/shared';
 import {
   clearRefs,
   registerElement,
@@ -125,7 +126,7 @@ describe('resolveElement', () => {
     expect(resolveElement('.nonexistent')).toBeNull();
   });
 
-  it('falls back to CSS selector when element is removed from DOM', () => {
+  it('falls back to CSS selector when the replacement has the same identity', () => {
     document.body.innerHTML = '<div id="d">original</div>';
     const el = document.getElementById('d')!;
     registerElement(el, '#d');
@@ -133,11 +134,120 @@ describe('resolveElement', () => {
     // Remove from DOM — WeakRef.deref() may still return the element,
     // but isConnected will be false, so it falls back to querySelector
     el.remove();
-    document.body.innerHTML = '<div id="d">replacement</div>';
+    document.body.innerHTML = '<div id="d">original</div>';
 
     const resolved = resolveElement('@e1');
     expect(resolved).not.toBeNull();
-    expect(resolved!.textContent).toBe('replacement');
+    expect(resolved!.textContent).toBe('original');
+  });
+
+  it('refuses the CSS fallback when the replacement has different text', () => {
+    document.body.innerHTML = '<div id="d">original</div>';
+    const el = document.getElementById('d')!;
+    registerElement(el, '#d');
+
+    el.remove();
+    document.body.innerHTML = '<div id="d">replacement</div>';
+
+    expect(resolveElement('@e1')).toBeNull();
+  });
+
+  it('refuses the CSS fallback for short text too (re-rendered list rows)', () => {
+    document.body.innerHTML = '<button id="b">Next</button>';
+    const el = document.getElementById('b')!;
+    registerElement(el, '#b');
+
+    el.remove();
+    document.body.innerHTML = '<button id="b">Prev</button>';
+
+    expect(resolveElement('@e1')).toBeNull();
+  });
+});
+
+// ─── strict mode ────────────────────────────────────────────────────
+
+describe('resolveElement (strict)', () => {
+  it('throws MULTIPLE_MATCHES when a CSS selector matches more than one element', () => {
+    document.body.innerHTML = '<button class="b">One</button><button class="b">Two</button>';
+
+    try {
+      resolveElement('.b', undefined, { strict: true });
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      const e = err as BrowserCliError;
+      expect(e.code).toBe('MULTIPLE_MATCHES');
+      expect(e.message).toContain('matched 2 elements');
+      expect(e.message).toContain('One');
+      expect(e.hint).toContain('--nth');
+    }
+  });
+
+  it('does not throw on multiple matches when a position filter is given', () => {
+    document.body.innerHTML = '<button class="b">One</button><button class="b">Two</button>';
+
+    const el = resolveElement('.b', { type: 'last' }, { strict: true });
+    expect(el?.textContent).toBe('Two');
+  });
+
+  it('does not throw on a single match', () => {
+    document.body.innerHTML = '<button class="b">Only</button>';
+    expect(resolveElement('.b', undefined, { strict: true })?.textContent).toBe('Only');
+  });
+
+  it('throws ELEMENT_NOT_FOUND with the ref count for an unregistered ref', () => {
+    document.body.innerHTML = '<div id="d">x</div>';
+    registerElement(document.getElementById('d')!, '#d');
+
+    try {
+      resolveElement('@e9', undefined, { strict: true });
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      const e = err as BrowserCliError;
+      expect(e.code).toBe('ELEMENT_NOT_FOUND');
+      expect(e.message).toContain('@e1..@e1');
+      expect(e.hint).toContain('snapshot -i');
+    }
+  });
+
+  it('throws STALE_REF when the ref target is gone', () => {
+    document.body.innerHTML = '<div id="d">original</div>';
+    const el = document.getElementById('d')!;
+    registerElement(el, '#d');
+    el.remove();
+    document.body.innerHTML = '<div id="d">replacement</div>';
+
+    try {
+      resolveElement('@e1', undefined, { strict: true });
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      const e = err as BrowserCliError;
+      expect(e.code).toBe('STALE_REF');
+      expect(e.hint).toContain('snapshot -i');
+    }
+  });
+
+  it('throws STALE_REF once the page URL differs from the snapshot URL', () => {
+    document.body.innerHTML = '<div id="d">x</div>';
+    registerElement(document.getElementById('d')!, '#d');
+
+    history.pushState({}, '', '/another-route');
+    try {
+      resolveElement('@e1', undefined, { strict: true });
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      const e = err as BrowserCliError;
+      expect(e.code).toBe('STALE_REF');
+      expect(e.message).toContain('another-route');
+    }
+  });
+
+  it('throws INVALID_ARGS for a malformed CSS selector', () => {
+    try {
+      resolveElement('div[', undefined, { strict: true });
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      expect((err as BrowserCliError).code).toBe('INVALID_ARGS');
+    }
   });
 });
 
@@ -205,5 +315,91 @@ describe('generateSelector', () => {
     const selector = generateSelector(child);
     expect(selector).toBe('#parent > span');
     expect(document.querySelector(selector)).toBe(child);
+  });
+});
+
+// ─── shadow DOM ────────────────────────────────────────────────────
+
+describe('shadow DOM', () => {
+  /** Attach a shadow root to a fresh host appended to `parent`. */
+  function attachHost(parent: ParentNode, id: string, html: string) {
+    const host = document.createElement('div');
+    host.id = id;
+    parent.append(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = html;
+    return { host, shadow };
+  }
+
+  it('resolveElement finds an element inside a shadow root', () => {
+    const { shadow } = attachHost(document.body, 'host', '<span id="inner">shadow text</span>');
+
+    expect(resolveElement('#inner')).toBe(shadow.getElementById('inner'));
+  });
+
+  it('resolveElements counts light and shadow matches', () => {
+    document.body.innerHTML = '<p class="dup">light</p>';
+    attachHost(document.body, 'host', '<p class="dup">shadow</p>');
+
+    expect(resolveElements('.dup')).toHaveLength(2);
+  });
+
+  it('strict mode reports matches that straddle a shadow boundary', () => {
+    document.body.innerHTML = '<p class="dup">light</p>';
+    attachHost(document.body, 'host', '<p class="dup">shadow</p>');
+
+    try {
+      resolveElement('.dup', undefined, { strict: true });
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      const e = err as BrowserCliError;
+      expect(e.code).toBe('MULTIPLE_MATCHES');
+      expect(e.message).toContain('matched 2 elements');
+    }
+  });
+
+  it('resolveElement accepts an explicit piercing path', () => {
+    const { shadow } = attachHost(document.body, 'host', '<span id="inner">deep</span>');
+
+    expect(resolveElement('#host >>> #inner')).toBe(shadow.getElementById('inner'));
+  });
+
+  it('generateSelector emits a piercing path that resolves back', () => {
+    const { shadow } = attachHost(document.body, 'host', '<span id="inner">deep</span>');
+    const inner = shadow.getElementById('inner')!;
+
+    const selector = generateSelector(inner);
+    expect(selector).toBe('#host >>> #inner');
+    expect(resolveElement(selector)).toBe(inner);
+  });
+
+  it('generateSelector walks nested shadow roots', () => {
+    const outer = attachHost(document.body, 'outer', '');
+    const inner = attachHost(outer.shadow, 'inner', '<button>Go</button>');
+    const button = inner.shadow.querySelector('button')!;
+
+    const selector = generateSelector(button);
+    expect(selector).toBe('#outer >>> #inner >>> button');
+    expect(resolveElement(selector)).toBe(button);
+  });
+
+  it('generateSelector disambiguates siblings at the top of a shadow tree', () => {
+    const { shadow } = attachHost(document.body, 'host', '<p>one</p><p>two</p>');
+    const second = shadow.querySelectorAll('p')[1];
+
+    const selector = generateSelector(second);
+    expect(selector).toBe('#host >>> p:nth-of-type(2)');
+    expect(resolveElement(selector)).toBe(second);
+  });
+
+  it('a ref registered inside a shadow root survives a re-render via its selector', () => {
+    const { shadow } = attachHost(document.body, 'host', '<span id="inner">keep</span>');
+    const inner = shadow.getElementById('inner')!;
+    registerElement(inner, generateSelector(inner));
+
+    inner.remove();
+    shadow.innerHTML = '<span id="inner">keep</span>';
+
+    expect(resolveElement('@e1')).toBe(shadow.getElementById('inner'));
   });
 });

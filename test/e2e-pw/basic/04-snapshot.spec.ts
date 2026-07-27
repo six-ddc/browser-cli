@@ -1,5 +1,8 @@
 import { test, expect } from '../fixtures';
-import { PAGES } from '../helpers/constants';
+import { PAGES, SEL, TEST_PASSWORD } from '../helpers/constants';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 test.describe('basic snapshot', () => {
   test('default snapshot returns accessibility tree', async ({ bcli, navigateAndWait }) => {
@@ -15,6 +18,126 @@ test.describe('basic snapshot', () => {
     expect(r).toBcliSuccess();
     // Verify output contains recognizable page elements (textbox for login form inputs)
     expect(r.stdout).toContain('textbox');
+  });
+
+  test('body text appears as StaticText nodes', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.LOGIN);
+    const r = bcli('snapshot');
+    expect(r).toBcliSuccess();
+    // The login page subheader is plain body copy, not an accessible name
+    expect(r.stdout).toContain('text "');
+    expect(r.stdout).toContain('This is where you can log into the secure area');
+  });
+
+  test('text duplicated by a parent accessible name is not repeated', async ({
+    bcli,
+    navigateAndWait,
+  }) => {
+    await navigateAndWait(PAGES.LOGIN);
+    const r = bcli('snapshot');
+    expect(r).toBcliSuccess();
+    // "Login" is the button's accessible name — it must not also appear as a text node
+    expect(r.stdout).not.toContain('text "Login"');
+  });
+
+  test('password field values are redacted', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.LOGIN);
+    expect(bcli('fill', SEL.PASSWORD, TEST_PASSWORD)).toBcliSuccess();
+
+    const r = bcli('snapshot');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('value=<redacted>');
+    // The page prints the credentials as body copy, so only the field's own
+    // value attribute must be free of the secret.
+    expect(r.stdout).not.toContain(`value="${TEST_PASSWORD}"`);
+  });
+});
+
+test.describe('--max-chars', () => {
+  test('caps output and appends a narrowing hint', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.LARGE_PAGE);
+    const r = bcli('snapshot', '--max-chars', '500');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('[truncated: showing ');
+    expect(r.stdout).toContain('--max-chars <n>');
+    expect(r.stdout.length).toBeLessThan(1000);
+  });
+
+  test('full output is returned when it fits', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.LOGIN);
+    const r = bcli('snapshot', '--max-chars', '100000');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).not.toContain('[truncated');
+  });
+});
+
+test.describe('-d 0', () => {
+  test('yields the page node only', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.LOGIN);
+    const r = bcli('snapshot', '-d', '0');
+    expect(r).toBcliSuccess();
+    expect(r.stdout.trim().split('\n')).toHaveLength(1);
+    expect(r.stdout.trim()).toMatch(/^page /);
+  });
+});
+
+test.describe('iframe annotation', () => {
+  test('iframe nodes carry a frame hint', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.IFRAME);
+    const r = bcli('snapshot');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('iframe');
+    expect(r.stdout).toContain('[use: frame ');
+  });
+});
+
+test.describe('--base with --save', () => {
+  test('diffs against the baseline and refreshes it in one call', async ({
+    bcli,
+    navigateAndWait,
+  }) => {
+    const dir = mkdtempSync(join(tmpdir(), 'bcli-e2e-snap-'));
+    const baseline = join(dir, 'baseline.txt');
+    try {
+      await navigateAndWait(PAGES.ADD_REMOVE);
+      expect(bcli('snapshot', '-ic', '--save', baseline)).toBcliSuccess();
+      const before = readFileSync(baseline, 'utf-8');
+
+      expect(bcli('click', 'text=Add Element')).toBcliSuccess();
+
+      const diff = bcli('snapshot', '-ic', '--base', baseline, '--save', baseline);
+      expect(diff).toBcliSuccess();
+      expect(diff.stdout).toContain('+');
+
+      const after = readFileSync(baseline, 'utf-8');
+      expect(after).not.toBe(before);
+
+      // Baseline is current now, so a follow-up diff sees no changes
+      const clean = bcli('snapshot', '-ic', '--base', baseline);
+      expect(clean).toBcliSuccess();
+      expect(clean.stdout.trim()).toBe('');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('--save writes a file under --json', async ({ bcli, navigateAndWait }) => {
+    const dir = mkdtempSync(join(tmpdir(), 'bcli-e2e-snap-json-'));
+    const out = join(dir, 'snap.txt');
+    try {
+      await navigateAndWait(PAGES.LOGIN);
+      const r = bcli('--json', 'snapshot', '-ic', '--save', out);
+      expect(r).toBcliSuccess();
+
+      const json = JSON.parse(r.stdout);
+      expect(json.success).toBe(true);
+      expect(json.data.saved).toBe(out);
+      expect(readFileSync(out, 'utf-8')).toContain('textbox');
+      // Baseline has refs stripped
+      expect(readFileSync(out, 'utf-8')).not.toContain('@e');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

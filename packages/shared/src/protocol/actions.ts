@@ -8,26 +8,33 @@ import type * as schemas from './schemas.js';
 
 // ─── Navigation ──────────────────────────────────────────────────────
 
+/** Emitted when a navigation completed but the page did not fully settle. */
+export interface NavigationDegradation {
+  /** False when the content script never answered a ping after navigating. */
+  contentScriptReady?: boolean;
+  warning?: string;
+}
+
 export type NavigateParams = z.infer<typeof schemas.navigateParamsSchema>;
-export interface NavigateResult {
+export interface NavigateResult extends NavigationDegradation {
   url: string;
   title: string;
 }
 
 export type GoBackParams = z.infer<typeof schemas.emptyParamsSchema>;
-export interface GoBackResult {
+export interface GoBackResult extends NavigationDegradation {
   url: string;
   title: string;
 }
 
 export type GoForwardParams = z.infer<typeof schemas.emptyParamsSchema>;
-export interface GoForwardResult {
+export interface GoForwardResult extends NavigationDegradation {
   url: string;
   title: string;
 }
 
 export type ReloadParams = z.infer<typeof schemas.emptyParamsSchema>;
-export interface ReloadResult {
+export interface ReloadResult extends NavigationDegradation {
   url: string;
   title: string;
 }
@@ -100,6 +107,21 @@ export type SelectParams = z.infer<typeof schemas.selectParamsSchema>;
 export interface SelectResult {
   selected: true;
   value: string;
+}
+
+export type FormFillParams = z.infer<typeof schemas.formFillParamsSchema>;
+/** How a single field was driven, so the caller can see what the DOM decided. */
+export interface FormFillFieldResult {
+  selector: string;
+  /** Which primitive the control type resolved to; absent when it never resolved. */
+  action?: 'fill' | 'check' | 'uncheck' | 'select';
+  value: string;
+  error?: { code: string; message: string; hint?: string };
+}
+export interface FormFillResult {
+  fields: FormFillFieldResult[];
+  filled: number;
+  failed: number;
 }
 
 export type UploadParams = z.infer<typeof schemas.uploadParamsSchema>;
@@ -186,10 +208,12 @@ export interface ScreenshotResult {
   data: string;
   /** MIME type */
   mimeType: string;
-  /** Image width */
+  /** Image width, in real pixels of the returned image */
   width: number;
-  /** Image height */
+  /** Image height, in real pixels of the returned image */
   height: number;
+  /** True when the capture went beyond the viewport to the full scrollable page */
+  fullPage?: boolean;
 }
 
 // ─── Drag and Drop ───────────────────────────────────────────────────
@@ -237,7 +261,9 @@ export interface MouseWheelResult {
 
 export type WaitParams = z.infer<typeof schemas.waitParamsSchema>;
 export interface WaitResult {
-  found: true;
+  found: boolean;
+  /** True when `--hidden` was satisfied (element gone or no longer visible). */
+  hidden?: boolean;
 }
 
 export type WaitForUrlParams = z.infer<typeof schemas.waitForUrlParamsSchema>;
@@ -249,6 +275,10 @@ export interface WaitForUrlResult {
 
 export type EvaluateParams = z.infer<typeof schemas.evaluateParamsSchema>;
 export interface EvaluateResult {
+  /**
+   * Crosses the boundary by structured clone: DOM nodes, functions and class
+   * instances arrive as null or as plain objects.
+   */
   value: unknown;
   /** Console output captured during evaluation (for debugging). */
   logs?: ConsoleEntry[];
@@ -257,19 +287,66 @@ export interface EvaluateResult {
 // ─── Console ─────────────────────────────────────────────────────────
 
 export type GetConsoleParams = z.infer<typeof schemas.getConsoleParamsSchema>;
-export interface GetConsoleResult {
+export interface GetConsoleResult extends GetConsoleResultMeta {
   entries: ConsoleEntry[];
 }
 
+export type ConsoleLevel = z.infer<typeof schemas.consoleLevelSchema>;
+
 export interface ConsoleEntry {
-  level: 'log' | 'warn' | 'error' | 'info' | 'debug';
+  /** `pageerror` covers window.onerror and unhandledrejection. */
+  level: ConsoleLevel;
   args: unknown[];
   timestamp: number;
+  /** Stack trace for pageerror entries. */
+  stack?: string;
+  /** `file:line:col` for pageerror entries, when the browser reports it. */
+  source?: string;
 }
 
-export type GetErrorsParams = z.infer<typeof schemas.emptyParamsSchema>;
+export interface GetConsoleResultMeta {
+  /** Entries dropped from the head of the ring buffer since the page loaded. */
+  dropped?: number;
+}
+
+export type GetErrorsParams = z.infer<typeof schemas.getErrorsParamsSchema>;
 export interface GetErrorsResult {
   errors: ConsoleEntry[];
+}
+
+// ─── CDP ─────────────────────────────────────────────────────────────
+
+export type CdpParams = z.infer<typeof schemas.cdpParamsSchema>;
+export interface CdpResult {
+  method: string;
+  result: unknown;
+}
+
+// ─── Downloads ───────────────────────────────────────────────────────
+
+export interface DownloadInfo {
+  id: number;
+  url: string;
+  /** Absolute path on disk. */
+  filename: string;
+  state: 'in_progress' | 'interrupted' | 'complete';
+  /** Total size in bytes; 0 when the server did not report one. */
+  fileSize: number;
+  bytesReceived: number;
+  mime?: string;
+  startTime?: string;
+  error?: string;
+  paused?: boolean;
+}
+
+export type DownloadListParams = z.infer<typeof schemas.downloadListParamsSchema>;
+export interface DownloadListResult {
+  downloads: DownloadInfo[];
+}
+
+export type DownloadWaitParams = z.infer<typeof schemas.downloadWaitParamsSchema>;
+export interface DownloadWaitResult {
+  download: DownloadInfo;
 }
 
 // ─── Tab Management ──────────────────────────────────────────────────
@@ -372,40 +449,65 @@ export interface HighlightResult {
 
 // ─── Frame Management ────────────────────────────────────────────────
 
+/** A frame in the tab's frame tree, identified by the browser's stable frameId. */
+export interface FrameDescriptor {
+  frameId: number;
+  parentFrameId: number;
+  url: string;
+  name: string | null;
+  title: string | null;
+  depth: number;
+  isMainFrame: boolean;
+  isCurrent: boolean;
+  /** False when the frame has no reachable content script (srcdoc, PDF, error page) */
+  reachable: boolean;
+}
+
+/** What a content script reports about its own document */
+export interface FrameDocumentInfo {
+  url: string;
+  name: string | null;
+  title: string | null;
+  isMainFrame: boolean;
+}
+
 export type SwitchFrameParams = z.infer<typeof schemas.switchFrameParamsSchema>;
 export interface SwitchFrameResult {
-  frameIndex: number;
-  frame: {
-    index: number;
-    name: string | null;
-    src: string;
-    isMainFrame: boolean;
-    isSameOrigin: boolean;
-  };
+  frame: FrameDescriptor;
+  /** How the iframe element was mapped to a frameId */
+  matchedBy?: 'index' | 'url' | 'frameId' | 'main';
 }
 
 export type ListFramesParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface ListFramesResult {
-  currentFrame: number;
-  frames: Array<{
-    index: number;
-    name: string | null;
-    src: string;
-    isMainFrame: boolean;
-    isSameOrigin: boolean;
-  }>;
+  currentFrameId: number;
+  frames: FrameDescriptor[];
 }
 
 export type GetCurrentFrameParams = z.infer<typeof schemas.emptyParamsSchema>;
 export interface GetCurrentFrameResult {
-  frameIndex: number;
-  frame: {
-    index: number;
-    name: string | null;
-    src: string;
-    isMainFrame: boolean;
-    isSameOrigin: boolean;
-  };
+  frame: FrameDescriptor;
+}
+
+export type ResolveFrameParams = z.infer<typeof schemas.resolveFrameParamsSchema>;
+export interface ResolveFrameResult {
+  /** Index of the frame element among this document's child browsing contexts */
+  index: number;
+  /** Total number of child browsing contexts in this document */
+  total: number;
+  /** Absolute URL of the frame element's src ('' for srcdoc / no src) */
+  src: string;
+  name: string | null;
+  srcdoc: boolean;
+}
+
+export type FrameOffsetParams = z.infer<typeof schemas.frameOffsetParamsSchema>;
+export interface FrameOffsetResult {
+  /** Viewport-relative content-box origin of the child frame element */
+  x: number;
+  y: number;
+  /** True when a non-identity CSS transform makes coordinate math unreliable */
+  scaled: boolean;
 }
 
 // ─── Network Watch (CDP) ─────────────────────────────────────────────
@@ -417,6 +519,7 @@ export interface NetworkWatchResult {
   pattern: string;
   timeout: number;
   filePath: string;
+  format: 'text' | 'ndjson';
 }
 
 export type NetworkUnwatchParams = z.infer<typeof schemas.networkUnwatchParamsSchema>;
@@ -425,8 +528,58 @@ export interface NetworkUnwatchResult {
   requestCount: number;
   duration: number;
   filePath: string;
+  /** Requests that were still in flight when the watch stopped. */
+  pendingCount: number;
   /** Captured request URLs with method info (for programmatic use in scripts) */
   requests: Array<{ method: string; url: string }>;
+}
+
+export type NetworkWatchFileParams = z.infer<typeof schemas.networkWatchFileParamsSchema>;
+export interface NetworkWatchFileResult {
+  watchId: string;
+  filePath: string;
+  format: 'text' | 'ndjson';
+  /** True while the watch is still capturing. */
+  active: boolean;
+  requestCount: number;
+}
+
+// ─── Network request log (webRequest) ────────────────────────────────
+
+export interface NetworkRequestSummary {
+  id: string;
+  method: string;
+  url: string;
+  status?: number;
+  /** webRequest resource type: main_frame, xmlhttprequest, script, … */
+  type: string;
+  tabId: number;
+  /** Epoch ms when the request started. */
+  timestamp: number;
+  /** Wall-clock ms from request start to completion; absent while in flight. */
+  duration?: number;
+  fromCache?: boolean;
+  error?: string;
+}
+
+export interface NetworkRequestDetail extends NetworkRequestSummary {
+  statusLine?: string;
+  ip?: string;
+  frameId?: number;
+  initiator?: string;
+}
+
+export type NetworkRequestsParams = z.infer<typeof schemas.networkRequestsParamsSchema>;
+export interface NetworkRequestsResult {
+  requests: NetworkRequestSummary[];
+  /** Matches before `limit` was applied. */
+  total: number;
+  cleared?: number;
+}
+
+export type NetworkRequestParams = z.infer<typeof schemas.networkRequestParamsSchema>;
+export interface NetworkRequestResult {
+  request: NetworkRequestDetail;
 }
 
 // ─── Network ─────────────────────────────────────────────────────────
@@ -676,6 +829,7 @@ export type ActionDef =
   | { action: 'check'; params: CheckParams; result: CheckResult }
   | { action: 'uncheck'; params: UncheckParams; result: UncheckResult }
   | { action: 'select'; params: SelectParams; result: SelectResult }
+  | { action: 'formFill'; params: FormFillParams; result: FormFillResult }
   | { action: 'upload'; params: UploadParams; result: UploadResult }
   // Scroll
   | { action: 'scroll'; params: ScrollParams; result: ScrollResult }
@@ -702,6 +856,11 @@ export type ActionDef =
   // Console
   | { action: 'getConsole'; params: GetConsoleParams; result: GetConsoleResult }
   | { action: 'getErrors'; params: GetErrorsParams; result: GetErrorsResult }
+  // CDP escape hatch
+  | { action: 'cdp'; params: CdpParams; result: CdpResult }
+  // Downloads
+  | { action: 'downloadList'; params: DownloadListParams; result: DownloadListResult }
+  | { action: 'downloadWait'; params: DownloadWaitParams; result: DownloadWaitResult }
   // Tabs
   | { action: 'tabNew'; params: TabNewParams; result: TabNewResult }
   | { action: 'tabList'; params: TabListParams; result: TabListResult }
@@ -724,9 +883,14 @@ export type ActionDef =
   | { action: 'switchFrame'; params: SwitchFrameParams; result: SwitchFrameResult }
   | { action: 'listFrames'; params: ListFramesParams; result: ListFramesResult }
   | { action: 'getCurrentFrame'; params: GetCurrentFrameParams; result: GetCurrentFrameResult }
+  | { action: 'resolveFrame'; params: ResolveFrameParams; result: ResolveFrameResult }
+  | { action: 'frameOffset'; params: FrameOffsetParams; result: FrameOffsetResult }
   // Network Watch (CDP)
   | { action: 'networkWatch'; params: NetworkWatchParams; result: NetworkWatchResult }
   | { action: 'networkUnwatch'; params: NetworkUnwatchParams; result: NetworkUnwatchResult }
+  | { action: 'networkWatchFile'; params: NetworkWatchFileParams; result: NetworkWatchFileResult }
+  | { action: 'networkRequests'; params: NetworkRequestsParams; result: NetworkRequestsResult }
+  | { action: 'networkRequest'; params: NetworkRequestParams; result: NetworkRequestResult }
   // Network
   | { action: 'route'; params: RouteParams; result: RouteResult }
   | { action: 'unroute'; params: UnrouteParams; result: UnrouteResult }

@@ -9,8 +9,11 @@
  *   4. Detach debugger
  */
 
-import type { Command } from '@browser-cli/shared';
+import type { Command, ErrorCode } from '@browser-cli/shared';
+import { BrowserCliError, protocolError } from '@browser-cli/shared';
+import { classifyError } from './error-classifier';
 import { sendToContentScript } from './send-to-content-script';
+import { getFrameViewportOffset } from './frame-routing';
 import { isWatchingTab } from './network-watcher';
 
 // ─── Typed access to chrome.debugger (reserved keyword) ─────────────
@@ -33,7 +36,7 @@ function getChromeLastError(): { message?: string } | undefined {
 // ─── CDP helpers ────────────────────────────────────────────────────
 
 /** Promise wrapper around chrome.debugger.sendCommand */
-function cdpSend(
+export function cdpSend(
   target: ChromeDebuggerDebuggee,
   method: string,
   params?: Record<string, unknown>,
@@ -92,6 +95,18 @@ async function withDebugger<T>(
       });
     }
   }
+}
+
+/**
+ * Send an arbitrary CDP command to a tab, reusing an active `network watch`
+ * debugger session on that tab if one exists (attach/detach otherwise).
+ */
+export async function sendCdpCommand(
+  tabId: number,
+  method: string,
+  params?: Record<string, unknown>,
+): Promise<unknown> {
+  return withDebugger(tabId, (target) => cdpSend(target, method, params));
 }
 
 // ─── Key mapping (replicates dom-interact.ts logic for CDP) ─────────
@@ -418,35 +433,62 @@ interface BoundingBox {
   height: number;
 }
 
-/** Query the content script for an element's bounding box, scrolling it into view first */
+/**
+ * Query the content script for an element's bounding box, scrolling it into
+ * view first, and translate it into top-level viewport coordinates.
+ *
+ * CDP `Input.dispatch*` takes top-level viewport coordinates, while
+ * `getBoundingClientRect()` inside an iframe is frame-relative — the ancestor
+ * chain offset bridges the two. When that offset cannot be computed the caller
+ * gets an UNSUPPORTED error rather than a click at the wrong place.
+ */
 async function getElementCenter(
   tabId: number,
   selector: string,
+  frameId = 0,
 ): Promise<{ x: number; y: number }> {
+  const frameOffset = frameId === 0 ? { x: 0, y: 0 } : await getFrameViewportOffset(tabId, frameId);
+
   // Scroll into view first
-  const scrollResp = await sendToContentScript(tabId, {
-    type: 'browser-cli-command',
-    id: `dbg-scroll-${Date.now()}`,
-    command: { action: 'scrollIntoView', params: { selector } },
-  });
+  const scrollResp = await sendToContentScript(
+    tabId,
+    {
+      type: 'browser-cli-command',
+      id: `dbg-scroll-${Date.now()}`,
+      command: { action: 'scrollIntoView', params: { selector } },
+    },
+    { frameId },
+  );
   if (!scrollResp.success) {
-    throw new Error(scrollResp.error?.message || `Element not found: ${selector}`);
+    throw new BrowserCliError(
+      (scrollResp.error?.code as ErrorCode | undefined) ?? 'ELEMENT_NOT_FOUND',
+      scrollResp.error?.message ?? `Element not found: ${selector}`,
+      scrollResp.error?.hint,
+    );
   }
 
   // Get bounding box
-  const bboxResp = await sendToContentScript(tabId, {
-    type: 'browser-cli-command',
-    id: `dbg-bbox-${Date.now()}`,
-    command: { action: 'boundingBox', params: { selector } },
-  });
+  const bboxResp = await sendToContentScript(
+    tabId,
+    {
+      type: 'browser-cli-command',
+      id: `dbg-bbox-${Date.now()}`,
+      command: { action: 'boundingBox', params: { selector } },
+    },
+    { frameId },
+  );
   if (!bboxResp.success || !bboxResp.data) {
-    throw new Error(bboxResp.error?.message || `Cannot get bounding box: ${selector}`);
+    throw new BrowserCliError(
+      (bboxResp.error?.code as ErrorCode | undefined) ?? 'ELEMENT_NOT_FOUND',
+      bboxResp.error?.message ?? `Cannot get bounding box: ${selector}`,
+      bboxResp.error?.hint,
+    );
   }
 
   const box = bboxResp.data as BoundingBox;
   return {
-    x: Math.round(box.x + box.width / 2),
-    y: Math.round(box.y + box.height / 2),
+    x: Math.round(frameOffset.x + box.x + box.width / 2),
+    y: Math.round(frameOffset.y + box.y + box.height / 2),
   };
 }
 
@@ -476,6 +518,7 @@ export function isDebuggerAvailable(): boolean {
 export async function handleDebuggerCommand(
   command: Command,
   tabId: number,
+  frameId = 0,
 ): Promise<{ success: boolean; data?: unknown; error?: unknown }> {
   const action = command.action as DebuggerAction;
   const params = command.params as Record<string, unknown>;
@@ -485,7 +528,7 @@ export async function handleDebuggerCommand(
       case 'click': {
         const selector = params.selector as string;
         const button = (params.button as 'left' | 'right' | 'middle' | undefined) ?? 'left';
-        const { x, y } = await getElementCenter(tabId, selector);
+        const { x, y } = await getElementCenter(tabId, selector, frameId);
         await withDebugger(tabId, async (target) => {
           await debuggerClick(target, x, y, button);
         });
@@ -494,7 +537,7 @@ export async function handleDebuggerCommand(
 
       case 'dblclick': {
         const selector = params.selector as string;
-        const { x, y } = await getElementCenter(tabId, selector);
+        const { x, y } = await getElementCenter(tabId, selector, frameId);
         await withDebugger(tabId, async (target) => {
           await debuggerDblClick(target, x, y);
         });
@@ -503,7 +546,7 @@ export async function handleDebuggerCommand(
 
       case 'hover': {
         const selector = params.selector as string;
-        const { x, y } = await getElementCenter(tabId, selector);
+        const { x, y } = await getElementCenter(tabId, selector, frameId);
         await withDebugger(tabId, async (target) => {
           await debuggerHover(target, x, y);
         });
@@ -513,7 +556,7 @@ export async function handleDebuggerCommand(
       case 'fill': {
         const selector = params.selector as string;
         const value = params.value as string;
-        const { x, y } = await getElementCenter(tabId, selector);
+        const { x, y } = await getElementCenter(tabId, selector, frameId);
         await withDebugger(tabId, async (target) => {
           await debuggerFill(target, x, y, value);
         });
@@ -524,7 +567,7 @@ export async function handleDebuggerCommand(
         const selector = params.selector as string;
         const text = params.text as string;
         const delay = (params.delay as number) || 0;
-        const { x, y } = await getElementCenter(tabId, selector);
+        const { x, y } = await getElementCenter(tabId, selector, frameId);
         await withDebugger(tabId, async (target) => {
           // Click to focus first
           await debuggerClick(target, x, y);
@@ -538,7 +581,7 @@ export async function handleDebuggerCommand(
         const selector = params.selector as string | undefined;
         // If a selector is provided, focus it first
         if (selector) {
-          const { x, y } = await getElementCenter(tabId, selector);
+          const { x, y } = await getElementCenter(tabId, selector, frameId);
           await withDebugger(tabId, async (target) => {
             await debuggerClick(target, x, y);
             await debuggerPress(target, key);
@@ -554,18 +597,25 @@ export async function handleDebuggerCommand(
       default:
         return {
           success: false,
-          error: {
-            message: `Action '${action as string}' does not support --debugger.`,
-          },
+          error: protocolError(
+            'UNSUPPORTED',
+            `Action '${action as string}' does not support --debugger.`,
+            `--debugger works with: ${[...DEBUGGER_ACTIONS].join(', ')}. Drop the flag to use synthetic events.`,
+          ),
         };
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const classified = classifyError(err);
     return {
       success: false,
-      error: {
-        message: `Debugger input failed: ${message}. Check that DevTools is not open on the target tab and the tab is a regular http/https page.`,
-      },
+      error:
+        classified.code === 'UNKNOWN'
+          ? protocolError(
+              'DEBUGGER_ERROR',
+              `Debugger input failed: ${classified.message}`,
+              'Check that DevTools is not open on the target tab and that the tab is a regular http/https page.',
+            )
+          : classified,
     };
   }
 }

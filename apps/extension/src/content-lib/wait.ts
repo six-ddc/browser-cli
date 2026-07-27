@@ -2,10 +2,13 @@
  * Wait operations: wait for selector, wait for URL pattern.
  */
 
-import type { Command } from '@browser-cli/shared';
+import { BrowserCliError, type Command } from '@browser-cli/shared';
+import { resolveElements } from './element-ref-store';
+import { isElementVisible } from './visibility';
 
 const DEFAULT_TIMEOUT = 10_000;
 const POLL_INTERVAL = 100;
+const NETWORK_IDLE_WINDOW = 500;
 
 export async function handleWait(command: Command): Promise<unknown> {
   switch (command.action) {
@@ -38,14 +41,20 @@ export async function handleWait(command: Command): Promise<unknown> {
 
       // Selector-based wait
       if (!selector) {
-        throw new Error('Provide selector, duration, text, load, or fn');
+        throw new BrowserCliError(
+          'INVALID_ARGS',
+          'wait requires one of: selector, duration, text, load, or fn.',
+          'Use `wait <selector>`, `wait <ms>`, `wait --text <s>`, `wait --load <state>` or `wait --fn <expr>`.',
+        );
       }
 
-      await waitForSelector(selector, {
-        timeout: timeout ?? DEFAULT_TIMEOUT,
-        visible: visible ?? true,
-      });
-      return { found: true };
+      const shouldBeVisible = visible ?? true;
+      if (shouldBeVisible) {
+        await waitForSelector(selector, timeout ?? DEFAULT_TIMEOUT);
+        return { found: true };
+      }
+      await waitForHidden(selector, timeout ?? DEFAULT_TIMEOUT);
+      return { found: false, hidden: true };
     }
     case 'waitForUrl': {
       const { pattern, timeout } = command.params;
@@ -57,69 +66,85 @@ export async function handleWait(command: Command): Promise<unknown> {
   }
 }
 
-function waitForSelector(
-  selector: string,
-  options: { timeout: number; visible: boolean },
-): Promise<Element> {
+function waitForSelector(selector: string, timeout: number): Promise<void> {
+  return pollUntil(
+    () => findVisible(selector) !== null,
+    timeout,
+    () =>
+      new BrowserCliError(
+        'TIMEOUT',
+        `Timeout waiting for selector "${selector}" to become visible after ${timeout}ms. ${describeSelectorState(selector)}`,
+        "Run 'snapshot -i' to see what is actually on the page, or raise --timeout if the page is just slow.",
+      ),
+  );
+}
+
+/** `--hidden`: satisfied when no match exists, or every match is invisible. */
+function waitForHidden(selector: string, timeout: number): Promise<void> {
+  return pollUntil(
+    () => findVisible(selector) === null,
+    timeout,
+    () =>
+      new BrowserCliError(
+        'TIMEOUT',
+        `Timeout waiting for "${selector}" to become hidden after ${timeout}ms — it is still visible.`,
+        'Trigger whatever removes or hides it first, or raise --timeout.',
+      ),
+  );
+}
+
+function findVisible(selector: string): Element | null {
+  return resolveElements(selector).find((el) => isElementVisible(el)) ?? null;
+}
+
+function describeSelectorState(selector: string): string {
+  const total = resolveElements(selector).length;
+  if (total === 0) return 'No element matches the selector.';
+  return `${total} element(s) match the selector but none are visible.`;
+}
+
+/**
+ * Poll a predicate with a MutationObserver fast path.
+ * Resolves as soon as it holds, rejects with `makeError()` on timeout.
+ */
+function pollUntil(
+  predicate: () => boolean,
+  timeout: number,
+  makeError: () => Error,
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Check immediately
-    const existing = checkSelector(selector, options.visible);
-    if (existing) {
-      resolve(existing);
+    if (predicate()) {
+      resolve();
       return;
     }
 
-    // Use MutationObserver + polling
-    const observer = new MutationObserver(() => {
-      const el = checkSelector(selector, options.visible);
-      if (el) {
-        observer.disconnect();
-        clearInterval(poll);
-        clearTimeout(timer);
-        resolve(el);
-      }
-    });
+    const finish = (fn: () => void) => {
+      observer.disconnect();
+      clearInterval(poll);
+      clearTimeout(timer);
+      fn();
+    };
 
+    const check = () => {
+      if (predicate()) finish(resolve);
+    };
+
+    const observer = new MutationObserver(check);
     observer.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ['style', 'class', 'hidden'],
+      characterData: true,
     });
 
     // Polling fallback (MutationObserver may miss computed style changes)
-    const poll = setInterval(() => {
-      const el = checkSelector(selector, options.visible);
-      if (el) {
-        observer.disconnect();
-        clearInterval(poll);
-        clearTimeout(timer);
-        resolve(el);
-      }
-    }, POLL_INTERVAL);
+    const poll = setInterval(check, POLL_INTERVAL);
 
     const timer = setTimeout(() => {
-      observer.disconnect();
-      clearInterval(poll);
-      reject(new Error(`Timeout waiting for selector "${selector}" after ${options.timeout}ms`));
-    }, options.timeout);
+      finish(() => reject(makeError()));
+    }, timeout);
   });
-}
-
-function checkSelector(selector: string, requireVisible: boolean): Element | null {
-  const el = document.querySelector(selector);
-  if (!el) return null;
-  if (requireVisible && !isVisible(el)) return null;
-  return el;
-}
-
-function isVisible(el: Element): boolean {
-  const style = window.getComputedStyle(el);
-  if (style.display === 'none') return false;
-  if (style.visibility === 'hidden') return false;
-  if (style.opacity === '0') return false;
-  const rect = el.getBoundingClientRect();
-  return rect.width > 0 || rect.height > 0;
 }
 
 function waitForUrl(pattern: string, timeout: number): Promise<string> {
@@ -142,49 +167,28 @@ function waitForUrl(pattern: string, timeout: number): Promise<string> {
 
     const timer = setTimeout(() => {
       clearInterval(poll);
-      reject(new Error(`Timeout waiting for URL pattern "${pattern}" after ${timeout}ms`));
+      reject(
+        new BrowserCliError(
+          'TIMEOUT',
+          `Timeout waiting for URL pattern "${pattern}" after ${timeout}ms. Current URL: ${location.href}`,
+          'Check the pattern (globs are matched as substrings, e.g. `**/secure*`), or raise --timeout.',
+        ),
+      );
     }, timeout);
   });
 }
 
 function waitForText(text: string, timeout: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Check immediately
-    if (document.body.textContent.includes(text)) {
-      resolve();
-      return;
-    }
-
-    const observer = new MutationObserver(() => {
-      if (document.body.textContent.includes(text)) {
-        observer.disconnect();
-        clearInterval(poll);
-        clearTimeout(timer);
-        resolve();
-      }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-
-    const poll = setInterval(() => {
-      if (document.body.textContent.includes(text)) {
-        observer.disconnect();
-        clearInterval(poll);
-        clearTimeout(timer);
-        resolve();
-      }
-    }, POLL_INTERVAL);
-
-    const timer = setTimeout(() => {
-      observer.disconnect();
-      clearInterval(poll);
-      reject(new Error(`Timeout waiting for text "${text}" after ${timeout}ms`));
-    }, timeout);
-  });
+  return pollUntil(
+    () => document.body.textContent.includes(text),
+    timeout,
+    () =>
+      new BrowserCliError(
+        'TIMEOUT',
+        `Timeout waiting for text "${text}" after ${timeout}ms.`,
+        "Confirm the exact wording with 'markdown' or 'get text body'; the match is case-sensitive and substring-based.",
+      ),
+  );
 }
 
 function waitForLoadState(
@@ -192,52 +196,80 @@ function waitForLoadState(
   timeout: number,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
     const timer = setTimeout(() => {
-      reject(new Error(`Timeout waiting for load state "${state}" after ${timeout}ms`));
+      if (settled) return;
+      settled = true;
+      reject(
+        new BrowserCliError(
+          'TIMEOUT',
+          `Timeout waiting for load state "${state}" after ${timeout}ms (document.readyState=${document.readyState}).`,
+          state === 'networkidle'
+            ? 'The page keeps issuing requests (polling, analytics, streaming). Wait for a concrete element instead: `wait <selector>`.'
+            : 'Raise --timeout, or wait for a concrete element instead: `wait <selector>`.',
+        ),
+      );
     }, timeout);
 
     if (state === 'domcontentloaded') {
       if (document.readyState !== 'loading') {
-        clearTimeout(timer);
-        resolve();
+        done();
       } else {
-        document.addEventListener(
-          'DOMContentLoaded',
-          () => {
-            clearTimeout(timer);
-            resolve();
-          },
-          { once: true },
-        );
+        document.addEventListener('DOMContentLoaded', done, { once: true });
       }
-    } else if (state === 'load') {
-      if (document.readyState === 'complete') {
-        clearTimeout(timer);
-        resolve();
-      } else {
-        window.addEventListener(
-          'load',
-          () => {
-            clearTimeout(timer);
-            resolve();
-          },
-          { once: true },
-        );
-      }
-    } else {
-      // state === 'networkidle'
-      // Approximate networkidle: wait for load then an additional 500ms of no new requests
-      const checkIdle = () => {
-        clearTimeout(timer);
-        // Give a small buffer after load for pending requests
-        setTimeout(() => resolve(), 500);
-      };
+      return;
+    }
 
+    if (state === 'load') {
       if (document.readyState === 'complete') {
-        checkIdle();
+        done();
       } else {
-        window.addEventListener('load', checkIdle, { once: true });
+        window.addEventListener('load', done, { once: true });
       }
+      return;
+    }
+
+    // networkidle: after load, require a quiet window with no new resource entries.
+    // The overall timeout stays armed until the quiet window is actually observed.
+    const waitForQuiet = () => {
+      if (settled) return;
+      let lastActivity = performance.now();
+
+      let observer: PerformanceObserver | undefined;
+      try {
+        observer = new PerformanceObserver(() => {
+          lastActivity = performance.now();
+        });
+        observer.observe({ type: 'resource', buffered: false });
+      } catch {
+        // PerformanceObserver unavailable — fall back to a fixed quiet period
+        observer = undefined;
+      }
+
+      const idlePoll = setInterval(() => {
+        if (settled) {
+          clearInterval(idlePoll);
+          observer?.disconnect();
+          return;
+        }
+        if (performance.now() - lastActivity >= NETWORK_IDLE_WINDOW) {
+          clearInterval(idlePoll);
+          observer?.disconnect();
+          done();
+        }
+      }, POLL_INTERVAL);
+    };
+
+    if (document.readyState === 'complete') {
+      waitForQuiet();
+    } else {
+      window.addEventListener('load', waitForQuiet, { once: true });
     }
   });
 }
@@ -265,7 +297,13 @@ function waitForFunction(expression: string, timeout: number): Promise<void> {
 
     const timer = setTimeout(() => {
       clearInterval(poll);
-      reject(new Error(`Timeout waiting for function "${expression}" after ${timeout}ms`));
+      reject(
+        new BrowserCliError(
+          'TIMEOUT',
+          `Timeout waiting for function "${expression}" to return truthy after ${timeout}ms.`,
+          "Verify the expression with 'eval' first — it is evaluated in the page's MAIN world and errors during polling are swallowed.",
+        ),
+      );
     }, timeout);
   });
 }

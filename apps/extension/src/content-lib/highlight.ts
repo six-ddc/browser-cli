@@ -3,17 +3,16 @@
  */
 
 import type { HighlightParams } from '@browser-cli/shared';
-import { resolveElement } from './element-ref-store';
+import { requireElement } from './actionability';
 
 const DEFAULT_COLOR = '#2196F3';
 const DEFAULT_DURATION = 2000;
 
 // eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleHighlight(params: HighlightParams): Promise<{ highlighted: true }> {
-  const { selector, color, duration } = params;
+  const { selector, color, duration, position } = params;
 
-  const el = resolveElement(selector);
-  if (!el) throw new Error(`Element not found: ${selector}`);
+  const el = requireElement(selector, position);
 
   const rect = el.getBoundingClientRect();
   const highlightColor = color || DEFAULT_COLOR;

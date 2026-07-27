@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, extname, basename } from 'node:path';
-import { sendCommand } from './shared.js';
+import { sendCommand, fail } from './shared.js';
 
 /** Simple MIME type lookup by extension */
 function getMimeType(filePath: string): string {
@@ -43,8 +43,12 @@ export const uploadCommand = new Command('upload')
       // Local file path — read and convert to data URL
       const absPath = resolve(f);
       if (!existsSync(absPath)) {
-        console.error(`Error: File not found: ${absPath}`);
-        process.exit(1);
+        fail(
+          cmd,
+          'INVALID_ARGS',
+          `File not found: ${absPath}`,
+          'Check the file path, or pass a data: URL / blob: URL instead of a local path.',
+        );
       }
       const content = readFileSync(absPath);
       const mimeType = getMimeType(absPath);

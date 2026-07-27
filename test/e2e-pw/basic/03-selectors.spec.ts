@@ -38,9 +38,22 @@ test.describe('CSS selectors', () => {
 test.describe('semantic locators — text=', () => {
   test('click with text= locator', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('click', 'text=Login');
+    // "Login" also matches the <h2> heading, so strict mode requires disambiguation
+    const r = bcli('click', 'text=Login', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
+  });
+
+  test('ambiguous text= fails with MULTIPLE_MATCHES instead of guessing', async ({
+    bcli,
+    navigateAndWait,
+  }) => {
+    await navigateAndWait(PAGES.LOGIN);
+    const r = bcli('click', 'text=Login');
+    expect(r).toBcliFailure();
+    expect(r.stderr).toContain('MULTIPLE_MATCHES');
+    expect(r.stderr).toContain('matched 2 elements');
+    expect(r.stderr).toContain('--nth');
   });
 
   test('click with quoted text= for exact match', async ({ bcli, navigateAndWait, activePage }) => {
@@ -67,10 +80,17 @@ test.describe('semantic locators — role=', () => {
     expect(r.stdout).toContain('Clicked');
   });
 
-  test('click role=link', async ({ bcli, navigateAndWait }) => {
+  test('click role=link with --first', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.HOME);
+    const r = bcli('click', 'role=link', '--first');
+    expect(r).toBcliSuccess();
+  });
+
+  test('bare role=link is rejected as ambiguous', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
     const r = bcli('click', 'role=link');
-    expect(r).toBcliSuccess();
+    expect(r).toBcliFailure();
+    expect(r.stderr).toContain('MULTIPLE_MATCHES');
   });
 });
 

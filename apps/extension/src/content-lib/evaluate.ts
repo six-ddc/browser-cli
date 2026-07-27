@@ -6,13 +6,13 @@
  * the Firefox fallback when MAIN-world eval is blocked by CSP.
  */
 
-import type { EvaluateParams } from '@browser-cli/shared';
+import { BrowserCliError, type EvaluateParams } from '@browser-cli/shared';
 
 export async function handleEvaluate(params: EvaluateParams): Promise<{
   value: unknown;
   logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
 }> {
-  const { expression } = params;
+  const { expression, args } = params;
 
   // Capture console output during eval
   const logs: Array<{ level: string; args: unknown[]; timestamp: number }> = [];
@@ -29,6 +29,9 @@ export async function handleEvaluate(params: EvaluateParams): Promise<{
       logs.push({
         level,
         args: args.map((a) => {
+          if (a instanceof Error) {
+            return { __error: true, name: a.name, message: a.message, stack: a.stack };
+          }
           try {
             return JSON.parse(JSON.stringify(a)) as unknown;
           } catch {
@@ -50,7 +53,9 @@ export async function handleEvaluate(params: EvaluateParams): Promise<{
   // (document, elements, attributes) are shared with the page so all
   // querySelector / innerText / getAttribute patterns work.
   try {
-    const result: unknown = await (0, eval)(expression);
+    const result: unknown = args
+      ? await ((0, eval)(`(${expression})`) as (...a: unknown[]) => unknown)(...args)
+      : await (0, eval)(expression);
     const res: {
       value: unknown;
       logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
@@ -58,7 +63,7 @@ export async function handleEvaluate(params: EvaluateParams): Promise<{
     if (logs.length) res.logs = logs;
     return res;
   } catch (e: unknown) {
-    throw new Error((e as Error).message);
+    throw new BrowserCliError('UNKNOWN', (e as Error).message, undefined, (e as Error).stack);
   } finally {
     console.log = origConsole.log;
     console.warn = origConsole.warn;

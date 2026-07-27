@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Actionability</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      #consent-banner {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 220px;
+        background: rgba(20, 20, 20, 0.95);
+        color: #fff;
+        padding: 20px;
+        z-index: 999;
+      }
+      #hidden-btn {
+        display: none;
+      }
+      .spacer {
+        height: 60vh;
+      }
+      #covered-btn {
+        position: fixed;
+        left: 40px;
+        bottom: 80px;
+        z-index: 1;
+      }
+      #result {
+        font-weight: bold;
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Actionability</h1>
+
+    <p id="result"></p>
+
+    <button id="plain-btn" onclick="mark('plain')">Plain</button>
+    <button id="hidden-btn" onclick="mark('hidden')">Hidden</button>
+    <button id="disabled-btn" disabled onclick="mark('disabled')">Disabled</button>
+    <div id="aria-disabled-btn" role="button" aria-disabled="true" onclick="mark('aria')">
+      Aria Disabled
+    </div>
+    <input id="readonly-input" readonly value="locked" />
+
+    <fieldset id="locked-set" disabled>
+      <button id="fieldset-btn" onclick="mark('fieldset')">In Disabled Fieldset</button>
+    </fieldset>
+
+    <div id="dupes">
+      <button class="dupe" onclick="mark('dupe-1')">Dupe One</button>
+      <button class="dupe" onclick="mark('dupe-2')">Dupe Two</button>
+      <button class="dupe" onclick="mark('dupe-3')">Dupe Three</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <button id="covered-btn" onclick="mark('covered')">Covered By Banner</button>
+
+    <div id="consent-banner">
+      <p>We use cookies.</p>
+      <button id="dismiss-banner" onclick="dismissBanner()">Accept</button>
+    </div>
+
+    <script>
+      function mark(what) {
+        document.getElementById('result').textContent = 'clicked:' + what;
+      }
+      function dismissBanner() {
+        document.getElementById('consent-banner').remove();
+        mark('banner-dismissed');
+      }
+    </script>
+  </body>
+</html>

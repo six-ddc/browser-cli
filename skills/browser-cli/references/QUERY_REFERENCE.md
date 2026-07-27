@@ -34,7 +34,9 @@ browser-cli get title
 browser-cli get text <selector>
 ```
 
-Returns the `textContent` of the matched element.
+Returns the element's rendered text using **`innerText` semantics**, not `textContent`: text hidden
+by `display:none`/`visibility:hidden` is excluded, and runs of consecutive blank lines are collapsed
+to at most one blank line. This matches what a user would actually see and copy from the page.
 
 **Examples:**
 
@@ -49,18 +51,28 @@ browser-cli get text @e3
 ### get html - Get Element HTML
 
 ```bash
-browser-cli get html <selector> [--outer]
+browser-cli get html <selector> [--outer] [--out-file <path>]
 ```
 
-| Option    | Description                           |
-| --------- | ------------------------------------- |
-| `--outer` | Return outerHTML instead of innerHTML |
+| Option              | Description                                     |
+| ------------------- | ----------------------------------------------- |
+| `--outer`           | Return outerHTML instead of innerHTML           |
+| `--out-file <path>` | Write the full HTML to a file instead of stdout |
+
+**Without `--out-file`**, output over 100000 characters is truncated on stdout, with a warning
+printed to stderr suggesting `--out-file` or a narrower selector.
+
+**With `--out-file <path>`**, the complete HTML (untruncated) is written to that file; stdout only
+prints a short confirmation, and `--json` output is `{"success":true,"data":{"path","chars"}}`. Use
+this whenever the element's HTML is large — it avoids flooding an agent's context window.
 
 **Examples:**
 
 ```bash
 browser-cli get html '.content'
 browser-cli get html '#article' --outer
+browser-cli get html '#app' --out-file /tmp/app.html
+browser-cli get html '#app' --out-file /tmp/app.html --json
 ```
 
 ---
@@ -164,6 +176,66 @@ browser-cli is visible '.error-message'
 browser-cli is enabled '#submit-btn'
 browser-cli is checked 'input[name="agree"]'
 ```
+
+---
+
+## Assertions (verify)
+
+Where `get`/`is` **report** a value, `verify` **judges** it: PASS exits `0`, FAIL exits `1`. No new
+browser capability is involved — each subcommand runs the corresponding query and compares locally.
+
+```bash
+browser-cli verify text "<text>"                  # body text contains <text> (substring)
+browser-cli verify visible <selector>             # element exists and is visible
+browser-cli verify value <selector> <expected>    # input value equals <expected> exactly
+browser-cli verify count <selector> <n>           # exactly n elements match
+browser-cli verify url <pattern>                  # URL matches a glob
+browser-cli verify title <pattern>                # title matches a glob
+```
+
+`url` / `title` use the **same pattern engine as `wait --url`**: a pattern containing `*` is a glob
+(`*` matches within a path segment, `**` across segments); a pattern with **no** `*` is compiled as
+a regular expression. Both are matched unanchored, so a substring is enough.
+
+**Output and exit codes:**
+
+| Outcome                              | Exit    | Where                                                     |
+| ------------------------------------ | ------- | --------------------------------------------------------- |
+| Assertion holds                      | `0`     | `PASS: <description>` on stdout                           |
+| Assertion fails (`ASSERTION_FAILED`) | `1`     | `FAIL: <description>` + `expected:` / `actual:` on stderr |
+| The query itself failed              | 2/3/4/5 | Standard error envelope                                   |
+
+The distinction between "the app is wrong" and "the automation is wrong" is deliberate:
+
+- `verify visible` on a **missing** element is a FAIL (exit `1`) — nothing matched, so it is not visible.
+- `verify value` on a **missing** element is a real `ELEMENT_NOT_FOUND` (exit `3`) — there is no
+  value to compare against.
+- `verify count <sel> 0` **passes** when nothing matches.
+
+**`--json`:**
+
+```json
+{ "success": true,  "data":  { "pass": true, "expected": 3, "actual": 3 } }
+{ "success": false, "error": { "code": "ASSERTION_FAILED", "message": "…", "hint": "…" } }
+```
+
+**Examples:**
+
+```bash
+browser-cli verify text "Order confirmed"
+browser-cli verify visible '#receipt'
+browser-cli verify value '#email' user@test.com
+browser-cli verify count '.cart-item' 2
+browser-cli verify url '**/checkout/success*'
+browser-cli verify title 'Order *'
+```
+
+Inside `batch`/`repl` a FAIL is reported as an `ASSERTION_FAILED` error for that line and the run
+continues (unless `--fail-fast`), with the process exiting `1` at the end — which makes `batch` a
+lightweight smoke-test runner.
+
+**Note:** `verify url` / `verify title` are tab-level and always report the top document, even when
+a frame is focused. The other subcommands run inside the focused frame.
 
 ---
 
@@ -276,14 +348,17 @@ browser-cli snapshot [options]
 
 Captures the accessibility tree of the page. Output includes element refs (`@e1`, `@e2`...) for use in subsequent commands.
 
-| Flag               | Short | Description                                             |
-| ------------------ | ----- | ------------------------------------------------------- |
-| `--interactive`    | `-i`  | Only show interactive elements (buttons, inputs, links) |
-| `--compact`        | `-c`  | Compact single-line output                              |
-| `--cursor`         | `-C`  | Include cursor-interactive elements (cursor:pointer)    |
-| `--depth <n>`      | `-d`  | Max tree depth                                          |
-| `--selector <sel>` | `-s`  | Scope to a specific element                             |
-| `--filter <role>`  | `-f`  | Only show nodes with this ARIA role and their ancestors |
+| Flag               | Short | Description                                                      |
+| ------------------ | ----- | ---------------------------------------------------------------- |
+| `--interactive`    | `-i`  | Only show interactive elements (buttons, inputs, links), no text |
+| `--compact`        | `-c`  | Drop pure-structure nodes and use 2-space indent                 |
+| `--cursor`         | `-C`  | Include cursor-interactive elements (cursor:pointer)             |
+| `--depth <n>`      | `-d`  | Max tree depth (`-d 0` reports the page node alone)              |
+| `--selector <sel>` | `-s`  | Scope to a specific element                                      |
+| `--filter <role>`  | `-f`  | Only show nodes with this ARIA role and their ancestors          |
+| `--max-chars <n>`  |       | Cap total output size (default 40000)                            |
+| `--save <path>`    |       | Write the tree to a file as a baseline (refs stripped)           |
+| `--base <path>`    |       | Diff against a saved baseline; combine with `--save` to refresh  |
 
 **Examples:**
 
@@ -301,16 +376,62 @@ browser-cli snapshot -ic -s '#sidebar'
 browser-cli snapshot -icC
 ```
 
-**Sample output (compact interactive):**
+**Sample output** — one node per line, indented by tree depth, in the form
+`role "name" (attributes) [@ref]`. `browser-cli snapshot -ic` on a login page:
 
 ```
-@e1 link "Home" [/]
-@e2 link "Products" [/products]
-@e3 textbox "Search" []
-@e4 button "Search"
-@e5 link "Login" [/login]
-@e6 link "Sign Up" [/signup]
+page "The Internet - Login Page" (url="http://localhost:4173/login")
+  textbox "Username" [@e1]
+  generic "Password" [@e2]
+  button "Login" [@e3]
+  link "browser-cli" (url="https://github.com/six-ddc/browser-cli") [@e4]
 ```
+
+The same page without `-i` also carries body copy as `text` nodes:
+
+```
+page "The Internet - Login Page" (url="http://localhost:4173/login")
+    generic
+        heading "Login Page" (level=2)
+        heading "This is where you can log into the secure area." (level=4)
+        generic
+            generic
+                text "Username"
+                textbox "Username" [@e1]
+            generic
+                text "Password"
+                generic "Password" [@e2]
+            button "Login" [@e3]
+    generic
+        text "Powered by"
+        link "browser-cli" (url="https://github.com/six-ddc/browser-cli") [@e4]
+```
+
+A trailing `(N interactive elements)` line reports the ref count. Indentation is 2 spaces with
+`-c`/`--compact` and 4 spaces without it.
+
+**Text nodes**: body copy appears as `text "..."` lines, truncated at 200 characters. Text that a
+parent's accessible name already reports (a button label, a heading) is not repeated. `-i` drops
+text nodes entirely.
+
+**State attributes**, rendered inside `(...)`: `level=<n>`, `disabled`, `readonly`, `required`,
+`checked=true|false|mixed`, `selected`, `expanded=true|false`, `focused`, `value="..."`, `url="..."`.
+Native attributes and their ARIA equivalents (`aria-disabled`, `aria-checked`, `aria-expanded`,
+`aria-selected`, `aria-required`, `aria-readonly`) both report.
+
+**Password safety**: fields with `type=password` or a `password` autocomplete hint report
+`value=<redacted>`. Baselines written by `--save` are redacted the same way.
+
+**Output cap**: output is cut on a line boundary at `--max-chars` (default 40000, roughly 10k
+tokens) and a hint line is appended:
+
+```
+[truncated: showing 5 of 55 lines. Use -i / -s <selector> / -d <depth> / --max-chars <n> to narrow]
+```
+
+**iframes and shadow DOM**: an iframe is a leaf node carrying the selector to enter it, e.g.
+`iframe "Checkout" [use: frame #pay-frame]` — run `frame #pay-frame` then snapshot again to see
+inside. Nodes at the root of an open shadow root are marked with a trailing `#shadow`.
 
 ---
 
@@ -320,20 +441,48 @@ browser-cli snapshot -icC
 browser-cli screenshot [options]
 ```
 
-| Option             | Description              | Default          |
-| ------------------ | ------------------------ | ---------------- |
-| `--selector <sel>` | Capture specific element | full page        |
-| `--path <path>`    | Output file path         | `screenshot.png` |
-| `--format <fmt>`   | `png` or `jpeg`          | `png`            |
-| `--quality <n>`    | JPEG quality (0-100)     | -                |
+| Option             | Description                                                | Default          |
+| ------------------ | ---------------------------------------------------------- | ---------------- |
+| `--selector <sel>` | Capture specific element                                   | visible viewport |
+| `--path <path>`    | Output file path                                           | `screenshot.png` |
+| `--format <fmt>`   | `png` or `jpeg`                                            | `png`            |
+| `--quality <n>`    | JPEG quality (0-100)                                       | -                |
+| `--full`           | Capture the entire scrollable page (Chrome only)           | off (viewport)   |
+| `--base64`         | Include base64 image data in `--json` output (`data.data`) | off              |
+
+**The default capture is the visible viewport**, not the whole page — add `--full` for the entire
+scrollable document.
+
+The file at `--path` is always written, including when `--json` is passed (previously `--path`
+combined with `--json` did not write the file — this is now fixed). `--json` output is
+`{"success":true,"data":{"path","width","height","mimeType","bytes","fullPage"}}` — the base64 image
+bytes are **not** included unless `--base64` is also given, since the payload can be large.
+`width`/`height` are the produced image's **real pixel** dimensions, which on a HiDPI display are
+larger than the CSS-pixel size.
+
+**`--full` details:**
+
+- Uses CDP `Page.captureScreenshot` with `captureBeyondViewport`. **Chrome only** — Firefox (or any
+  session without the debugger API) fails with `UNSUPPORTED` and a hint to drop `--full`.
+- Unlike a viewport capture, it does **not** need to make the target tab active first, so
+  `--tab <id> screenshot --full` does not disturb the user's current tab. A viewport capture still
+  auto-switches the tab (a `captureVisibleTab` API limitation).
+- With `--selector`, the element is cropped by page coordinates using the CDP `clip` parameter, so
+  it can capture **elements taller than the viewport** — which the viewport-based element screenshot
+  cannot.
+- If another debugger client (DevTools) is attached to the tab, it fails with `DEBUGGER_ERROR`.
 
 **Examples:**
 
 ```bash
 browser-cli screenshot
 browser-cli screenshot --path /tmp/page.png
+browser-cli screenshot --full --path /tmp/whole-page.png
 browser-cli screenshot --selector '#chart' --path chart.png
+browser-cli screenshot --full --selector '#long-table' --path table.png  # taller than the viewport
 browser-cli screenshot --format jpeg --quality 80 --path photo.jpg
+browser-cli screenshot --path /tmp/page.png --json          # writes file + prints metadata
+browser-cli screenshot --path /tmp/page.png --json --base64 # + data.data (base64 PNG)
 ```
 
 ---
@@ -344,6 +493,7 @@ browser-cli screenshot --format jpeg --quality 80 --path photo.jpg
 browser-cli eval '<expression>'
 browser-cli eval -b '<base64-encoded-expression>'
 echo '<expression>' | browser-cli eval --stdin
+browser-cli eval '<function-expression>' --arg <json> [--arg <json> ...]
 ```
 
 Evaluates JavaScript in the page context (MAIN world) and returns the result. **Async-aware**: if the expression returns a Promise, it is automatically awaited — `fetch()`, async IIFEs, and other async patterns work seamlessly.
@@ -352,6 +502,7 @@ Evaluates JavaScript in the page context (MAIN world) and returns the result. **
 | -------------- | ---------------------------------------------------------------------------------------------------- |
 | `-b, --base64` | Decode expression from base64 before evaluating (useful for complex scripts with special characters) |
 | `--stdin`      | Read expression from stdin (useful for piping scripts)                                               |
+| `--arg <json>` | JSON argument passed to the expression, which must evaluate to a function; repeatable                |
 
 **Examples:**
 
@@ -367,6 +518,24 @@ cat script.js | browser-cli eval --stdin
 browser-cli eval 'fetch("/api/data").then(r => r.json())'
 browser-cli eval '(async () => { const r = await fetch("/api"); return r.status; })()'
 ```
+
+**Calling a function with `--arg`**: pass one or more `--arg <json>` flags and the expression must
+evaluate to a function; it is invoked as `(expr)(...args)`. Each `--arg` is parsed as a JSON value,
+so a string argument needs its own quotes:
+
+```bash
+browser-cli eval '(a, b) => a + b' --arg 1 --arg 2
+browser-cli eval '(sel) => document.querySelector(sel).textContent' --arg '"#title"'
+```
+
+**Errors and return values**:
+
+- When page code throws, the error's page-side `stack` trace is printed to stderr in text mode, and
+  available as `error.stack` under `--json`.
+- Return values pass through structured clone: DOM nodes, functions, and class instances do not
+  survive — they come back as `null` or a plain object stripped of methods. Convert DOM info to a
+  string or plain object inside the expression (`el.outerHTML`, `{ id: el.id, text: el.textContent }`)
+  rather than returning the node itself.
 
 ---
 

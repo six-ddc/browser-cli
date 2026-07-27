@@ -1,7 +1,7 @@
 /**
  * WatchManager — manages network watch lifecycle on the daemon side.
- * Receives structured events from the extension, formats them as HTTP-readable text,
- * and writes to output files.
+ * Receives structured events from the extension, formats them as HTTP-readable
+ * text (or NDJSON), and writes to output files.
  */
 
 import {
@@ -15,6 +15,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import type { EventMessage, RequestMessage } from '@browser-cli/shared';
+import { BrowserCliError } from '@browser-cli/shared';
 import type { WsServer } from './ws-server.js';
 import { logger } from '../util/logger.js';
 import { getAppDir } from '../util/paths.js';
@@ -35,6 +36,8 @@ interface NetworkRecord {
   size?: number;
   duration?: number;
   error?: string;
+  /** True for requests still in flight when the watch was stopped. */
+  pending?: boolean;
 }
 
 interface CapturedRequest {
@@ -42,19 +45,31 @@ interface CapturedRequest {
   url: string;
 }
 
+type WatchFormat = 'text' | 'ndjson';
+
 interface WatchEntry {
   watchId: string;
   tabId: number;
   pattern: string;
   filePath: string;
+  format: WatchFormat;
   fd: number;
   startedAt: number;
   requestCount: number;
+  pendingCount: number;
   timeout: number;
   timer: ReturnType<typeof setTimeout>;
   unsubscribe: () => void;
   /** Captured request URLs for structured return in networkUnwatch */
   capturedRequests: CapturedRequest[];
+}
+
+/** Metadata retained for the most recent watch, even after it's stopped. */
+interface LastWatchInfo {
+  watchId: string;
+  filePath: string;
+  format: WatchFormat;
+  requestCount: number;
 }
 
 function getWatchesDir(): string {
@@ -100,15 +115,19 @@ function tryPrettyJson(text: string): string {
   }
 }
 
-function formatRequestResponse(record: NetworkRecord): string {
+/** Render one captured request/response pair as human-readable text. Exported for tests. */
+export function formatRequestResponse(record: NetworkRecord): string {
   const lines: string[] = [];
-  const sep = '\u2500'.repeat(40);
+  const sep = '─'.repeat(40);
   lines.push(sep);
   lines.push('');
 
   // Request line
   const duration = record.duration != null ? `, ${record.duration}ms` : '';
-  lines.push(`>>> ${record.method} ${record.url}  [${record.resourceType}${duration}]`);
+  const pendingTag = record.pending ? ' [PENDING]' : '';
+  lines.push(
+    `>>> ${record.method} ${record.url}  [${record.resourceType}${duration}]${pendingTag}`,
+  );
 
   if (record.requestHeaders) {
     for (const [k, v] of Object.entries(record.requestHeaders)) {
@@ -122,7 +141,9 @@ function formatRequestResponse(record: NetworkRecord): string {
   lines.push('');
 
   // Response line
-  if (record.error) {
+  if (record.pending) {
+    lines.push('<<< (pending — still in flight when the watch stopped)');
+  } else if (record.error) {
     lines.push(`<<< ERROR: ${record.error}  (${record.duration ?? 0}ms)`);
   } else if (record.status != null) {
     const size = formatSize(record.size);
@@ -150,9 +171,15 @@ function formatRequestResponse(record: NetworkRecord): string {
   return lines.join('\n');
 }
 
+/** Render one captured request/response pair as an NDJSON line. Exported for tests. */
+export function formatNdjsonLine(record: NetworkRecord): string {
+  return JSON.stringify(record) + '\n';
+}
+
 export class WatchManager {
   private watches = new Map<string, WatchEntry>();
   private wsServer: WsServer;
+  private lastWatch: LastWatchInfo | null = null;
 
   constructor(wsServer: WsServer) {
     this.wsServer = wsServer;
@@ -160,7 +187,7 @@ export class WatchManager {
 
   async startWatch(
     tabId: number,
-    params: { pattern?: string; timeout?: number; body?: boolean; method?: string },
+    params: { pattern?: string; timeout?: number; body?: boolean; method?: string; json?: boolean },
     sendToExtension: (msg: RequestMessage) => Promise<unknown>,
   ): Promise<{
     watchId: string;
@@ -168,15 +195,17 @@ export class WatchManager {
     pattern: string;
     timeout: number;
     filePath: string;
+    format: WatchFormat;
   }> {
     const watchId = `watch-${Date.now()}`;
     const timeout = params.timeout ?? 30000;
     const pattern = params.pattern ?? '*';
+    const format: WatchFormat = params.json ? 'ndjson' : 'text';
 
     // Prune old watch files (>7 days) before creating new one
     const watchesDir = getWatchesDir();
     pruneOldWatchFiles(watchesDir);
-    const filePath = join(watchesDir, `${watchId}.txt`);
+    const filePath = join(watchesDir, `${watchId}.${format === 'ndjson' ? 'ndjson' : 'txt'}`);
     const fd = openSync(filePath, 'w');
 
     // Send networkWatch to extension — it resolves the real tabId
@@ -206,14 +235,16 @@ export class WatchManager {
       throw err;
     }
 
-    // Write file header with the resolved tab ID
-    const header = [
-      `# Watch started: ${new Date().toISOString()}`,
-      `# Pattern: ${pattern}`,
-      `# Tab: ${resolvedTabId}`,
-      '',
-    ].join('\n');
-    writeSync(fd, header);
+    // Write file header with the resolved tab ID (text mode only — NDJSON stays pure data)
+    if (format === 'text') {
+      const header = [
+        `# Watch started: ${new Date().toISOString()}`,
+        `# Pattern: ${pattern}`,
+        `# Tab: ${resolvedTabId}`,
+        '',
+      ].join('\n');
+      writeSync(fd, header);
+    }
 
     // Subscribe to events — use resolvedTabId from extension
     const unsubscribe = this.wsServer.addEventListener((msg: EventMessage) => {
@@ -224,13 +255,15 @@ export class WatchManager {
       if (!entry) return;
 
       const record = msg.data as NetworkRecord;
-      const formatted = formatRequestResponse(record);
+      const formatted =
+        entry.format === 'ndjson' ? formatNdjsonLine(record) : formatRequestResponse(record);
       try {
         writeSync(entry.fd, formatted);
       } catch {
         // File may have been closed
       }
       entry.requestCount++;
+      if (record.pending) entry.pendingCount++;
       entry.capturedRequests.push({ method: record.method, url: record.url });
     });
 
@@ -244,9 +277,11 @@ export class WatchManager {
       tabId: resolvedTabId,
       pattern,
       filePath,
+      format,
       fd,
       startedAt: Date.now(),
       requestCount: 0,
+      pendingCount: 0,
       timeout,
       timer,
       unsubscribe,
@@ -254,10 +289,10 @@ export class WatchManager {
     });
 
     logger.info(
-      `Watch ${watchId} started for tab ${resolvedTabId} (pattern=${pattern}, timeout=${timeout}ms)`,
+      `Watch ${watchId} started for tab ${resolvedTabId} (pattern=${pattern}, timeout=${timeout}ms, format=${format})`,
     );
 
-    return { watchId, tabId: resolvedTabId, pattern, timeout, filePath };
+    return { watchId, tabId: resolvedTabId, pattern, timeout, filePath, format };
   }
 
   async stopWatch(
@@ -268,6 +303,7 @@ export class WatchManager {
     requestCount: number;
     duration: number;
     filePath: string;
+    pendingCount: number;
     requests: CapturedRequest[];
   }> {
     // Find the watch entry by tabId, or stop the first active watch
@@ -288,43 +324,28 @@ export class WatchManager {
     }
 
     if (!entry) {
-      throw new Error('No active network watch found. Use "network watch" to start one first.');
+      throw new BrowserCliError(
+        'SESSION_NOT_FOUND',
+        'No active network watch found.',
+        'Start one with "network watch <pattern>" before calling unwatch.',
+      );
     }
 
     const {
       watchId,
       tabId: entryTabId,
       filePath,
+      format,
       fd,
       startedAt,
-      requestCount,
       timer,
       unsubscribe,
       capturedRequests,
     } = entry;
 
-    // Clean up
-    clearTimeout(timer);
-    unsubscribe();
-    this.watches.delete(watchId);
-
-    const duration = Math.round((Date.now() - startedAt) / 1000);
-
-    // Write file footer
-    const footer = [
-      '',
-      `# Watch ended: ${new Date().toISOString()}`,
-      `# Duration: ${duration}s | Requests: ${requestCount}`,
-      '',
-    ].join('\n');
-    try {
-      writeSync(fd, footer);
-      closeSync(fd);
-    } catch {
-      // File may already be closed
-    }
-
-    // Send networkUnwatch to extension
+    // Send networkUnwatch to extension first — this flushes any in-flight
+    // requests as `pending` records via the event subscription above, so
+    // requestCount/pendingCount below reflect them.
     try {
       const requestId = `watch-stop-${Date.now()}`;
       await sendToExtension({
@@ -340,9 +361,41 @@ export class WatchManager {
       // Extension may have disconnected
     }
 
-    logger.info(`Watch ${watchId} stopped (${requestCount} requests in ${duration}s)`);
+    // Clean up
+    clearTimeout(timer);
+    unsubscribe();
+    this.watches.delete(watchId);
 
-    return { watchId, requestCount, duration, filePath, requests: capturedRequests };
+    const duration = Math.round((Date.now() - startedAt) / 1000);
+    const { requestCount, pendingCount } = entry;
+
+    // Write file footer (text mode only)
+    if (format === 'text') {
+      const footer = [
+        '',
+        `# Watch ended: ${new Date().toISOString()}`,
+        `# Duration: ${duration}s | Requests: ${requestCount} | Pending: ${pendingCount}`,
+        '',
+      ].join('\n');
+      try {
+        writeSync(fd, footer);
+      } catch {
+        // File may already be closed
+      }
+    }
+    try {
+      closeSync(fd);
+    } catch {
+      // File may already be closed
+    }
+
+    this.lastWatch = { watchId, filePath, format, requestCount };
+
+    logger.info(
+      `Watch ${watchId} stopped (${requestCount} requests in ${duration}s, ${pendingCount} pending)`,
+    );
+
+    return { watchId, requestCount, duration, filePath, pendingCount, requests: capturedRequests };
   }
 
   /** Stop all watches (used during shutdown) */
@@ -360,5 +413,63 @@ export class WatchManager {
   /** Check if there's an active watch */
   get hasActiveWatch(): boolean {
     return this.watches.size > 0;
+  }
+
+  /**
+   * Look up the output file for a watch — active or already stopped.
+   * Omit `watchId` (or pass "latest") for the most recently started watch.
+   */
+  getWatchFile(watchId?: string): {
+    watchId: string;
+    filePath: string;
+    format: WatchFormat;
+    active: boolean;
+    requestCount: number;
+  } {
+    const wantsLatest = !watchId || watchId === 'latest';
+
+    if (!wantsLatest) {
+      const entry = this.watches.get(watchId);
+      if (entry) {
+        return {
+          watchId: entry.watchId,
+          filePath: entry.filePath,
+          format: entry.format,
+          active: true,
+          requestCount: entry.requestCount,
+        };
+      }
+      if (this.lastWatch && this.lastWatch.watchId === watchId) {
+        return { ...this.lastWatch, active: false };
+      }
+      throw new BrowserCliError(
+        'INVALID_ARGS',
+        `Watch "${watchId}" not found.`,
+        'Run "network watch-file" with no id for the most recent watch, or "network watch <pattern>" to start a new one.',
+      );
+    }
+
+    // Most recent active watch (insertion order = Map iteration order), else last stopped watch.
+    let mostRecent: WatchEntry | undefined;
+    for (const entry of this.watches.values()) {
+      mostRecent = entry;
+    }
+    if (mostRecent) {
+      return {
+        watchId: mostRecent.watchId,
+        filePath: mostRecent.filePath,
+        format: mostRecent.format,
+        active: true,
+        requestCount: mostRecent.requestCount,
+      };
+    }
+    if (this.lastWatch) {
+      return { ...this.lastWatch, active: false };
+    }
+    throw new BrowserCliError(
+      'SESSION_NOT_FOUND',
+      'No network watch has been started yet.',
+      'Start one with "network watch <pattern>", then call "network watch-file" to get its output path.',
+    );
   }
 }

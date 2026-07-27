@@ -61,7 +61,8 @@ test.describe('find text', () => {
   test('click by text content', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('find', 'text=Login', 'click');
+    // "Login" also matches the <h2> heading, so pick the button explicitly
+    const r = bcli('find', 'text=Login', 'click', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -70,7 +71,7 @@ test.describe('find text', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     // Omitting action should default to click
-    const r = bcli('find', 'text=Login');
+    const r = bcli('find', 'text=Login', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -87,7 +88,7 @@ test.describe('find text', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     // "Log" should match "Login" in partial/substring mode
-    const r = bcli('find', 'text=Log', 'click');
+    const r = bcli('find', 'text=Log', 'click', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -173,7 +174,7 @@ test.describe('find xpath', () => {
   test('complex xpath expression', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.CHECKBOXES);
 
-    const r = bcli('find', 'xpath=//input[@type="checkbox"]', 'click');
+    const r = bcli('find', 'xpath=//input[@type="checkbox"]', 'click', '--first');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });

@@ -1,7 +1,7 @@
 import type { Server, Socket } from 'node:net';
 import { createServer } from 'node:net';
 import { unlinkSync, existsSync } from 'node:fs';
-import { schemas } from '@browser-cli/shared';
+import { protocolError, schemas } from '@browser-cli/shared';
 import type { DaemonRequest, DaemonResponse } from '@browser-cli/shared';
 import { logger } from '../util/logger.js';
 
@@ -95,9 +95,11 @@ export class SocketServer {
       const errorResponse: DaemonResponse = {
         id: 'unknown',
         success: false,
-        error: {
-          message: (err as Error).message,
-        },
+        error: protocolError(
+          'INVALID_ARGS',
+          `Malformed request: ${(err as Error).message}`,
+          'The command did not match the protocol schema — check the action name and its params.',
+        ),
       };
       try {
         // Try to extract the id from the raw message

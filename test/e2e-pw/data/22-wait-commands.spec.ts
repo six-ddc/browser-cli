@@ -86,14 +86,39 @@ test.describe('wait selector', () => {
 // ===========================================================================
 
 test.describe('wait --hidden', () => {
-  test('waits until element is removed', async ({ bcli, navigateAndWait }) => {
+  test('waits until the element is actually removed', async ({
+    bcli,
+    navigateAndWait,
+    activePage,
+  }) => {
     await navigateAndWait(PAGES.DYNAMIC_CONTROLS);
-    // Click Remove to hide the checkbox
-    bcli('click', '#checkbox-example button');
+    await expect(activePage.locator('#checkbox input')).toBeVisible();
 
-    // Wait for the checkbox to become hidden
-    const r = bcli('wait', '#checkbox', '--hidden', '--timeout', '10000');
+    // Removal happens ~1s after the click, so the wait has to do real work
+    bcli('click', '#btn-toggle');
+
+    const r = bcli('wait', '#checkbox input', '--hidden', '--timeout', '10000');
     expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Hidden: #checkbox input');
+    await expect(activePage.locator('#checkbox input')).toHaveCount(0);
+  });
+
+  test('succeeds immediately when nothing matches', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.DYNAMIC_CONTROLS);
+
+    const r = bcli('wait', '.never-existed', '--hidden', '--timeout', '3000');
+    expect(r).toBcliSuccess();
+    expect(r.stdout).toContain('Hidden: .never-existed');
+  });
+
+  test('times out while the element is still visible', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.DYNAMIC_CONTROLS);
+
+    // #checkbox is never removed — only the inner input is
+    const r = bcli('wait', '#checkbox', '--hidden', '--timeout', '2000');
+    expect(r).toBcliFailure();
+    expect(r.stderr).toContain('TIMEOUT');
+    expect(r.stderr).toContain('to become hidden');
   });
 });
 

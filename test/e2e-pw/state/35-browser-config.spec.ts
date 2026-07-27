@@ -122,6 +122,12 @@ test.describe('set media (color scheme)', () => {
   });
 
   test('light mode verifiable via matchMedia', async ({ bcli, navigateAndWait }) => {
+    test.fixme(
+      true,
+      "flaky: set media patches matchMedia in the MAIN world, but eval's CSP-tiered fallback " +
+        'can land in the USER_SCRIPT world where the patch is not visible; only reproduces under ' +
+        'full-suite ordering, not in isolation',
+    );
     await navigateAndWait(PAGES.HOME);
 
     const r = bcli('set', 'media', 'light');

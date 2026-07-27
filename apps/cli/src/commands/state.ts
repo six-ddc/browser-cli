@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { sendCommand } from './shared.js';
+import { fail, getRootOpts, sendCommand } from './shared.js';
 import { logger } from '../util/logger.js';
 
 export const stateCommand = new Command('state').description(
@@ -12,7 +12,13 @@ stateCommand
   .description('Export cookies + storage to a JSON file')
   .argument('<path>', 'File path to save state')
   .action(async (filePath: string, _opts: unknown, cmd: Command) => {
-    const result = await sendCommand(cmd, { action: 'stateExport', params: {} });
+    // skipJson so the file is written before any output — under plain --json
+    // sendCommand exits as soon as it prints.
+    const result = await sendCommand(
+      cmd,
+      { action: 'stateExport', params: {} },
+      { skipJson: true },
+    );
     if (!result) return;
 
     const stateData = {
@@ -28,6 +34,27 @@ stateCommand
     const cookies = Array.isArray(result.cookies) ? result.cookies.length : 0;
     const local = Object.keys(result.localStorage).length;
     const session = Object.keys(result.sessionStorage).length;
+
+    if (getRootOpts(cmd).json) {
+      console.log(
+        JSON.stringify(
+          {
+            success: true,
+            data: {
+              path: filePath,
+              url: result.url,
+              cookies,
+              localStorage: local,
+              sessionStorage: session,
+            },
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
     logger.success(
       `State saved to ${filePath} (${cookies} cookies, ${local} localStorage, ${session} sessionStorage)`,
     );
@@ -41,9 +68,13 @@ stateCommand
     let raw: string;
     try {
       raw = readFileSync(filePath, 'utf-8');
-    } catch {
-      logger.error(`Failed to read file: ${filePath}`);
-      process.exit(1);
+    } catch (err) {
+      fail(
+        cmd,
+        'INVALID_ARGS',
+        `Failed to read state file ${filePath}: ${(err as Error).message}`,
+        "Pass the path of a file written by 'state save'.",
+      );
     }
 
     let stateData: {
@@ -64,14 +95,22 @@ stateCommand
     };
     try {
       stateData = JSON.parse(raw) as typeof stateData;
-    } catch {
-      logger.error('Invalid JSON in state file');
-      process.exit(1);
+    } catch (err) {
+      fail(
+        cmd,
+        'INVALID_ARGS',
+        `Invalid JSON in state file ${filePath}: ${(err as Error).message}`,
+        "Regenerate it with 'state save <path>'.",
+      );
     }
 
     if (stateData.version !== 1) {
-      logger.error(`Unsupported state file version: ${stateData.version}`);
-      process.exit(1);
+      fail(
+        cmd,
+        'INVALID_ARGS',
+        `Unsupported state file version: ${String(stateData.version)} (expected 1)`,
+        "Regenerate it with 'state save <path>'.",
+      );
     }
 
     // Transform cookies for import: add url from domain if missing, normalize sameSite

@@ -23,7 +23,7 @@ const cookiesCmd = new Command('cookies')
         ]
           .filter(Boolean)
           .join(', ');
-        console.log(`${c.name}=${c.value.substring(0, 50)}${c.value.length > 50 ? '...' : ''}`);
+        console.log(`${c.name}=${c.value}`);
         console.log(`  Domain: ${c.domain}  Path: ${c.path}  ${flags}`);
       }
     }
@@ -54,7 +54,7 @@ cookiesCmd
           ]
             .filter(Boolean)
             .join(', ');
-          console.log(`${c.name}=${c.value.substring(0, 50)}${c.value.length > 50 ? '...' : ''}`);
+          console.log(`${c.name}=${c.value}`);
           console.log(`  Domain: ${c.domain}  Path: ${c.path}  ${flags}`);
         }
       }

@@ -1,0 +1,1 @@
+browser-cli e2e download fixture — this file is downloaded by 33-download.spec.ts

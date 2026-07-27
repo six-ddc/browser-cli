@@ -4,10 +4,29 @@
  * using browser APIs (not forwarded to content scripts).
  */
 
-import type { RequestMessage, ResponseMessage, Command } from '@browser-cli/shared';
+import type {
+  RequestMessage,
+  ResponseMessage,
+  Command,
+  ErrorCode,
+  ScreenshotResult,
+} from '@browser-cli/shared';
+import { BrowserCliError } from '@browser-cli/shared';
 import { classifyError } from './error-classifier';
 import type { NetworkManager } from './network-manager';
 import { startWatch, stopWatch, getActiveWatchTabId } from './network-watcher';
+import { getRequests, getRequest } from './request-log';
+import { listDownloads, waitForDownload } from './downloads';
+import { sendCdpCommand, isDebuggerAvailable } from './debugger-input';
+import { sendToContentScript, type ContentScriptResponse } from './send-to-content-script';
+import {
+  describeFrameId,
+  getAllFrames,
+  getFocusedFrameId,
+  listFrameDescriptors,
+  resolveFrameBySelector,
+  setFocusedFrameId,
+} from './frame-routing';
 
 /** Firefox contextualIdentities API (not in WXT/Chrome types) */
 interface ContextualIdentity {
@@ -22,20 +41,18 @@ interface ContextualIdentitiesAPI {
   remove: (cookieStoreId: string) => Promise<ContextualIdentity>;
 }
 
-/** Typed response from content script via browser.tabs.sendMessage */
-interface ContentScriptResponse {
-  success: boolean;
-  data?: unknown;
-  error?: { message?: string };
-}
-
-/** Send a typed message to content script and get a typed response */
-async function sendToContentScript(
-  tabId: number,
-  message: unknown,
-  options?: { frameId: number },
-): Promise<ContentScriptResponse> {
-  return await browser.tabs.sendMessage(tabId, message, options);
+/** Re-throw a content-script failure without flattening its code and hint. */
+function throwContentScriptError(
+  response: ContentScriptResponse,
+  fallback: { code: ErrorCode; message: string; hint?: string },
+): never {
+  const { code, message, hint, stack } = response.error ?? {};
+  throw new BrowserCliError(
+    (code as ErrorCode | undefined) ?? fallback.code,
+    message ?? fallback.message,
+    hint ?? fallback.hint,
+    stack,
+  );
 }
 
 // Firefox: persistent listener for setHeaders (webRequest blocking mode)
@@ -110,19 +127,11 @@ export async function handleBackgroundCommand(
     const data = await routeCommand(command, targetTabId, networkManager);
     return { id, type: 'response', success: true, data };
   } catch (err) {
-    const error =
-      err !== null &&
-      typeof err === 'object' &&
-      'message' in err &&
-      !(err instanceof Error) &&
-      typeof (err as { message: unknown }).message === 'string'
-        ? (err as { message: string })
-        : classifyError(err);
     return {
       id,
       type: 'response',
       success: false,
-      error,
+      error: classifyError(err),
     };
   }
 }
@@ -132,10 +141,11 @@ const BLOCKED_SCHEMES = ['javascript', 'data', 'vbscript'];
 function assertSafeUrl(url: string): void {
   const scheme = url.trim().split(':')[0].toLowerCase();
   if (BLOCKED_SCHEMES.includes(scheme)) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-    throw {
-      message: `Blocked navigation to "${scheme}:" URL — this scheme is not allowed for security reasons. Use http: or https: URLs instead.`,
-    };
+    throw new BrowserCliError(
+      'INVALID_ARGS',
+      `Blocked navigation to "${scheme}:" URL — this scheme is not allowed for security reasons.`,
+      'Use an http: or https: URL instead.',
+    );
   }
 }
 
@@ -149,12 +159,15 @@ async function routeCommand(
     case 'navigate': {
       const { url } = command.params;
       assertSafeUrl(url);
+      const before = await browser.tabs.get(targetTabId);
       await browser.tabs.update(targetTabId, { url });
-      // Wait for navigation to complete and content script to be ready
-      await waitForTabLoad(targetTabId);
-      await waitForContentScriptReady(targetTabId);
+      const load = await waitForTabLoad(targetTabId, 15_000, {
+        requireNavigation: true,
+        previousUrl: before.url,
+      });
+      const ready = await waitForContentScriptReady(targetTabId);
       const tab = await browser.tabs.get(targetTabId);
-      return { url: tab.url, title: tab.title };
+      return { url: tab.url, title: tab.title, ...navigationWarnings(load, ready) };
     }
     case 'goBack': {
       const beforeBack = await browser.tabs.get(targetTabId);
@@ -162,10 +175,10 @@ async function routeCommand(
         target: { tabId: targetTabId },
         func: () => history.back(),
       });
-      await waitForUrlChange(targetTabId, beforeBack.url || '');
-      await waitForContentScriptReady(targetTabId);
+      const load = await waitForUrlChange(targetTabId, beforeBack.url || '');
+      const ready = await waitForContentScriptReady(targetTabId);
       const tab = await browser.tabs.get(targetTabId);
-      return { url: tab.url };
+      return { url: tab.url, title: tab.title, ...navigationWarnings(load, ready) };
     }
     case 'goForward': {
       const beforeFwd = await browser.tabs.get(targetTabId);
@@ -173,17 +186,17 @@ async function routeCommand(
         target: { tabId: targetTabId },
         func: () => history.forward(),
       });
-      await waitForUrlChange(targetTabId, beforeFwd.url || '');
-      await waitForContentScriptReady(targetTabId);
+      const load = await waitForUrlChange(targetTabId, beforeFwd.url || '');
+      const ready = await waitForContentScriptReady(targetTabId);
       const tab = await browser.tabs.get(targetTabId);
-      return { url: tab.url };
+      return { url: tab.url, title: tab.title, ...navigationWarnings(load, ready) };
     }
     case 'reload': {
       await browser.tabs.reload(targetTabId);
-      await waitForTabLoad(targetTabId);
-      await waitForContentScriptReady(targetTabId);
+      const load = await waitForTabLoad(targetTabId, 15_000, { requireNavigation: true });
+      const ready = await waitForContentScriptReady(targetTabId);
       const tab = await browser.tabs.get(targetTabId);
-      return { url: tab.url, title: tab.title };
+      return { url: tab.url, title: tab.title, ...navigationWarnings(load, ready) };
     }
     case 'getUrl': {
       const tab = await browser.tabs.get(targetTabId);
@@ -222,10 +235,11 @@ async function routeCommand(
           .contextualIdentities;
         const identities = await ctxIds.query({ name: container });
         if (identities.length === 0) {
-          // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-          throw {
-            message: `Container "${container}" not found. Use "container list" to see available containers, or "container create" to create one.`,
-          };
+          throw new BrowserCliError(
+            'INVALID_ARGS',
+            `Container "${container}" not found.`,
+            'Run "container list" to see available containers, or "container create" to make one.',
+          );
         }
         cookieStoreId = identities[0].cookieStoreId;
       }
@@ -317,7 +331,18 @@ async function routeCommand(
 
     // ─── Screenshot ────────────────────────────────────────────
     case 'screenshot': {
-      const { selector, format, quality } = command.params;
+      const { selector, format, quality, full } = command.params;
+
+      if (full) {
+        if (import.meta.env.FIREFOX || !isDebuggerAvailable()) {
+          throw new BrowserCliError(
+            'UNSUPPORTED',
+            'screenshot --full requires the chrome.debugger API, which Firefox does not provide.',
+            'Drop --full to capture the viewport, or run this against a Chrome session.',
+          );
+        }
+        return await captureFullPage(targetTabId, selector, format || 'png', quality);
+      }
 
       // captureVisibleTab() can only capture the active tab (Chrome API limitation).
       // If targeting a non-active tab, auto-switch to it first.
@@ -342,7 +367,11 @@ async function routeCommand(
           { frameId: 0 },
         );
         if (!csResponse.success) {
-          throw new Error(csResponse.error?.message || `Element not found: ${selector}`);
+          throwContentScriptError(csResponse, {
+            code: 'ELEMENT_NOT_FOUND',
+            message: `Element not found: ${selector}`,
+            hint: "Run 'snapshot -i' to list the elements currently on the page.",
+          });
         }
         // Get bounding box for crop metadata
         const bboxResponse = await sendToContentScript(
@@ -370,28 +399,25 @@ async function routeCommand(
         const cropped = await cropImage(dataUrl, cropRect, dpr, format || 'png', quality);
         const [croppedHeader, croppedBase64] = cropped.split(',');
         const croppedMime = croppedHeader.split(':')[1].split(';')[0];
+        const croppedSize = await imageSize(cropped);
         return {
           data: croppedBase64,
           mimeType: croppedMime,
-          width: Math.round(cropRect.width),
-          height: Math.round(cropRect.height),
+          width: croppedSize.width,
+          height: croppedSize.height,
         };
       }
 
       // Parse data URL: data:image/png;base64,xxxxx
       const [header, base64Data] = dataUrl.split(',');
       const mimeType = header.split(':')[1].split(';')[0];
-
-      // Get viewport dimensions from the window
-      const win = await browser.windows.getCurrent();
-      const viewportWidth = win.width ?? 0;
-      const viewportHeight = win.height ?? 0;
+      const size = await imageSize(dataUrl);
 
       return {
         data: base64Data,
         mimeType,
-        width: viewportWidth,
-        height: viewportHeight,
+        width: size.width,
+        height: size.height,
       };
     }
 
@@ -404,13 +430,20 @@ async function routeCommand(
     //   Both ─── 3. Error with actionable hint
     //
     case 'evaluate': {
-      const { expression } = command.params;
+      const { expression, args } = command.params;
+
+      // Evaluate inside the focused frame, so `frame <selector>` also scopes eval
+      const evalFrameId = await getFocusedFrameId(targetTabId);
+      const evalTarget =
+        evalFrameId === 0
+          ? { tabId: targetTabId }
+          : { tabId: targetTabId, frameIds: [evalFrameId] };
 
       // ── Step 1: MAIN world eval ────────────────────────────
       const mainWorldResult = await browser.scripting.executeScript({
-        target: { tabId: targetTabId },
+        target: evalTarget,
         world: 'MAIN',
-        func: async (expr: string) => {
+        func: async (expr: string, callArgs?: unknown[]) => {
           // Capture console output during eval
           const __logs: Array<{ level: string; args: unknown[]; timestamp: number }> = [];
           const __origConsole = {
@@ -426,6 +459,9 @@ async function routeCommand(
               __logs.push({
                 level,
                 args: args.map((a) => {
+                  if (a instanceof Error) {
+                    return { __error: true, name: a.name, message: a.message, stack: a.stack };
+                  }
                   try {
                     return JSON.parse(JSON.stringify(a)) as unknown;
                   } catch {
@@ -469,10 +505,18 @@ async function routeCommand(
 
           // eval() works — any error from here is a genuine expression error
           try {
-            const __r = await __evalFn(expr);
+            // With args the expression must evaluate to a function: (expr)(...args)
+            const __r = callArgs
+              ? await (__evalFn(`(${expr})`) as (...a: unknown[]) => unknown)(...callArgs)
+              : await __evalFn(expr);
             return { __ok: true, value: __r, logs: __logs };
           } catch (e: unknown) {
-            return { __ok: false, error: (e as Error).message, logs: __logs };
+            return {
+              __ok: false,
+              error: (e as Error).message,
+              stack: (e as Error).stack,
+              logs: __logs,
+            };
           } finally {
             console.log = __origConsole.log;
             console.warn = __origConsole.warn;
@@ -481,7 +525,8 @@ async function routeCommand(
             console.debug = __origConsole.debug;
           }
         },
-        args: [expression],
+        // executeScript rejects `undefined` inside args, so omit the slot entirely.
+        args: args ? [expression, args] : [expression],
       });
 
       const raw = mainWorldResult[0]?.result as
@@ -493,6 +538,7 @@ async function routeCommand(
         | {
             __ok: false;
             error: string;
+            stack?: string;
             __blocked?: boolean;
             logs?: Array<{ level: string; args: unknown[]; timestamp: number }>;
           }
@@ -510,8 +556,9 @@ async function routeCommand(
       const step1Error = raw?.error ?? 'eval() returned no result';
 
       // eval() ran the expression but it threw — genuine expression error.
+      // Carry the page-side stack so the caller sees where in their code it broke.
       if (raw && !raw.__blocked) {
-        throw new Error(step1Error);
+        throw new BrowserCliError('UNKNOWN', step1Error, undefined, raw.stack);
       }
 
       // ── Step 2: Fallback (platform-specific) ─────────────
@@ -531,18 +578,21 @@ async function routeCommand(
               .replace(/\\/g, '\\\\')
               .replace(/`/g, '\\`')
               .replace(/\$/g, '\\$');
-            const wrappedCode = `(async () => { try { return { __ok: true, value: await (0, eval)(\`${escaped}\`) }; } catch(e) { return { __ok: false, error: e.message }; } })()`;
+            const invocation = args
+              ? `(await (0, eval)(\`(${escaped})\`))(...${JSON.stringify(args)})`
+              : `(0, eval)(\`${escaped}\`)`;
+            const wrappedCode = `(async () => { try { return { __ok: true, value: await ${invocation} }; } catch(e) { return { __ok: false, error: e.message, stack: e.stack }; } })()`;
             const usResults = await chrome.userScripts.execute({
-              target: { tabId: targetTabId },
+              target: evalTarget,
               js: [{ code: wrappedCode }],
             });
             const usResult = usResults[0]?.result as
               | { __ok: true; value: unknown }
-              | { __ok: false; error: string }
+              | { __ok: false; error: string; stack?: string }
               | null
               | undefined;
             if (usResult && !usResult.__ok) {
-              throw new Error(usResult.error);
+              throw new BrowserCliError('UNKNOWN', usResult.error, undefined, usResult.stack);
             }
             return { value: usResult?.__ok ? usResult.value : usResult };
           } catch (usErr) {
@@ -554,13 +604,11 @@ async function routeCommand(
           }
         }
         // userScripts not available
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-        throw {
-          message:
-            "eval() is blocked by this page's Content Security Policy (CSP). " +
-            "Enable Developer Mode (or 'Allow User Scripts' on Chrome 138+) in chrome://extensions to auto-bypass CSP, " +
-            "or use 'snapshot -ic' / 'find' to interact with elements without eval.",
-        };
+        throw new BrowserCliError(
+          'CSP_BLOCKED',
+          "eval() is blocked by this page's Content Security Policy (CSP).",
+          "Enable Developer Mode (or 'Allow User Scripts' on Chrome 138+) in chrome://extensions to auto-bypass CSP, or use 'snapshot -ic' / 'find' to interact with elements without eval.",
+        );
       } else {
         // Firefox: ISOLATED world eval (extension CSP, always works)
         const response = await sendToContentScript(
@@ -568,12 +616,15 @@ async function routeCommand(
           {
             type: 'browser-cli-command',
             id: `bg-evaluate-${Date.now()}`,
-            command: { action: 'evaluate', params: { expression } },
+            command: { action: 'evaluate', params: { expression, args } },
           },
-          { frameId: 0 },
+          { frameId: evalFrameId },
         );
         if (!response.success) {
-          throw new Error(response.error?.message || 'evaluate failed');
+          throwContentScriptError(response, {
+            code: 'UNKNOWN',
+            message: 'evaluate failed',
+          });
         }
         return response.data;
       }
@@ -593,6 +644,45 @@ async function routeCommand(
       const tabId = getActiveWatchTabId() ?? targetTabId;
       await stopWatch(tabId);
       return { stopped: true };
+    }
+
+    // ─── Network request log (webRequest) ─────────────────────
+    case 'networkRequests': {
+      return getRequests(command.params, targetTabId);
+    }
+    case 'networkRequest': {
+      return getRequest(command.params.id);
+    }
+
+    // ─── CDP escape hatch ───────────────────────────────────────
+    case 'cdp': {
+      if (import.meta.env.FIREFOX || !isDebuggerAvailable()) {
+        throw new BrowserCliError(
+          'UNSUPPORTED',
+          'cdp requires the chrome.debugger API, which Firefox does not provide.',
+          'Run this command against a Chrome session, or use the extension-native commands instead.',
+        );
+      }
+      const { method, params } = command.params;
+      try {
+        const result = await sendCdpCommand(targetTabId, method, params);
+        return { method, result };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        throw new BrowserCliError(
+          'DEBUGGER_ERROR',
+          `CDP command "${method}" failed: ${message}`,
+          'Check the method name and params against https://chromedevtools.github.io/devtools-protocol/',
+        );
+      }
+    }
+
+    // ─── Downloads ────────────────────────────────────────────
+    case 'downloadList': {
+      return listDownloads(command.params);
+    }
+    case 'downloadWait': {
+      return waitForDownload(command.params);
     }
 
     // ─── Network ───────────────────────────────────────────────
@@ -787,6 +877,52 @@ async function routeCommand(
         })),
         total: results.length,
       };
+    }
+
+    // ─── Frame Management ──────────────────────────────────────
+    case 'switchFrame': {
+      const { main, selector, frameId } = command.params;
+
+      if (main) {
+        await setFocusedFrameId(targetTabId, 0);
+        return { frame: await describeFrameId(targetTabId, 0), matchedBy: 'main' };
+      }
+
+      if (frameId != null) {
+        const frames = await getAllFrames(targetTabId);
+        if (!frames.some((f) => f.frameId === frameId)) {
+          throw new BrowserCliError(
+            'FRAME_ERROR',
+            `No frame with id ${frameId} in this tab.`,
+            "Run 'frame list' to see the frame ids that exist now.",
+          );
+        }
+        await setFocusedFrameId(targetTabId, frameId);
+        return { frame: await describeFrameId(targetTabId, frameId), matchedBy: 'frameId' };
+      }
+
+      if (!selector) {
+        throw new BrowserCliError(
+          'INVALID_ARGS',
+          'switchFrame needs a selector, a frameId, or main: true.',
+          "Use 'frame <selector>' to enter an iframe, 'frame main' to go back to the top document, or 'frame list' to see the frame ids.",
+        );
+      }
+
+      const picked = await resolveFrameBySelector(targetTabId, selector);
+      await setFocusedFrameId(targetTabId, picked.frameId);
+      return {
+        frame: await describeFrameId(targetTabId, picked.frameId),
+        matchedBy: picked.matchedBy,
+      };
+    }
+
+    case 'listFrames':
+      return listFrameDescriptors(targetTabId);
+
+    case 'getCurrentFrame': {
+      const currentFrameId = await getFocusedFrameId(targetTabId);
+      return { frame: await describeFrameId(targetTabId, currentFrameId) };
     }
 
     // ─── State Management ──────────────────────────────────────
@@ -1050,10 +1186,11 @@ async function routeCommand(
         .contextualIdentities;
       const identitiesR = await ctxIdsR.query({ name });
       if (identitiesR.length === 0) {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- ProtocolError is caught upstream
-        throw {
-          message: `Container "${name}" not found. Use "container list" to see available containers.`,
-        };
+        throw new BrowserCliError(
+          'INVALID_ARGS',
+          `Container "${name}" not found.`,
+          'Run "container list" to see available containers.',
+        );
       }
       await ctxIdsR.remove(identitiesR[0].cookieStoreId);
       return { removed: true };
@@ -1081,14 +1218,37 @@ export function cookieToInfo(c: Browser.cookies.Cookie) {
  * Wait for the tab URL to change from `previousUrl`, then wait for load to complete.
  * Used for goBack/goForward where `tabs.goBack()` resolves before navigation starts.
  */
-function waitForUrlChange(tabId: number, previousUrl: string, timeoutMs = 15_000): Promise<void> {
+function waitForUrlChange(
+  tabId: number,
+  previousUrl: string,
+  timeoutMs = 15_000,
+): Promise<{ timedOut: boolean }> {
   return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      browser.tabs.onUpdated.removeListener(listener);
-      resolve(); // Resolve anyway on timeout — page may have no history
-    }, timeoutMs);
-
     let navigationStarted = false;
+    let settled = false;
+
+    let poll: ReturnType<typeof setInterval> | undefined;
+
+    const finish = (timedOut: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearInterval(poll);
+      browser.tabs.onUpdated.removeListener(listener);
+      resolve({ timedOut });
+    };
+
+    const timer = setTimeout(() => finish(true), timeoutMs);
+
+    // A same-document history entry (SPA route) never runs a load cycle, so
+    // once the URL has moved, poll the status instead of waiting for 'complete'.
+    const startPolling = () => {
+      poll ??= setInterval(() => {
+        void browser.tabs.get(tabId).then((tab) => {
+          if (tab.status === 'complete') finish(false);
+        });
+      }, 100);
+    };
 
     const listener = (updatedTabId: number, changeInfo: Browser.tabs.OnUpdatedInfo) => {
       if (updatedTabId !== tabId) return;
@@ -1102,10 +1262,12 @@ function waitForUrlChange(tabId: number, previousUrl: string, timeoutMs = 15_000
       }
 
       // Once navigation started, wait for complete
-      if (navigationStarted && changeInfo.status === 'complete') {
-        clearTimeout(timer);
-        browser.tabs.onUpdated.removeListener(listener);
-        resolve();
+      if (navigationStarted) {
+        if (changeInfo.status === 'complete') {
+          finish(false);
+          return;
+        }
+        startPolling();
       }
     };
 
@@ -1119,20 +1281,38 @@ function waitForUrlChange(tabId: number, previousUrl: string, timeoutMs = 15_000
  * Resolves (never rejects) — special pages (chrome://, about:, PDF) may never
  * have a content script, so we don't want to block the command flow.
  */
-function waitForContentScriptReady(tabId: number, timeoutMs = 5_000): Promise<void> {
+/**
+ * Whether the tab's top-level document is parsed and usable. `complete` is not
+ * the bar here: the top document's load event also waits on every subframe,
+ * which is the very thing this check exists to stop waiting for.
+ */
+async function isTopFrameLoaded(tabId: number): Promise<boolean> {
+  try {
+    const results = await browser.scripting.executeScript({
+      target: { tabId, frameIds: [0] },
+      func: () => document.readyState,
+    });
+    const state = results[0]?.result;
+    return state === 'interactive' || state === 'complete';
+  } catch {
+    return false;
+  }
+}
+
+function waitForContentScriptReady(tabId: number, timeoutMs = 5_000): Promise<boolean> {
   const POLL_INTERVAL = 200;
   return new Promise((resolve) => {
     const deadline = Date.now() + timeoutMs;
     const attempt = () => {
       if (Date.now() > deadline) {
-        resolve();
+        resolve(false);
         return;
       }
       browser.tabs
         .sendMessage(tabId, { type: 'browser-cli-ping' }, { frameId: 0 })
         .then((response: unknown) => {
           if (response && (response as { ready?: boolean }).ready) {
-            resolve();
+            resolve(true);
           } else {
             setTimeout(attempt, POLL_INTERVAL);
           }
@@ -1145,31 +1325,113 @@ function waitForContentScriptReady(tabId: number, timeoutMs = 5_000): Promise<vo
   });
 }
 
-function waitForTabLoad(tabId: number, timeoutMs = 15_000): Promise<void> {
+/**
+ * Warnings appended to navigation results when the page did not fully settle.
+ * The command still succeeds — the agent decides whether to wait further.
+ */
+function navigationWarnings(load: { timedOut: boolean }, contentScriptReady: boolean) {
+  const warnings: string[] = [];
+  if (load.timedOut) {
+    warnings.push('the page did not reach load state within 15s');
+  }
+  if (!contentScriptReady) {
+    warnings.push(
+      'the content script never became ready (privileged page, PDF viewer, or a very slow load)',
+    );
+  }
+  if (warnings.length === 0) return {};
+  return {
+    contentScriptReady,
+    warning: `Navigation finished but ${warnings.join(' and ')}. Commands that touch the DOM may fail — retry after 'wait --load domcontentloaded'.`,
+  };
+}
+
+/**
+ * Wait for a tab to finish loading.
+ *
+ * With `requireNavigation`, a `complete` status only counts once navigation has
+ * actually started — otherwise the stale `complete` of the *previous* page
+ * resolves immediately and the caller reads the old DOM.
+ *
+ * Resolves with `timedOut: true` rather than rejecting, so slow pages degrade
+ * into a warning instead of a hard failure.
+ */
+function waitForTabLoad(
+  tabId: number,
+  timeoutMs = 15_000,
+  options?: { requireNavigation?: boolean; previousUrl?: string },
+): Promise<{ timedOut: boolean }> {
   return new Promise((resolve) => {
-    const timer = setTimeout(() => {
+    let navigationStarted = !options?.requireNavigation;
+    let settled = false;
+
+    const finish = (timedOut: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       browser.tabs.onUpdated.removeListener(listener);
-      resolve(); // Resolve anyway, don't block on slow pages
-    }, timeoutMs);
+      resolve({ timedOut });
+    };
+
+    const timer = setTimeout(() => finish(true), timeoutMs);
 
     const listener = (updatedTabId: number, changeInfo: Browser.tabs.OnUpdatedInfo) => {
-      if (updatedTabId === tabId && changeInfo.status === 'complete') {
-        clearTimeout(timer);
-        browser.tabs.onUpdated.removeListener(listener);
-        resolve();
-      }
+      if (updatedTabId !== tabId) return;
+      if (changeInfo.status === 'loading') navigationStarted = true;
+      if (changeInfo.url && changeInfo.url !== options?.previousUrl) navigationStarted = true;
+      if (navigationStarted && changeInfo.status === 'complete') finish(false);
     };
 
     browser.tabs.onUpdated.addListener(listener);
 
-    // Check if already complete
-    void browser.tabs.get(tabId).then((tab) => {
-      if (tab.status === 'complete') {
-        clearTimeout(timer);
-        browser.tabs.onUpdated.removeListener(listener);
-        resolve();
-      }
-    });
+    // A local page can finish loading before the listener is attached, and then
+    // no onUpdated event ever arrives — polling is what keeps the latch from
+    // waiting out the full timeout on a page that is already done.
+    const startedAt = Date.now();
+    const POLL_INTERVAL = 100;
+    /** Past this, a tab still sitting at `complete` never started loading. */
+    const ALREADY_COMPLETE_GRACE = 1_500;
+    /**
+     * Only pages that would otherwise stall fall back to the top frame alone:
+     * a normally-loading page reaches `complete` well inside this window, so
+     * its callers keep the stronger "everything settled" guarantee.
+     */
+    const TOP_FRAME_GRACE = 3_000;
+
+    const poll = () => {
+      if (settled) return;
+      void browser.tabs
+        .get(tabId)
+        .then((tab) => {
+          if (settled) return;
+          if (tab.status === 'loading') {
+            navigationStarted = true;
+            // A tab stays `loading` until every subframe settles, so one slow
+            // or never-finishing iframe would hold navigate for the full
+            // timeout. The document the caller asked for being done is what
+            // they actually waited for.
+            if (Date.now() - startedAt > TOP_FRAME_GRACE) {
+              void isTopFrameLoaded(tabId).then((loaded) => {
+                if (loaded) finish(false);
+              });
+            }
+          } else if (tab.status === 'complete') {
+            const urlChanged =
+              options?.previousUrl !== undefined && tab.url !== options.previousUrl;
+            if (navigationStarted || urlChanged) {
+              finish(false);
+              return;
+            }
+            if (Date.now() - startedAt > ALREADY_COMPLETE_GRACE) {
+              finish(false);
+              return;
+            }
+          }
+          setTimeout(poll, POLL_INTERVAL);
+        })
+        .catch(() => setTimeout(poll, POLL_INTERVAL));
+    };
+    poll();
   });
 }
 
@@ -1184,6 +1446,110 @@ async function getDevicePixelRatio(tabId: number): Promise<number> {
   } catch {
     return 1;
   }
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(',');
+  const mimeMatch = header.match(/:(.*?);/);
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeMatch ? mimeMatch[1] : 'image/png' });
+}
+
+/**
+ * Real pixel dimensions of an encoded image. The window/viewport sizes the
+ * caller has on hand are CSS pixels and disagree with the capture on any
+ * HiDPI display.
+ */
+async function imageSize(dataUrl: string): Promise<{ width: number; height: number }> {
+  try {
+    const bitmap = await createImageBitmap(dataUrlToBlob(dataUrl));
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return { width: 0, height: 0 };
+  }
+}
+
+/**
+ * Capture the whole scrollable page via CDP. captureVisibleTab() cannot see
+ * past the viewport, and unlike it this path does not have to make the tab
+ * active first.
+ */
+async function captureFullPage(
+  tabId: number,
+  selector: string | undefined,
+  format: string,
+  quality: number | undefined,
+): Promise<ScreenshotResult> {
+  const params: Record<string, unknown> = {
+    format,
+    captureBeyondViewport: true,
+    fromSurface: true,
+  };
+  if (format === 'jpeg' && quality !== undefined) params.quality = quality;
+
+  if (selector) {
+    const bboxResponse = await sendToContentScript(tabId, {
+      type: 'browser-cli-command',
+      id: `screenshot-full-bbox-${Date.now()}`,
+      command: { action: 'boundingBox', params: { selector } },
+    });
+    if (!bboxResponse.success) {
+      throwContentScriptError(bboxResponse, {
+        code: 'ELEMENT_NOT_FOUND',
+        message: `Element not found: ${selector}`,
+        hint: "Run 'snapshot -i' to list the elements currently on the page.",
+      });
+    }
+    const rect = bboxResponse.data as { x: number; y: number; width: number; height: number };
+    // boundingBox is viewport-relative; a beyond-viewport capture is anchored
+    // at the document origin, so shift by the current scroll offset.
+    const scrollResults = await browser.scripting.executeScript({
+      target: { tabId },
+      func: () => ({ x: window.scrollX, y: window.scrollY }),
+    });
+    const offset = (scrollResults[0]?.result as { x: number; y: number } | undefined) ?? {
+      x: 0,
+      y: 0,
+    };
+    params.clip = {
+      x: rect.x + offset.x,
+      y: rect.y + offset.y,
+      width: rect.width,
+      height: rect.height,
+      scale: 1,
+    };
+  }
+
+  let result: unknown;
+  try {
+    result = await sendCdpCommand(tabId, 'Page.captureScreenshot', params);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new BrowserCliError(
+      'DEBUGGER_ERROR',
+      `Full-page screenshot failed: ${message}`,
+      'Another debugger client (DevTools) may be attached to this tab. Close it, or drop --full to capture the viewport.',
+    );
+  }
+
+  const base64Data = (result as { data?: string }).data;
+  if (!base64Data) {
+    throw new BrowserCliError(
+      'DEBUGGER_ERROR',
+      'Page.captureScreenshot returned no image data.',
+      'Drop --full to capture the viewport instead.',
+    );
+  }
+
+  const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+  const { width, height } = await imageSize(`data:${mimeType};base64,${base64Data}`);
+  return { data: base64Data, mimeType, width, height, fullPage: true };
 }
 
 async function cropImage(

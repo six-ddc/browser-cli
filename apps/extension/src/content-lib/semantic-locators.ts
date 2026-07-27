@@ -20,6 +20,47 @@ import {
   isVisibleForSnapshot,
   matchText,
 } from './snapshot-helpers';
+import { searchRoots } from './deep-query';
+
+/**
+ * Walk every element below `root`, descending into shadow roots — a TreeWalker
+ * stops at shadow boundaries, so each shadow tree needs its own walker.
+ * Invisible elements are skipped but their children are still visited, and the
+ * root element itself is always yielded (matching a bare TreeWalker's start).
+ */
+function* walkElements(root: Element, includeHidden: boolean): Generator<Element> {
+  for (const searchRoot of searchRoots(root)) {
+    const walker = document.createTreeWalker(searchRoot as Node, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node) =>
+        includeHidden || isVisibleForSnapshot(node as Element)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_SKIP,
+    });
+
+    let current: Node | null =
+      walker.currentNode.nodeType === Node.ELEMENT_NODE ? walker.currentNode : walker.nextNode();
+    while (current) {
+      yield current as Element;
+      current = walker.nextNode();
+    }
+  }
+}
+
+/** Run a CSS query in `root` and in every shadow root below it. */
+function queryAllDeep(root: Element, selector: string): Element[] {
+  const results: Element[] = [];
+  for (const searchRoot of searchRoots(root)) {
+    results.push(...Array.from(searchRoot.querySelectorAll(selector)));
+  }
+  return results;
+}
+
+/** getElementById scoped to the tree the node lives in (document or shadow root). */
+function elementByIdInScope(node: Node, id: string): Element | null {
+  const scope = node.getRootNode() as Partial<Document>;
+  if (typeof scope.getElementById === 'function') return scope.getElementById(id);
+  return document.getElementById(id);
+}
 
 /**
  * Resolve a semantic locator to matching DOM elements.
@@ -63,45 +104,25 @@ export function findByRole(locator: RoleLocator, root: Element = document.body):
   const { role, name, options } = locator;
   const results: Element[] = [];
 
-  // Walk all elements
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-    acceptNode: (node) => {
-      const el = node as Element;
-
-      // Skip invisible elements unless includeHidden is set
-      if (!options.includeHidden && !isVisibleForSnapshot(el)) {
-        return NodeFilter.FILTER_SKIP;
-      }
-
-      return NodeFilter.FILTER_ACCEPT;
-    },
-  });
-
-  let currentNode: Node | null = walker.currentNode;
-  while (currentNode) {
-    const el = currentNode as Element;
+  for (const el of walkElements(root, options.includeHidden ?? false)) {
     const elementRole = getAriaRole(el);
+    if (elementRole.toLowerCase() !== role.toLowerCase()) continue;
 
-    // Check role match
-    if (elementRole.toLowerCase() === role.toLowerCase()) {
-      // If name is specified, check accessible name
-      if (name !== undefined) {
-        const accessibleName = getAccessibleName(el);
-        if (
-          matchText(accessibleName, name, {
-            exact: options.exact ?? true,
-            ignoreCase: options.ignoreCase ?? true,
-          })
-        ) {
-          results.push(el);
-        }
-      } else {
-        // No name filter, add all matching roles
+    // If name is specified, check accessible name
+    if (name !== undefined) {
+      const accessibleName = getAccessibleName(el);
+      if (
+        matchText(accessibleName, name, {
+          exact: options.exact ?? true,
+          ignoreCase: options.ignoreCase ?? true,
+        })
+      ) {
         results.push(el);
       }
+    } else {
+      // No name filter, add all matching roles
+      results.push(el);
     }
-
-    currentNode = walker.nextNode();
   }
 
   return results;
@@ -118,21 +139,7 @@ export function findByText(locator: TextLocator, root: Element = document.body):
   const { text, options } = locator;
   const results: Element[] = [];
 
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-    acceptNode: (node) => {
-      const el = node as Element;
-
-      if (!options.includeHidden && !isVisibleForSnapshot(el)) {
-        return NodeFilter.FILTER_SKIP;
-      }
-
-      return NodeFilter.FILTER_ACCEPT;
-    },
-  });
-
-  let currentNode: Node | null = walker.currentNode;
-  while (currentNode) {
-    const el = currentNode as Element;
+  for (const el of walkElements(root, options.includeHidden ?? false)) {
     const textContent = el.textContent.trim();
 
     if (
@@ -144,8 +151,6 @@ export function findByText(locator: TextLocator, root: Element = document.body):
     ) {
       results.push(el);
     }
-
-    currentNode = walker.nextNode();
   }
 
   // Prefer the most specific (deepest) elements: remove any element
@@ -166,7 +171,7 @@ export function findByLabel(locator: LabelLocator, root: Element = document.body
   const results: Element[] = [];
 
   // Find all labels
-  const labels = root.querySelectorAll('label');
+  const labels = queryAllDeep(root, 'label') as HTMLLabelElement[];
 
   for (const label of labels) {
     const text = label.textContent.trim();
@@ -185,7 +190,7 @@ export function findByLabel(locator: LabelLocator, root: Element = document.body
     // Try htmlFor attribute
     const htmlFor = label.htmlFor;
     if (htmlFor) {
-      target = document.getElementById(htmlFor);
+      target = elementByIdInScope(label, htmlFor);
     }
 
     // Try nested input
@@ -220,7 +225,7 @@ export function findByPlaceholder(
   const { text, options } = locator;
   const results: Element[] = [];
 
-  const inputs = root.querySelectorAll('input, textarea');
+  const inputs = queryAllDeep(root, 'input, textarea');
 
   for (const input of inputs) {
     const placeholder = input.getAttribute('placeholder') || '';
@@ -253,7 +258,7 @@ export function findByAlt(locator: AltLocator, root: Element = document.body): E
   const { text, options } = locator;
   const results: Element[] = [];
 
-  const images = root.querySelectorAll('img');
+  const images = queryAllDeep(root, 'img');
 
   for (const img of images) {
     const alt = img.getAttribute('alt') || '';
@@ -286,21 +291,7 @@ export function findByTitle(locator: TitleLocator, root: Element = document.body
   const { text, options } = locator;
   const results: Element[] = [];
 
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-    acceptNode: (node) => {
-      const el = node as Element;
-
-      if (!options.includeHidden && !isVisibleForSnapshot(el)) {
-        return NodeFilter.FILTER_SKIP;
-      }
-
-      return NodeFilter.FILTER_ACCEPT;
-    },
-  });
-
-  let currentNode: Node | null = walker.currentNode;
-  while (currentNode) {
-    const el = currentNode as Element;
+  for (const el of walkElements(root, options.includeHidden ?? false)) {
     const title = el.getAttribute('title') || '';
 
     if (
@@ -312,8 +303,6 @@ export function findByTitle(locator: TitleLocator, root: Element = document.body
     ) {
       results.push(el);
     }
-
-    currentNode = walker.nextNode();
   }
 
   return results;
@@ -332,7 +321,7 @@ export function findByTestId(locator: TestIdLocator, root: Element = document.bo
 
   // Fast path for exact match
   if (options.exact !== false) {
-    const elements = root.querySelectorAll(`[data-testid="${CSS.escape(value)}"]`);
+    const elements = queryAllDeep(root, `[data-testid="${CSS.escape(value)}"]`);
     for (const el of elements) {
       if (!options.includeHidden && !isVisibleForSnapshot(el)) {
         continue;
@@ -343,7 +332,7 @@ export function findByTestId(locator: TestIdLocator, root: Element = document.bo
   }
 
   // Slow path for contains match
-  const allWithTestId = root.querySelectorAll('[data-testid]');
+  const allWithTestId = queryAllDeep(root, '[data-testid]');
   for (const el of allWithTestId) {
     const testId = el.getAttribute('data-testid') || '';
 
@@ -370,6 +359,9 @@ export function findByTestId(locator: TestIdLocator, root: Element = document.bo
  * @example
  * findByXPath({ type: 'xpath', expression: '//button[@type="submit"]', options: {} })
  * // Finds: <button type="submit">Submit</button>
+ *
+ * XPath cannot address shadow trees — this is the one locator that does not
+ * pierce shadow roots.
  */
 export function findByXPath(locator: XPathLocator, root: Element = document.body): Element[] {
   const { expression } = locator;

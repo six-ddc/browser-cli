@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cross-Origin Frame Document</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 12px;
+        background: #eef6ff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="frame-heading">Cross Origin Frame</h1>
+    <p id="frame-paragraph">This document is served from the second origin.</p>
+    <input id="frame-input" type="text" placeholder="Type here" />
+    <button id="frame-button" type="button">Frame Button</button>
+    <p id="frame-status">idle</p>
+    <script>
+      document.getElementById('frame-button').addEventListener('click', () => {
+        document.getElementById('frame-status').textContent = 'clicked';
+      });
+    </script>
+  </body>
+</html>

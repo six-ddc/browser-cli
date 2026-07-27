@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { Command } from 'commander';
 import { registerCommands } from '../src/commands/index.js';
+import type * as SharedModule from '../src/commands/shared.js';
 
 // ─── Mock sendCommand ──────────────────────────────────────────────────
 // We mock the shared module so every command's action captures what it
@@ -26,7 +27,8 @@ vi.mock('../src/daemon/process.js', () => ({
   ensureDaemon: () => Promise.resolve({ pid: 12345, info: {} }),
 }));
 
-vi.mock('../src/commands/shared.js', () => ({
+vi.mock('../src/commands/shared.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof SharedModule>()),
   getRootOpts: () => ({ session: 'default', json: false }),
   sendCommand: (...args: unknown[]) => {
     sendCommandMock(...args);

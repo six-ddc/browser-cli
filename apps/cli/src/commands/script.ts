@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runScript, ScriptStepError } from '../lib/script-runner.js';
-import { getRootOpts } from './shared.js';
+import { getRootOpts, fail, requireInt } from './shared.js';
 import { logger } from '../util/logger.js';
 
 /**
@@ -55,20 +55,11 @@ export const scriptCommand = new Command('script')
       cmd: Command,
     ) => {
       const rootOpts = getRootOpts(cmd);
-      const timeout = opts.timeout ? Number(opts.timeout) : undefined;
-
-      if (timeout !== undefined && Number.isNaN(timeout)) {
-        logger.error('Invalid --timeout value — must be a number');
-        process.exit(1);
-      }
+      const timeout = requireInt(cmd, opts.timeout, '-t/--timeout', { min: 1 });
 
       let tabId: number | undefined;
       if (rootOpts.tab) {
-        tabId = Number(rootOpts.tab);
-        if (Number.isNaN(tabId)) {
-          logger.error(`Invalid --tab value "${rootOpts.tab}" — must be a numeric tab ID`);
-          process.exit(1);
-        }
+        tabId = requireInt(cmd, rootOpts.tab, '--tab');
       }
 
       // Parse script args passed after `--` (Commander puts them in passedArgs)
@@ -80,8 +71,12 @@ export const scriptCommand = new Command('script')
       if (file === '-') {
         const source = readFileSync(0, 'utf-8');
         if (!source.trim()) {
-          logger.error('No script provided on stdin');
-          process.exit(1);
+          fail(
+            cmd,
+            'INVALID_ARGS',
+            'No script provided on stdin',
+            'Pipe a script into stdin, e.g. cat script.mjs | browser-cli script -',
+          );
         }
         tmpFile = join(
           tmpdir(),

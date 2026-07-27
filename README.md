@@ -27,7 +27,7 @@ The CLI sends commands to a background daemon, which relays them over WebSocket 
 
 **Page & Content**
 
-- Navigate (goto, back, forward, reload), take screenshots
+- Navigate (goto, back, forward, reload), take viewport or full-page screenshots
 - Extract clean readable Markdown via [Defuddle](https://github.com/nickersoft/defuddle) — strips nav, ads, and boilerplate
 - Accessibility snapshots with element refs (`@e1`, `@e2`), baseline saving & diffing to detect page changes
 - Evaluate JavaScript in page context
@@ -36,50 +36,64 @@ The CLI sends commands to a background daemon, which relays them over WebSocket 
 
 - Actions — click, fill, type, press, hover, drag & drop, scroll, check/uncheck, select, upload
 - Semantic locators — find elements by role, text, label, placeholder, alt, title, testid, xpath
+- Shadow DOM pierced automatically; cross-origin iframes fully supported
 - `find` command — locate + act in one step: `find 'role=button[name="Submit"]'`
+- `form fill` — batch-fill many fields (text, select, checkbox/radio) in one round-trip
 - Wait for selector, URL, duration, text, load state, or custom function
+- `verify` assertions — PASS/FAIL with exit codes, for smoke tests and agent self-checks
 
 **Browser State**
 
-- Tabs, windows, tab groups; frame switching
+- Tabs, windows, tab groups; frame switching (by selector or frame id)
 - Cookies, localStorage, sessionStorage
 - Network interception (block, redirect, track)
 - Dialogs (alert/confirm/prompt), console logs
 
-**Scripting**
+**Scripting & Integration**
 
 - `script` command — run multi-step automation as a single ES module (Node.js process)
 - Browser SDK with 1:1 CLI command mapping (`browser.navigate()`, `browser.click()`, etc.)
 - Supports stdin, file input, CLI arguments, and per-command timeouts
+- `batch`/`repl` — run many commands over one shared daemon connection, from a file, stdin, or an interactive prompt
+- `browser-cli mcp` — expose the browser to any MCP client (Claude Code, Claude Desktop) as tools
+
+**Agent Guard Rails**
+
+- `--policy` — restrict which actions an invocation may perform (allow/deny/confirm, glob rules)
+- `--boundaries` — mark page-sourced output with nonce-fenced markers so an LLM can tell page text from tool output
+- WebSocket origin enforcement keeps web pages from driving the daemon — see [SECURITY.md](SECURITY.md)
 
 **Data & Config**
 
 - Query text, HTML, value, attributes, element state, count, bounding box
 - Viewport, geolocation, media preferences, custom headers
 - Bookmarks & history management
+- Downloads (`download list`/`download wait`), daemon health check (`doctor`), raw CDP escape hatch (`cdp`)
 
 ## Site-Specific Guides — Pre-built Automation for Popular Sites
 
 Browser-CLI ships with **site-specific guides** that contain tested CSS selectors, extraction scripts, and interaction patterns for popular websites. When an AI agent automates a known site, it can skip trial-and-error DOM exploration and use the pre-built scripts directly — **saving tokens and dramatically improving accuracy**.
 
-| Site                                                                                  | What's Covered                                           |
-| ------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| [google.com](skills/browser-cli/references/sites/google.com.md)                       | Search results extraction, pagination, "People also ask" |
-| [scholar.google.com](skills/browser-cli/references/sites/scholar.google.com.md)       | Academic paper search, citations, metadata               |
-| [mail.google.com](skills/browser-cli/references/sites/mail.google.com.md)             | Gmail inbox, email reading, compose, labels              |
-| [youtube.com](skills/browser-cli/references/sites/youtube.com.md)                     | Video search, transcript extraction, captions            |
-| [x.com](skills/browser-cli/references/sites/x.com.md)                                 | Timeline, tweets, search, profiles                       |
-| [reddit.com](skills/browser-cli/references/sites/reddit.com.md)                       | Feeds, posts, threaded comments, subreddit search        |
-| [news.ycombinator.com](skills/browser-cli/references/sites/news.ycombinator.com.md)   | Front page, comments, search                             |
-| [linkedin.com](skills/browser-cli/references/sites/linkedin.com.md)                   | Company pages, people search, feed, job listings         |
-| [discord.com](skills/browser-cli/references/sites/discord.com.md)                     | Servers, channels, messages, search, members             |
-| [quora.com](skills/browser-cli/references/sites/quora.com.md)                         | Question search, answers extraction                      |
-| [xiaohongshu.com](skills/browser-cli/references/sites/xiaohongshu.com.md)             | Search, note detail, comments                            |
-| [weixin.sogou.com](skills/browser-cli/references/sites/weixin.sogou.com.md)           | WeChat article search                                    |
-| [jira-datacenter](skills/browser-cli/references/sites/jira-datacenter.md)             | Self-hosted Jira issue tracking, agile boards            |
-| [opensearch-dashboards](skills/browser-cli/references/sites/opensearch-dashboards.md) | Self-hosted log analytics (Kibana fork)                  |
+| Site                                                                                  | What's Covered                                                         |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [google.com](skills/browser-cli/references/sites/google.com.md)                       | Search results extraction, pagination, "People also ask"               |
+| [scholar.google.com](skills/browser-cli/references/sites/scholar.google.com.md)       | Academic paper search, citations, metadata                             |
+| [mail.google.com](skills/browser-cli/references/sites/mail.google.com.md)             | Gmail inbox, email reading, compose, labels                            |
+| [youtube.com](skills/browser-cli/references/sites/youtube.com.md)                     | Video search, transcript extraction, captions                          |
+| [x.com](skills/browser-cli/references/sites/x.com.md)                                 | Timeline, tweets, search, profiles                                     |
+| [reddit.com](skills/browser-cli/references/sites/reddit.com.md)                       | Feeds, posts, threaded comments, subreddit search                      |
+| [news.ycombinator.com](skills/browser-cli/references/sites/news.ycombinator.com.md)   | Front page, comments, search                                           |
+| [linkedin.com](skills/browser-cli/references/sites/linkedin.com.md)                   | Company pages, people search, feed, job listings                       |
+| [discord.com](skills/browser-cli/references/sites/discord.com.md)                     | Servers, channels, messages, search, members                           |
+| [quora.com](skills/browser-cli/references/sites/quora.com.md)                         | Question search, answers extraction                                    |
+| [xiaohongshu.com](skills/browser-cli/references/sites/xiaohongshu.com.md)             | Search, note detail, comments                                          |
+| [weixin.sogou.com](skills/browser-cli/references/sites/weixin.sogou.com.md)           | WeChat article search                                                  |
+| [weibo.com](skills/browser-cli/references/sites/weibo.com.md)                         | Feed, posts, search                                                    |
+| [jira-datacenter](skills/browser-cli/references/sites/jira-datacenter.md)             | Self-hosted Jira issue tracking, agile boards                          |
+| [opensearch-dashboards](skills/browser-cli/references/sites/opensearch-dashboards.md) | Self-hosted log analytics (Kibana fork)                                |
+| [arena.ai](skills/browser-cli/references/sites/arena.ai.md)                           | Multi-model AI chat arena — model selection, prompts, image extraction |
 
-Each guide includes ready-to-use `browser-cli eval` scripts, key selectors, pagination/scroll patterns, and site-specific gotchas (auth requirements, shadow DOM, SPA caveats). Community contributions welcome — use the [site-guide skill](skills/site-guide/SKILL.md) to interactively explore a site's live DOM and generate a tested guide, or see the [contributing guide](skills/browser-cli/references/sites/CONTRIBUTING.md) for manual authoring.
+Each guide includes ready-to-use `browser-cli eval` scripts, key selectors, pagination/scroll patterns, and site-specific gotchas (auth requirements, shadow DOM, SPA caveats). Community contributions welcome — use the [site-guide skill](skills/browser-cli-site-guide/SKILL.md) to interactively explore a site's live DOM and generate a tested guide, or see the [contributing guide](skills/browser-cli/references/sites/CONTRIBUTING.md) for manual authoring.
 
 ## Quick Start
 

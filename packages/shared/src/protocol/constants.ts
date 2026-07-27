@@ -19,5 +19,20 @@ export const HEARTBEAT_TIMEOUT_MS = 15_000;
 /** Default timeout for CLI commands waiting for a response */
 export const COMMAND_TIMEOUT_MS = 30_000;
 
+/**
+ * Transport timeout for a command, in ms.
+ *
+ * A command carrying its own `timeout` (wait, waitForUrl, network watch) must
+ * not be cut short by the socket or WebSocket layer — otherwise
+ * `wait --timeout 60000` dies at 30s reporting the wrong failure.
+ */
+export function socketTimeoutFor(command: { params?: unknown }): number {
+  const commandTimeout = (command.params as { timeout?: unknown } | undefined)?.timeout;
+  if (typeof commandTimeout !== 'number' || !Number.isFinite(commandTimeout)) {
+    return COMMAND_TIMEOUT_MS;
+  }
+  return Math.max(commandTimeout + 5_000, COMMAND_TIMEOUT_MS);
+}
+
 /** App directory name under home */
 export const APP_DIR_NAME = '.browser-cli';

@@ -1,16 +1,13 @@
 import type { Command } from '@browser-cli/shared';
-import { schemas } from '@browser-cli/shared';
+import { protocolError, schemas } from '@browser-cli/shared';
 import { classifyError } from '../lib/error-classifier';
-import { initFrameBridge } from '../content-lib/frame-bridge';
 import { initOverlay } from '../content-lib/command-overlay';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
   allFrames: true,
+  matchAboutBlank: true,
   main() {
-    // Initialize frame bridge for iframe support
-    initFrameBridge();
-
     // Initialize command overlay (auto-shows if tab was recently operated on)
     initOverlay();
 
@@ -34,9 +31,11 @@ export default defineContentScript({
         if (!parseResult.success) {
           sendResponse({
             success: false,
-            error: {
-              message: `Invalid command: ${parseResult.error.message}. Check the command action and params match the expected schema.`,
-            },
+            error: protocolError(
+              'INVALID_ARGS',
+              `Invalid command: ${parseResult.error.message}`,
+              'Check the action name and that its params match the protocol schema.',
+            ),
           });
           return true;
         }
@@ -62,27 +61,8 @@ export default defineContentScript({
 });
 
 async function handleContentCommand(command: Command): Promise<unknown> {
-  // Check if we need to route to an iframe
-  const { getCurrentFrameIndex, getCurrentIFrame } = await import('../content-lib/frames');
-  const frameIndex = getCurrentFrameIndex();
-
-  // If we're targeting an iframe, route the command there
-  if (
-    frameIndex > 0 &&
-    command.action !== 'switchFrame' &&
-    command.action !== 'listFrames' &&
-    command.action !== 'getCurrentFrame'
-  ) {
-    const iframe = getCurrentIFrame();
-    if (!iframe) {
-      throw new Error(`Frame index ${frameIndex} is no longer available`);
-    }
-
-    const { executeInFrame } = await import('../content-lib/frame-bridge');
-    return executeInFrame(iframe, command);
-  }
-
-  // Execute command in main frame context
+  // The background delivers each command straight to the target frame's
+  // content script by frameId, so this always runs in the intended document.
   // Dynamic import of content-lib modules based on action
   switch (command.action) {
     // Interaction
@@ -136,6 +116,11 @@ async function handleContentCommand(command: Command): Promise<unknown> {
     case 'select': {
       const { handleForm } = await import('../content-lib/form');
       return handleForm(command);
+    }
+
+    case 'formFill': {
+      const { handleFormFill } = await import('../content-lib/form-fill');
+      return handleFormFill(command);
     }
 
     // Upload
@@ -199,20 +184,20 @@ async function handleContentCommand(command: Command): Promise<unknown> {
       return handleBrowserConfig(command);
     }
 
-    // Frame management
-    case 'switchFrame': {
-      const { handleSwitchFrame } = await import('../content-lib/frames');
-      return handleSwitchFrame(command.params);
-    }
-
-    case 'listFrames': {
-      const { handleListFrames } = await import('../content-lib/frames');
-      return handleListFrames();
-    }
-
+    // Frame management (background-driven: describe this document, locate iframes)
     case 'getCurrentFrame': {
       const { handleGetCurrentFrame } = await import('../content-lib/frames');
       return handleGetCurrentFrame();
+    }
+
+    case 'resolveFrame': {
+      const { handleResolveFrame } = await import('../content-lib/frames');
+      return handleResolveFrame(command.params);
+    }
+
+    case 'frameOffset': {
+      const { handleFrameOffset } = await import('../content-lib/frames');
+      return handleFrameOffset(command.params);
     }
 
     // Markdown

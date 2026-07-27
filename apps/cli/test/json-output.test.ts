@@ -233,11 +233,12 @@ describe('--json: lifecycle commands', () => {
 
     expect(lines).toHaveLength(1);
     const json = JSON.parse(lines[0]);
-    expect(json.daemon).toBe(true);
-    expect(json.pid).toBe(12345);
-    expect(json.wsPort).toBe(9222);
-    expect(json.extension.connected).toBe(true);
-    expect(json.extension.extensionId).toBe('ext-abc');
+    expect(json.success).toBe(true);
+    expect(json.data.daemon).toBe(true);
+    expect(json.data.pid).toBe(12345);
+    expect(json.data.wsPort).toBe(9222);
+    expect(json.data.extension.connected).toBe(true);
+    expect(json.data.extension.extensionId).toBe('ext-abc');
   });
 
   it('status --json when daemon not running', async () => {
@@ -247,7 +248,8 @@ describe('--json: lifecycle commands', () => {
 
     expect(lines).toHaveLength(1);
     const json = JSON.parse(lines[0]);
-    expect(json.daemon).toBe(false);
+    expect(json.success).toBe(true);
+    expect(json.data.daemon).toBe(false);
   });
 
   it('start --json outputs structured JSON', async () => {
@@ -258,7 +260,7 @@ describe('--json: lifecycle commands', () => {
     expect(lines).toHaveLength(1);
     const json = JSON.parse(lines[0]);
     expect(json.success).toBe(true);
-    expect(json.pid).toBe(99999);
+    expect(json.data.pid).toBe(99999);
   });
 
   it('stop --json outputs structured JSON', async () => {
@@ -269,6 +271,6 @@ describe('--json: lifecycle commands', () => {
     expect(lines).toHaveLength(1);
     const json = JSON.parse(lines[0]);
     expect(json.success).toBe(true);
-    expect(json.stopped).toBe(true);
+    expect(json.data.stopped).toBe(true);
   });
 });

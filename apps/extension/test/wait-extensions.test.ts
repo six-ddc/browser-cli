@@ -54,8 +54,7 @@ describe('wait selector', () => {
 
     const result = await handleWait({
       action: 'wait',
-      // visible: false because jsdom getBoundingClientRect() returns zero dimensions
-      params: { selector: '.loaded', timeout: 5000, visible: false },
+      params: { selector: '.loaded', timeout: 5000 },
     } as Command);
 
     expect(result).toEqual({ found: true });
@@ -71,6 +70,64 @@ describe('wait selector', () => {
     vi.advanceTimersByTime(1100);
 
     await expect(promise).rejects.toThrow('Timeout waiting for selector');
+  });
+});
+
+// ─── Hidden wait (visible: false) ────────────────────────────────────
+
+describe('wait --hidden', () => {
+  it('resolves immediately when the selector matches nothing', async () => {
+    vi.useRealTimers();
+
+    const result = await handleWait({
+      action: 'wait',
+      params: { selector: '.gone', timeout: 5000, visible: false },
+    } as Command);
+
+    expect(result).toEqual({ found: false, hidden: true });
+    vi.useFakeTimers();
+  });
+
+  it('resolves immediately when every match is hidden', async () => {
+    vi.useRealTimers();
+    document.body.innerHTML = '<div class="banner" style="display:none">x</div>';
+
+    const result = await handleWait({
+      action: 'wait',
+      params: { selector: '.banner', timeout: 5000, visible: false },
+    } as Command);
+
+    expect(result).toEqual({ found: false, hidden: true });
+    vi.useFakeTimers();
+  });
+
+  it('resolves once the element is removed', async () => {
+    document.body.innerHTML = '<div class="banner">x</div>';
+
+    const promise = handleWait({
+      action: 'wait',
+      params: { selector: '.banner', timeout: 5000, visible: false },
+    } as Command);
+
+    setTimeout(() => {
+      document.querySelector('.banner')!.remove();
+    }, 200);
+    vi.advanceTimersByTime(400);
+
+    expect(await promise).toEqual({ found: false, hidden: true });
+  });
+
+  it('times out while the element is still visible', async () => {
+    document.body.innerHTML = '<div class="banner">x</div>';
+
+    const promise = handleWait({
+      action: 'wait',
+      params: { selector: '.banner', timeout: 1000, visible: false },
+    } as Command);
+
+    vi.advanceTimersByTime(1100);
+
+    await expect(promise).rejects.toThrow('to become hidden');
   });
 });
 
@@ -225,7 +282,7 @@ describe('error handling', () => {
         action: 'wait',
         params: {},
       } as Command),
-    ).rejects.toThrow('Provide selector, duration, text, load, or fn');
+    ).rejects.toThrow('wait requires one of: selector, duration, text, load, or fn');
   });
 
   it('throws on unknown wait action', async () => {

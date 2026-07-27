@@ -26,7 +26,7 @@ import { windowCommand } from './window.js';
 // Browser Config
 import { setCommand } from './set.js';
 // Form
-import { checkCommand, uncheckCommand, selectCommand } from './form.js';
+import { checkCommand, uncheckCommand, selectCommand, formCommand } from './form.js';
 import { uploadCommand } from './upload.js';
 // Scroll
 import { scrollCommand, scrollIntoViewCommand } from './scroll.js';
@@ -42,6 +42,11 @@ import { waitCommand, waitForUrlCommand } from './wait.js';
 import { evalCommand } from './evaluate.js';
 // Console
 import { consoleCommand, errorsCommand } from './console.js';
+// Debugging
+import { cdpCommand } from './cdp.js';
+import { downloadCommand } from './download.js';
+import { logsCommand } from './logs.js';
+import { doctorCommand } from './doctor.js';
 // Tabs
 import { tabCommand } from './tab.js';
 // Cookies
@@ -70,6 +75,13 @@ import { historyCommand } from './history.js';
 import { containerCommand } from './container.js';
 // Script
 import { scriptCommand } from './script.js';
+// Verify
+import { verifyCommand } from './verify.js';
+// Batch / REPL
+import { batchCommand } from './batch.js';
+import { replCommand } from './repl.js';
+// MCP
+import { mcpCommand } from './mcp.js';
 
 /**
  * Single source of truth for command registration AND categorization.
@@ -97,7 +109,10 @@ export const commandCategories: Array<{ name: string; commands: Command[] }> = [
     ],
   },
   { name: 'Mouse', commands: [mouseCommand] },
-  { name: 'Form', commands: [checkCommand, uncheckCommand, selectCommand, uploadCommand] },
+  {
+    name: 'Form',
+    commands: [checkCommand, uncheckCommand, selectCommand, formCommand, uploadCommand],
+  },
   { name: 'Scroll', commands: [scrollCommand, scrollIntoViewCommand] },
   { name: 'Data Queries', commands: [getCommand, isCommand] },
   { name: 'Snapshot', commands: [snapshotCommand] },
@@ -105,6 +120,8 @@ export const commandCategories: Array<{ name: string; commands: Command[] }> = [
   { name: 'Wait', commands: [waitCommand, waitForUrlCommand] },
   { name: 'Evaluate', commands: [evalCommand] },
   { name: 'Console', commands: [consoleCommand, errorsCommand] },
+  { name: 'Debugging', commands: [cdpCommand, logsCommand, doctorCommand] },
+  { name: 'Downloads', commands: [downloadCommand] },
   { name: 'Tabs', commands: [tabCommand] },
   { name: 'Cookies', commands: [cookiesCommand] },
   { name: 'Storage', commands: [storageCommand] },
@@ -121,6 +138,9 @@ export const commandCategories: Array<{ name: string; commands: Command[] }> = [
   { name: 'History', commands: [historyCommand] },
   { name: 'Container', commands: [containerCommand] },
   { name: 'Script', commands: [scriptCommand] },
+  { name: 'Verify', commands: [verifyCommand] },
+  { name: 'Batch', commands: [batchCommand, replCommand] },
+  { name: 'MCP', commands: [mcpCommand] },
 ];
 
 export function registerCommands(program: Command): void {

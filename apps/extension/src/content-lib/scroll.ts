@@ -3,6 +3,7 @@
  */
 
 import type { Command } from '@browser-cli/shared';
+import { requireElement } from './actionability';
 import { resolveElement } from './element-ref-store';
 
 const DEFAULT_SCROLL_AMOUNT = 400;
@@ -37,10 +38,11 @@ export async function handleScroll(command: Command): Promise<unknown> {
       return { scrolled: true };
     }
     case 'scrollIntoView': {
-      const { selector } = command.params;
-      const el = resolveElement(selector);
-      if (!el) throw new Error(`Element not found: ${selector}`);
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const { selector, position } = command.params;
+      const el = requireElement(selector, position);
+      // Instant, not smooth: callers (screenshot crop, --debugger coordinates)
+      // read the bounding box right after this resolves.
+      el.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
       return { scrolled: true };
     }
     default:

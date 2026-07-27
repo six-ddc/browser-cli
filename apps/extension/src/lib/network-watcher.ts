@@ -21,6 +21,8 @@ export interface NetworkRecord {
   size?: number;
   duration?: number;
   error?: string;
+  /** True for requests still in flight when the watch was stopped. */
+  pending?: boolean;
 }
 
 interface PendingRequest {
@@ -100,12 +102,14 @@ function cdpSend(
   });
 }
 
-function matchesPattern(url: string, pattern?: string): boolean {
+/**
+ * Substring glob: `*` matches anything, and the pattern is not anchored — so
+ * `/api/*` matches `https://host/api/users`, matching `network route`.
+ * Exported for unit tests.
+ */
+export function matchesPattern(url: string, pattern?: string): boolean {
   if (!pattern) return true;
-  // Simple glob matching: * matches anything
-  const regex = new RegExp(
-    '^' + pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$',
-  );
+  const regex = new RegExp(pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*'), 'i');
   return regex.test(url);
 }
 
@@ -363,6 +367,28 @@ export async function stopWatch(tabId: number): Promise<void> {
   if (!watch) return;
 
   watches.delete(tabId);
+
+  // Flush requests that never got a loadingFinished/loadingFailed event —
+  // otherwise they're silently dropped and the caller never learns about them.
+  const now = Date.now() / 1000;
+  for (const pending of watch.pendingRequests.values()) {
+    const duration = Math.round((now - pending.startTime) * 1000);
+    const record: NetworkRecord = {
+      url: pending.url,
+      method: pending.method,
+      resourceType: pending.resourceType,
+      status: pending.status,
+      statusText: pending.statusText ?? '(pending)',
+      requestHeaders: pending.requestHeaders,
+      responseHeaders: pending.responseHeaders,
+      postData: pending.postData,
+      mimeType: pending.mimeType,
+      duration,
+      pending: true,
+    };
+    sendEventFn?.('networkWatch', record, tabId);
+  }
+  watch.pendingRequests.clear();
 
   const dbg = getChromeDebugger();
   if (!dbg) return;

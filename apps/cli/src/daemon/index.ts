@@ -12,11 +12,13 @@ import { Bridge } from './bridge.js';
 import { WatchManager } from './watch-manager.js';
 import { writeDaemonPid, cleanupPidFile } from './process.js';
 import { isNonLoopback, generateAuthToken, writeAuthToken, cleanupAuthToken } from './auth.js';
-import { getSocketPath, getAppDir } from '../util/paths.js';
-import { logger } from '../util/logger.js';
+import { getSocketPath, getAppDir, getDaemonLogPath } from '../util/paths.js';
+import { logger, enableFileLogging } from '../util/logger.js';
 import { loadSessionMap, saveSessionMap } from './session-store.js';
 
 async function main() {
+  enableFileLogging(getDaemonLogPath());
+
   const { values } = parseArgs({
     options: {
       daemon: { type: 'boolean', default: false },

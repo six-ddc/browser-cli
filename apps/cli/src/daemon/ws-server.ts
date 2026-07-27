@@ -18,6 +18,7 @@ import type {
   BrowserInfo,
 } from '@browser-cli/shared';
 import { logger } from '../util/logger.js';
+import { verifyWsOrigin } from './auth.js';
 
 export interface ExtensionConnection {
   ws: WebSocket;
@@ -36,8 +37,6 @@ export interface PendingRequest {
   sessionId: string;
 }
 
-const MAX_STORED_EVENTS = 1000;
-
 export interface WsServerOptions {
   /** Pre-loaded clientId→sessionId mapping (from disk) */
   sessionMap?: Map<string, string>;
@@ -53,7 +52,6 @@ export class WsServer {
   private defaultSessionId: string | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private pending = new Map<string, PendingRequest>();
-  private events: EventMessage[] = [];
   private eventListeners: Array<(msg: EventMessage) => void> = [];
   /** Maps persistent clientId → friendly sessionId */
   private clientSessionMap: Map<string, string>;
@@ -111,7 +109,21 @@ export class WsServer {
 
   start(port: number, host = DEFAULT_WS_HOST): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.wss = new WebSocketServer({ port, host });
+      this.wss = new WebSocketServer({
+        port,
+        host,
+        verifyClient: ({ origin }, done) => {
+          const verdict = verifyWsOrigin(origin);
+          if (!verdict.allowed) {
+            logger.warn(
+              `Rejected WebSocket handshake from web origin ${verdict.origin} — only browser extensions may connect`,
+            );
+            done(false, 403, 'Forbidden origin');
+            return;
+          }
+          done(true);
+        },
+      });
 
       this.wss.on('listening', () => {
         logger.info(`WebSocket server listening on ws://${host}:${port}`);
@@ -191,7 +203,7 @@ export class WsServer {
         break;
       case 'event':
         logger.debug(`Event from extension: ${msg.event}`);
-        this.storeEvent(msg);
+        this.dispatchEvent(msg);
         break;
       default:
         logger.warn('Unexpected message type from extension:', (msg as { type: string }).type);
@@ -303,11 +315,7 @@ export class WsServer {
     };
   }
 
-  private storeEvent(msg: EventMessage) {
-    this.events.push(msg);
-    if (this.events.length > MAX_STORED_EVENTS) {
-      this.events.splice(0, this.events.length - MAX_STORED_EVENTS);
-    }
+  private dispatchEvent(msg: EventMessage) {
     for (const fn of this.eventListeners) {
       try {
         fn(msg);
@@ -315,19 +323,6 @@ export class WsServer {
         // Listener errors should not break event processing
       }
     }
-  }
-
-  getEvents(filter?: { event?: string; tabId?: number }): EventMessage[] {
-    if (!filter) return [...this.events];
-    return this.events.filter((e) => {
-      if (filter.event && e.event !== filter.event) return false;
-      if (filter.tabId !== undefined && e.tabId !== filter.tabId) return false;
-      return true;
-    });
-  }
-
-  clearEvents(): void {
-    this.events = [];
   }
 
   private startHeartbeat() {

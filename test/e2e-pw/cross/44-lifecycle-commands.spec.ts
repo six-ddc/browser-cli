@@ -76,7 +76,7 @@ test.describe('start command', () => {
     expect(() => JSON.parse(r.stdout)).not.toThrow();
     const parsed = JSON.parse(r.stdout);
     expect(parsed.success).toBe(true);
-    expect(parsed.pid).toBeGreaterThan(0);
+    expect(parsed.data.pid).toBeGreaterThan(0);
   });
 
   test('start when already running handles gracefully', () => {
@@ -126,6 +126,6 @@ test.describe('status --json when not running', () => {
     expect(r.exitCode).toBe(0);
     expect(() => JSON.parse(r.stdout)).not.toThrow();
     const parsed = JSON.parse(r.stdout);
-    expect(parsed.daemon).toBe(false);
+    expect(parsed.data.daemon).toBe(false);
   });
 });

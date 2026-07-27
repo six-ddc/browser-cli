@@ -28,6 +28,11 @@ export function getAuthTokenPath(): string {
   return join(getAppDir(), 'auth-token');
 }
 
+/** Get daemon log file path */
+export function getDaemonLogPath(): string {
+  return join(getAppDir(), 'daemon.log');
+}
+
 /** Get the WS host */
 export function getWsHost(): string {
   return DEFAULT_WS_HOST;

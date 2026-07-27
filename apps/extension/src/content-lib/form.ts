@@ -2,15 +2,17 @@
  * Form operations: check, uncheck, select.
  */
 
-import type { Command } from '@browser-cli/shared';
-import { resolveElement } from './element-ref-store';
+import { BrowserCliError, type Command } from '@browser-cli/shared';
+import { requireActionable } from './actionability';
+import { describeElement } from './element-describe';
+import type { Position } from './element-ref-store';
 
 // eslint-disable-next-line @typescript-eslint/require-await -- async for caller contract
 export async function handleForm(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'check': {
-      const { selector, position } = command.params;
-      const el = requireCheckable(selector, position);
+      const { selector, position, force } = command.params;
+      const el = requireCheckable(selector, position, force);
       if (!el.checked) {
         el.checked = true;
         el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -19,8 +21,8 @@ export async function handleForm(command: Command): Promise<unknown> {
       return { checked: true };
     }
     case 'uncheck': {
-      const { selector, position } = command.params;
-      const el = requireCheckable(selector, position);
+      const { selector, position, force } = command.params;
+      const el = requireCheckable(selector, position, force);
       if (el.checked) {
         el.checked = false;
         el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -29,11 +31,14 @@ export async function handleForm(command: Command): Promise<unknown> {
       return { unchecked: true };
     }
     case 'select': {
-      const { selector, value, position } = command.params;
-      const el = resolveElement(selector, position);
-      if (!el) throw new Error(`Element not found: ${selector}`);
+      const { selector, value, position, force } = command.params;
+      const el = requireActionable(selector, position, { force, skipOcclusion: true });
       if (!(el instanceof HTMLSelectElement)) {
-        throw new Error(`Element is not a <select>: ${selector}`);
+        throw new BrowserCliError(
+          'ELEMENT_TYPE_MISMATCH',
+          `Element is not a <select>: ${selector} → ${describeElement(el)}.`,
+          "For a custom (non-native) dropdown, click it open and then click the option — 'snapshot -i' after opening shows the options.",
+        );
       }
 
       // Try matching by value first, then by text/label (like Playwright's selectOption)
@@ -58,8 +63,10 @@ export async function handleForm(command: Command): Promise<unknown> {
         const available = Array.from(el.options)
           .map((o) => `"${o.text}" (value="${o.value}")`)
           .join(', ');
-        throw new Error(
-          `No option matching "${value}" in <select>. Available options: ${available}`,
+        throw new BrowserCliError(
+          'ELEMENT_NOT_FOUND',
+          `No option matching "${value}" in <select> ${selector}. Available options: ${available}`,
+          'Pass one of the listed option labels or values exactly.',
         );
       }
 
@@ -74,15 +81,16 @@ export async function handleForm(command: Command): Promise<unknown> {
 
 function requireCheckable(
   selector: string,
-  position?: { type: 'first' | 'last' | 'nth'; index?: number },
+  position?: Position,
+  force?: boolean,
 ): HTMLInputElement {
-  const el = resolveElement(selector, position);
-  if (!el) throw new Error(`Element not found: ${selector}`);
-  if (!(el instanceof HTMLInputElement)) {
-    throw new Error(`Element is not an <input>: ${selector}`);
-  }
-  if (el.type !== 'checkbox' && el.type !== 'radio') {
-    throw new Error(`Element is not a checkbox or radio: ${selector}`);
+  const el = requireActionable(selector, position, { force });
+  if (!(el instanceof HTMLInputElement) || (el.type !== 'checkbox' && el.type !== 'radio')) {
+    throw new BrowserCliError(
+      'ELEMENT_TYPE_MISMATCH',
+      `Element is not a checkbox or radio input: ${selector} → ${describeElement(el)}.`,
+      'For a custom toggle, use `click` instead; `check`/`uncheck` only drive native checkbox/radio inputs.',
+    );
   }
   return el;
 }

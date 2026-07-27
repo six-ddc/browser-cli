@@ -10,8 +10,13 @@ export const elementRefSchema = z.string().regex(/^@e\d+$/);
 
 // ─── Error ───────────────────────────────────────────────────────────
 
+// `code` is optional on the wire so a message from a producer that has not
+// been migrated yet still validates; consumers normalize it to UNKNOWN.
 export const protocolErrorSchema = z.object({
+  code: z.string().optional(),
   message: z.string(),
+  hint: z.string().optional(),
+  stack: z.string().optional(),
 });
 
 // ─── Action Params ───────────────────────────────────────────────────
@@ -33,22 +38,26 @@ export const clickParamsSchema = z.object({
   selector: z.string(),
   button: z.enum(['left', 'right', 'middle']).optional(),
   debugger: z.boolean().optional(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const dblclickParamsSchema = z.object({
   selector: z.string(),
   debugger: z.boolean().optional(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const hoverParamsSchema = z.object({
   selector: z.string(),
   debugger: z.boolean().optional(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const fillParamsSchema = z.object({
   selector: z.string(),
   value: z.string(),
   debugger: z.boolean().optional(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const typeParamsSchema = z.object({
@@ -56,36 +65,55 @@ export const typeParamsSchema = z.object({
   text: z.string(),
   delay: z.number().optional(),
   debugger: z.boolean().optional(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const pressParamsSchema = z.object({
   selector: z.string().optional(),
   key: z.string(),
   debugger: z.boolean().optional(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const clearParamsSchema = z.object({
   selector: z.string(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const focusParamsSchema = z.object({
   selector: z.string(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 
 // Form
 export const checkParamsSchema = z.object({
   selector: z.string(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const uncheckParamsSchema = z.object({
   selector: z.string(),
+  force: z.boolean().optional(),
   position: positionSchema,
 });
 export const selectParamsSchema = z.object({
   selector: z.string(),
   value: z.string(),
+  force: z.boolean().optional(),
   position: positionSchema,
+});
+export const formFillParamsSchema = z.object({
+  /** Ordered field list; the control type decides fill vs check vs select. */
+  fields: z.array(
+    z.object({
+      selector: z.string(),
+      value: z.union([z.string(), z.boolean(), z.number()]),
+    }),
+  ),
+  force: z.boolean().optional(),
+  /** Keep going after a field fails instead of aborting the whole batch. */
+  continueOnError: z.boolean().optional(),
 });
 
 // Scroll
@@ -94,24 +122,32 @@ export const scrollParamsSchema = z.object({
   amount: z.number().optional(),
   selector: z.string().optional(),
 });
-export const scrollIntoViewParamsSchema = z.object({ selector: z.string() });
+export const scrollIntoViewParamsSchema = z.object({
+  selector: z.string(),
+  position: positionSchema,
+});
 
 // Data queries
-export const getTextParamsSchema = z.object({ selector: z.string() });
+export const getTextParamsSchema = z.object({ selector: z.string(), position: positionSchema });
 export const getHtmlParamsSchema = z.object({
   selector: z.string(),
   outer: z.boolean().optional(),
+  position: positionSchema,
 });
-export const getValueParamsSchema = z.object({ selector: z.string() });
+export const getValueParamsSchema = z.object({ selector: z.string(), position: positionSchema });
 export const getAttributeParamsSchema = z.object({
   selector: z.string(),
   attribute: z.string(),
+  position: positionSchema,
 });
 export const isVisibleParamsSchema = z.object({ selector: z.string() });
 export const isEnabledParamsSchema = z.object({ selector: z.string() });
 export const isCheckedParamsSchema = z.object({ selector: z.string() });
 export const countParamsSchema = z.object({ selector: z.string() });
-export const boundingBoxParamsSchema = z.object({ selector: z.string() });
+export const boundingBoxParamsSchema = z.object({
+  selector: z.string(),
+  position: positionSchema,
+});
 
 // Snapshot
 export const snapshotParamsSchema = z.object({
@@ -121,6 +157,7 @@ export const snapshotParamsSchema = z.object({
   depth: z.number().optional(),
   selector: z.string().optional(),
   filter: z.string().optional(),
+  maxChars: z.number().optional(),
 });
 
 // Screenshot
@@ -128,6 +165,7 @@ export const screenshotParamsSchema = z.object({
   selector: z.string().optional(),
   format: z.enum(['png', 'jpeg']).optional(),
   quality: z.number().min(0).max(100).optional(),
+  full: z.boolean().optional(),
 });
 
 // Drag
@@ -182,11 +220,19 @@ export const waitForUrlParamsSchema = z.object({
 // Evaluate
 export const evaluateParamsSchema = z.object({
   expression: z.string(),
+  /** Arguments applied to the expression: it is wrapped as `(expr)(...args)`. */
+  args: z.array(z.unknown()).optional(),
 });
 
 // Console
+export const consoleLevelSchema = z.enum(['log', 'warn', 'error', 'info', 'debug', 'pageerror']);
 export const getConsoleParamsSchema = z.object({
-  level: z.enum(['log', 'warn', 'error', 'info', 'debug']).optional(),
+  level: consoleLevelSchema.optional(),
+  limit: z.number().optional(),
+  clear: z.boolean().optional(),
+});
+export const getErrorsParamsSchema = z.object({
+  limit: z.number().optional(),
   clear: z.boolean().optional(),
 });
 
@@ -244,6 +290,7 @@ export const highlightParamsSchema = z.object({
   selector: z.string(),
   color: z.string().optional(),
   duration: z.number().optional(),
+  position: positionSchema,
 });
 
 // Network Watch (CDP)
@@ -252,8 +299,40 @@ export const networkWatchParamsSchema = z.object({
   timeout: z.number().optional(),
   body: z.boolean().optional(),
   method: z.string().optional(),
+  /** Write the capture file as NDJSON (one structured record per line). */
+  json: z.boolean().optional(),
 });
 export const networkUnwatchParamsSchema = z.object({});
+export const networkWatchFileParamsSchema = z.object({
+  /** Watch id, or "latest" / omitted for the most recent watch. */
+  watchId: z.string().optional(),
+});
+
+// Network request log (webRequest ring buffer)
+export const networkRequestsParamsSchema = z.object({
+  filter: z.string().optional(),
+  limit: z.number().optional(),
+  /** Include requests from every tab, not just the target tab. */
+  all: z.boolean().optional(),
+  clear: z.boolean().optional(),
+});
+export const networkRequestParamsSchema = z.object({ id: z.string() });
+
+// CDP escape hatch
+export const cdpParamsSchema = z.object({
+  method: z.string(),
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
+// Downloads
+export const downloadListParamsSchema = z.object({
+  limit: z.number().optional(),
+  state: z.enum(['in_progress', 'interrupted', 'complete']).optional(),
+});
+export const downloadWaitParamsSchema = z.object({
+  id: z.number().optional(),
+  timeout: z.number().optional(),
+});
 
 // Network
 export const routeParamsSchema = z.object({
@@ -267,10 +346,15 @@ export const getRoutesParamsSchema = emptyParamsSchema;
 // Frame management
 export const switchFrameParamsSchema = z.object({
   selector: z.string().optional(),
-  name: z.string().optional(),
-  url: z.string().optional(),
-  index: z.number().optional(),
+  frameId: z.number().optional(),
   main: z.boolean().optional(),
+});
+export const resolveFrameParamsSchema = z.object({
+  selector: z.string(),
+});
+export const frameOffsetParamsSchema = z.object({
+  index: z.number(),
+  scroll: z.boolean().optional(),
 });
 
 // Upload
@@ -404,6 +488,7 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('check'), params: checkParamsSchema }),
   z.object({ action: z.literal('uncheck'), params: uncheckParamsSchema }),
   z.object({ action: z.literal('select'), params: selectParamsSchema }),
+  z.object({ action: z.literal('formFill'), params: formFillParamsSchema }),
   z.object({ action: z.literal('upload'), params: uploadParamsSchema }),
   z.object({ action: z.literal('scroll'), params: scrollParamsSchema }),
   z.object({ action: z.literal('scrollIntoView'), params: scrollIntoViewParamsSchema }),
@@ -422,7 +507,8 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('waitForUrl'), params: waitForUrlParamsSchema }),
   z.object({ action: z.literal('evaluate'), params: evaluateParamsSchema }),
   z.object({ action: z.literal('getConsole'), params: getConsoleParamsSchema }),
-  z.object({ action: z.literal('getErrors'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('getErrors'), params: getErrorsParamsSchema }),
+  z.object({ action: z.literal('cdp'), params: cdpParamsSchema }),
   z.object({ action: z.literal('tabNew'), params: tabNewParamsSchema }),
   z.object({ action: z.literal('tabList'), params: emptyParamsSchema }),
   z.object({ action: z.literal('tabSwitch'), params: tabSwitchParamsSchema }),
@@ -439,8 +525,15 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('switchFrame'), params: switchFrameParamsSchema }),
   z.object({ action: z.literal('listFrames'), params: emptyParamsSchema }),
   z.object({ action: z.literal('getCurrentFrame'), params: emptyParamsSchema }),
+  z.object({ action: z.literal('resolveFrame'), params: resolveFrameParamsSchema }),
+  z.object({ action: z.literal('frameOffset'), params: frameOffsetParamsSchema }),
   z.object({ action: z.literal('networkWatch'), params: networkWatchParamsSchema }),
   z.object({ action: z.literal('networkUnwatch'), params: networkUnwatchParamsSchema }),
+  z.object({ action: z.literal('networkWatchFile'), params: networkWatchFileParamsSchema }),
+  z.object({ action: z.literal('networkRequests'), params: networkRequestsParamsSchema }),
+  z.object({ action: z.literal('networkRequest'), params: networkRequestParamsSchema }),
+  z.object({ action: z.literal('downloadList'), params: downloadListParamsSchema }),
+  z.object({ action: z.literal('downloadWait'), params: downloadWaitParamsSchema }),
   z.object({ action: z.literal('route'), params: routeParamsSchema }),
   z.object({ action: z.literal('unroute'), params: unrouteParamsSchema }),
   z.object({ action: z.literal('getRoutes'), params: getRoutesParamsSchema }),
@@ -549,3 +642,11 @@ export const daemonResponseSchema = z.object({
   data: z.unknown().optional(),
   error: protocolErrorSchema.optional(),
 });
+
+/**
+ * Every action name the protocol accepts, read back off the command union so
+ * it cannot drift from what the daemon will actually parse.
+ */
+export const ACTION_TYPES: readonly string[] = commandSchema.options.map(
+  (option) => option.shape.action.value,
+);

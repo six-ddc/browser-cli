@@ -3,9 +3,15 @@ import { getUrl, getToken, getEnabled, setState } from '../lib/state';
 import type { RequestMessage, ResponseMessage, ProtocolError } from '@browser-cli/shared';
 import { classifyError } from '../lib/error-classifier';
 import { NetworkManager } from '../lib/network-manager';
-import { frameManager } from '../lib/frame-manager';
 import { sendToContentScript } from '../lib/send-to-content-script';
 import { setNetworkWatcherSendEvent } from '../lib/network-watcher';
+import { initRequestLog, clearTabRequests } from '../lib/request-log';
+import {
+  clearFrameFocus,
+  forgetTab,
+  invalidateFrameFocus,
+  resolveCommandFrameId,
+} from '../lib/frame-routing';
 
 let wsClient: WsClient | null = null;
 let networkManager: NetworkManager | null = null;
@@ -50,6 +56,11 @@ const BG_ACTIONS = new Set([
   'screenshot',
   'networkWatch',
   'networkUnwatch',
+  'networkRequests',
+  'networkRequest',
+  'cdp',
+  'downloadList',
+  'downloadWait',
   'route',
   'unroute',
   'getRoutes',
@@ -73,7 +84,13 @@ const BG_ACTIONS = new Set([
   'stateExport',
   'stateImport',
   'evaluate',
+  'switchFrame',
+  'listFrames',
+  'getCurrentFrame',
 ]);
+
+/** Commands whose whole point is to replace the top-level document */
+const NAVIGATION_ACTIONS = new Set(['navigate', 'goBack', 'goForward', 'reload']);
 
 async function resolveTargetTab(tabId?: number): Promise<number> {
   if (tabId) return tabId;
@@ -171,6 +188,7 @@ async function ensureInitialized(): Promise<void> {
     await setState({ connected: false, sessionId: null, reconnecting: false, nextRetryIn: null });
 
     networkManager = new NetworkManager();
+    initRequestLog();
 
     const [url, token, clientId] = await Promise.all([getUrl(), getToken(), getOrCreateClientId()]);
 
@@ -240,6 +258,12 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
     // Record command timestamp and notify overlay
     touchTab(targetTabId);
 
+    // An explicit navigation destroys the focused frame on purpose, so drop the
+    // focus quietly — only unexpected navigations surface a notice.
+    if (NAVIGATION_ACTIONS.has(command.action)) {
+      clearFrameFocus(targetTabId);
+    }
+
     if (BG_ACTIONS.has(command.action)) {
       console.log(`[browser-cli] Routing to background handler: ${command.action}`);
       const { handleBackgroundCommand } = await import('../lib/command-router');
@@ -251,6 +275,10 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
       );
       return result;
     }
+
+    // Every content-script command is delivered straight to the focused frame,
+    // which is how cross-origin iframes are reached.
+    const frameId = await resolveCommandFrameId(targetTabId);
 
     // Debugger-based input: intercept click/fill/type/press with params.debugger=true
     const params = command.params as Record<string, unknown>;
@@ -266,7 +294,7 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
           console.log(
             `[browser-cli] Routing to debugger handler: ${command.action} on tab ${targetTabId}`,
           );
-          const result = await handleDebuggerCommand(command, targetTabId);
+          const result = await handleDebuggerCommand(command, targetTabId, frameId);
           return {
             id,
             type: 'response',
@@ -280,13 +308,17 @@ async function handleCommand(msg: RequestMessage): Promise<ResponseMessage> {
 
     // Forward to content script (with retry)
     console.log(
-      `[browser-cli] Forwarding to content script on tab ${targetTabId}: ${command.action}`,
+      `[browser-cli] Forwarding to content script on tab ${targetTabId} frame ${frameId}: ${command.action}`,
     );
-    const response = await sendToContentScript(targetTabId, {
-      type: 'browser-cli-command',
-      id,
-      command,
-    });
+    const response = await sendToContentScript(
+      targetTabId,
+      {
+        type: 'browser-cli-command',
+        id,
+        command,
+      },
+      { frameId },
+    );
 
     console.log(
       `[browser-cli] Content script response #${id}:`,
@@ -369,8 +401,20 @@ if (typeof self !== 'undefined' && typeof self.addEventListener === 'function') 
 
 // Clean up tab state when tabs are closed
 browser.tabs.onRemoved.addListener((tabId) => {
-  frameManager.clearTab(tabId);
   tabCommandTimestamps.delete(tabId);
+  clearTabRequests(tabId);
+  forgetTab(tabId);
+});
+
+// A top-level navigation destroys every subframe, so the focused frame is gone.
+// Drop the focus and remember why — the next command reports it once instead of
+// silently retargeting the top document.
+browser.webNavigation.onCommitted.addListener((details) => {
+  if (details.frameId !== 0) return;
+  invalidateFrameFocus(
+    details.tabId,
+    `The focused frame was discarded because the page navigated to ${details.url}.`,
+  );
 });
 
 // Re-show overlay on navigation completion if tab was recently operated on

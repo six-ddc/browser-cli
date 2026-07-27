@@ -5,10 +5,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 test.describe('console (basic)', () => {
   test('gets console output', async ({ bcli, navigateAndWait }) => {
-    test.fixme(
-      true,
-      'console capture is unreliable after network route tests destabilize extension connection',
-    );
     await navigateAndWait(PAGES.HOME);
 
     // Generate a console.log via eval (runs in MAIN world)
@@ -21,10 +17,6 @@ test.describe('console (basic)', () => {
   });
 
   test('captures console.warn', async ({ bcli, navigateAndWait }) => {
-    test.fixme(
-      true,
-      'console capture is unreliable after network route tests destabilize extension connection',
-    );
     await navigateAndWait(PAGES.HOME);
 
     bcli('eval', 'console.warn("test-warning-message"); true');
@@ -36,10 +28,6 @@ test.describe('console (basic)', () => {
   });
 
   test('captures console.error', async ({ bcli, navigateAndWait }) => {
-    test.fixme(
-      true,
-      'console capture is unreliable after network route tests destabilize extension connection',
-    );
     await navigateAndWait(PAGES.HOME);
 
     bcli('eval', 'console.error("test-error-message"); true');
@@ -178,10 +166,6 @@ test.describe('errors', () => {
   });
 
   test('captures runtime errors from eval', async ({ bcli, navigateAndWait }) => {
-    test.fixme(
-      true,
-      'eval-thrown async errors via setTimeout are not reliably captured by the errors command',
-    );
     await navigateAndWait(PAGES.HOME);
 
     // Trigger a page-level error via eval
@@ -227,5 +211,26 @@ test.describe('console + errors integration', () => {
     const r = bcli('console');
     expect(r).toBcliSuccess();
     // Console from before interaction may or may not persist depending on navigation
+  });
+});
+
+test.describe('console --limit', () => {
+  test('caps the number of returned entries', async ({ bcli, navigateAndWait }) => {
+    await navigateAndWait(PAGES.HOME);
+
+    bcli('console', '--clear');
+    bcli('eval', 'console.log("limit-msg-1")');
+    bcli('eval', 'console.log("limit-msg-2")');
+    bcli('eval', 'console.log("limit-msg-3")');
+    await sleep(1000);
+
+    const r = bcli('console', '--limit', '2');
+    expect(r).toBcliSuccess();
+    const lines = r.stdout.split('\n').filter((line) => line.includes('[log]'));
+    expect(lines).toHaveLength(2);
+    // Limit keeps the most recent entries.
+    expect(r.stdout).toContain('limit-msg-2');
+    expect(r.stdout).toContain('limit-msg-3');
+    expect(r.stdout).not.toContain('limit-msg-1');
   });
 });

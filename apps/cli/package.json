@@ -1,6 +1,6 @@
 {
   "name": "@browser-cli/cli",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "type": "module",
   "description": "Skill-powered browser automation CLI for AI agents — real browser extensions, optional CDP, no Playwright",
   "author": "six-ddc",
@@ -60,6 +60,10 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:",
-    "ws": "^8.19.0"
+    "ws": "^8.19.0",
+    "zod": "^4.3.6"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
   }
 }

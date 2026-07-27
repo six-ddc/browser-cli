@@ -113,7 +113,7 @@ test.describe('network integration', () => {
   test('clear requests then navigate generates new requests', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.HOME);
 
-    const r1 = bcli('network', 'clear');
+    const r1 = bcli('network', 'requests', '--clear');
     expect(r1).toBcliSuccess();
 
     await navigateAndWait(PAGES.LOGIN);

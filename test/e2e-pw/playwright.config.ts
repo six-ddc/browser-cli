@@ -21,11 +21,21 @@ export default defineConfig({
     video: 'on-first-retry',
   },
 
-  webServer: {
-    command: 'npx serve ./pages -l 4173 --no-clipboard',
-    port: 4173,
-    reuseExistingServer: !process.env.CI,
-  },
+  // Two servers over the same fixture directory: localhost:4173 and
+  // 127.0.0.1:4174 are different origins, which is all a cross-origin iframe
+  // needs (different host *and* port, so no same-origin shortcuts apply).
+  webServer: [
+    {
+      command: 'npx serve ./pages -l 4173 --no-clipboard',
+      port: 4173,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: 'npx serve ./pages -l 4174 --no-clipboard',
+      port: 4174,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 
   globalSetup: './global-setup.ts',
   globalTeardown: './global-teardown.ts',

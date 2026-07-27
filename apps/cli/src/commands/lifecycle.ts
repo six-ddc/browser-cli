@@ -4,7 +4,7 @@ import type { BrowserInfo } from '@browser-cli/shared';
 import { startDaemon, stopDaemon, getDaemonPid } from '../daemon/process.js';
 import { getSocketPath, getWsPort, getWsHost, getAuthTokenPath } from '../util/paths.js';
 import { logger } from '../util/logger.js';
-import { getRootOpts } from './shared.js';
+import { fail, getRootOpts } from './shared.js';
 
 // ── Shared types & helpers ────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ interface SessionConnection {
   connectedAt: number;
 }
 
-interface StatusData {
+export interface StatusData {
   connections: SessionConnection[];
   uptime: number;
   wsHost?: string;
@@ -24,7 +24,7 @@ interface StatusData {
 }
 
 /** Query live daemon status via the internal _status command */
-async function queryDaemonStatus(): Promise<StatusData | null> {
+export async function queryDaemonStatus(): Promise<StatusData | null> {
   const pid = getDaemonPid();
   if (!pid) return null;
 
@@ -78,7 +78,7 @@ export const startCommand = new Command('start')
           token: opts.token,
         });
         if (rootOpts.json) {
-          console.log(JSON.stringify({ success: true, pid, ...info }));
+          console.log(JSON.stringify({ success: true, data: { pid, ...info } }, null, 2));
         } else {
           logger.success(`Daemon started (PID ${pid})`);
           if (info.authToken) {
@@ -88,12 +88,12 @@ export const startCommand = new Command('start')
           }
         }
       } catch (err) {
-        if (rootOpts.json) {
-          console.log(JSON.stringify({ success: false, error: (err as Error).message }));
-          process.exit(1);
-        }
-        logger.error(`Failed to start daemon: ${(err as Error).message}`);
-        process.exit(1);
+        fail(
+          cmd,
+          'UNKNOWN',
+          `Failed to start daemon: ${(err as Error).message}`,
+          'Check that port 9222 is free and that ~/.browser-cli is writable.',
+        );
       }
     },
   );
@@ -104,7 +104,7 @@ export const stopCommand = new Command('stop')
     const rootOpts = getRootOpts(cmd);
     const stopped = await stopDaemon();
     if (rootOpts.json) {
-      console.log(JSON.stringify({ success: true, stopped }));
+      console.log(JSON.stringify({ success: true, data: { stopped } }, null, 2));
       return;
     }
     if (stopped) {
@@ -122,7 +122,7 @@ export const statusCommand = new Command('status')
 
     if (!pid) {
       if (rootOpts.json) {
-        console.log(JSON.stringify({ daemon: false }));
+        console.log(JSON.stringify({ success: true, data: { daemon: false } }, null, 2));
         return;
       }
       console.log('Daemon: not running');
@@ -182,7 +182,7 @@ export const statusCommand = new Command('status')
     }
 
     if (rootOpts.json) {
-      console.log(JSON.stringify(status, null, 2));
+      console.log(JSON.stringify({ success: true, data: status }, null, 2));
     }
   });
 
@@ -194,7 +194,9 @@ export const listCommand = new Command('list')
 
     if (!data) {
       if (rootOpts.json) {
-        console.log(JSON.stringify({ sessions: [], daemon: false }));
+        console.log(
+          JSON.stringify({ success: true, data: { sessions: [], daemon: false } }, null, 2),
+        );
         return;
       }
       console.log('Daemon is not running. Start with: browser-cli start');
@@ -207,15 +209,18 @@ export const listCommand = new Command('list')
       console.log(
         JSON.stringify(
           {
-            sessions: sessions.map((s) => ({
-              sessionId: s.sessionId,
-              browser: s.browser ? { name: s.browser.name, version: s.browser.version } : null,
-              status: 'connected',
-              connectedAt: s.connectedAt,
-              extensionId: s.extensionId,
-            })),
-            daemon: true,
-            uptime: data.uptime,
+            success: true,
+            data: {
+              sessions: sessions.map((s) => ({
+                sessionId: s.sessionId,
+                browser: s.browser ? { name: s.browser.name, version: s.browser.version } : null,
+                status: 'connected',
+                connectedAt: s.connectedAt,
+                extensionId: s.extensionId,
+              })),
+              daemon: true,
+              uptime: data.uptime,
+            },
           },
           null,
           2,

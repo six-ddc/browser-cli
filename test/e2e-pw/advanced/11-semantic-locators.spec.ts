@@ -70,7 +70,8 @@ test.describe('text= locator', () => {
   test('click by text (substring match)', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('click', 'text=Login');
+    // "Login" matches both the <h2> heading and the button — pick the button
+    const r = bcli('click', 'text=Login', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -88,7 +89,7 @@ test.describe('text= locator', () => {
     await navigateAndWait(PAGES.LOGIN);
 
     // "Log" should match "Login" in substring mode
-    const r = bcli('click', 'text=Log');
+    const r = bcli('click', 'text=Log', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -104,7 +105,7 @@ test.describe('text= locator', () => {
   test('text is case insensitive by default', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('click', 'text=login');
+    const r = bcli('click', 'text=login', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -185,8 +186,8 @@ test.describe('alt= locator', () => {
     await navigateAndWait(PAGES.HOVERS);
 
     // The hovers page has images with alt="User 1", alt="User 2", alt="User 3"
-    // Substring match on "User" should find one of them
-    const r = bcli('click', 'alt=User');
+    // Substring match on "User" is ambiguous — pick the first
+    const r = bcli('click', 'alt=User', '--first');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Clicked');
   });
@@ -312,7 +313,7 @@ test.describe('semantic locator with get commands', () => {
   test('get text with role= selector', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
 
-    const r = bcli('get', 'text', 'role=heading');
+    const r = bcli('get', 'text', 'role=heading', '--first');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Login');
   });

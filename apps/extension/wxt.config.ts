@@ -24,8 +24,11 @@ export default defineConfig({
       'scripting',
       'storage',
       'alarms',
+      // Frame tree enumeration for cross-origin iframe routing
+      'webNavigation',
       'bookmarks',
       'history',
+      'downloads',
       // Chrome: declarativeNetRequest for network interception
       // Firefox: webRequest + webRequestBlocking
       ...(browser !== 'firefox'

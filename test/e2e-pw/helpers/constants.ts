@@ -18,10 +18,14 @@ export const PAGES = {
   ADD_REMOVE: 'add-remove',
   DYNAMIC_CONTENT: 'dynamic-content',
   DYNAMIC_CONTROLS: 'dynamic-controls',
+  ACTIONABILITY: 'actionability',
   DYNAMIC_LOADING_1: 'dynamic-loading-1',
   DYNAMIC_LOADING_2: 'dynamic-loading-2',
   IFRAME: 'iframe',
   NESTED_FRAMES: 'nested-frames',
+  CROSS_ORIGIN_IFRAME: 'cross-origin-iframe',
+  CROSS_ORIGIN_NESTED: 'cross-origin-nested',
+  CROSS_ORIGIN_FRAME: 'cross-origin-frame',
   JAVASCRIPT_ALERTS: 'javascript-alerts',
   JAVASCRIPT_ERROR: 'javascript-error',
   LARGE_PAGE: 'large-page',
@@ -37,7 +41,13 @@ export const PAGES = {
   ARTICLE: 'article',
   TRUSTED_EVENTS: 'trusted-events',
   SNAPSHOT_ROBUSTNESS: 'snapshot-robustness',
+  DOWNLOAD: 'download',
+  FORM_FILL: 'form-fill',
 } as const;
+
+// Second fixture origin — same files, different host:port, so iframes pointing
+// at it are genuinely cross-origin (see playwright.config.ts webServer).
+export const CROSS_ORIGIN_BASE_URL = 'http://127.0.0.1:4174';
 
 // Test credentials for login page
 export const TEST_USERNAME = 'tomsmith';

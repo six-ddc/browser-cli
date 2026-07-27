@@ -3,74 +3,72 @@
  * Uses complete event sequences to match real user behavior.
  */
 
-import type { Command } from '@browser-cli/shared';
-import { resolveElement } from './element-ref-store';
+import { BrowserCliError, type Command } from '@browser-cli/shared';
+import { requireActionable, requireElement } from './actionability';
+import { describeElement } from './element-describe';
 
 export async function handleInteraction(command: Command): Promise<unknown> {
   switch (command.action) {
     case 'click': {
-      const { selector, button, position } = command.params;
-      const el = requireElement(selector, position);
+      const { selector, button, position, force } = command.params;
+      const el = requireActionable(selector, position, { force });
       performClick(el, button || 'left');
       return { clicked: true };
     }
     case 'dblclick': {
-      const { selector, position } = command.params;
-      const el = requireElement(selector, position);
+      const { selector, position, force } = command.params;
+      const el = requireActionable(selector, position, { force });
       performDblClick(el);
       return { clicked: true };
     }
     case 'hover': {
-      const { selector, position } = command.params;
-      const el = requireElement(selector, position);
+      const { selector, position, force } = command.params;
+      const el = requireActionable(selector, position, { force });
       performHover(el);
       return { hovered: true };
     }
     case 'fill': {
-      const { selector, value, position } = command.params;
-      const el = requireElement(selector, position);
-      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
-        throw new Error(`Element is not fillable (not an <input> or <textarea>): ${selector}`);
-      }
+      const { selector, value, position, force } = command.params;
+      const el = requireActionable(selector, position, { force, requireEditable: true });
+      requireTextControl(el, selector, 'fillable');
       performFill(el, value);
       return { filled: true };
     }
     case 'type': {
-      const { selector, text, delay, position } = command.params;
-      const el = requireElement(selector, position);
-      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
-        throw new Error(`Element is not typeable (not an <input> or <textarea>): ${selector}`);
-      }
+      const { selector, text, delay, position, force } = command.params;
+      const el = requireActionable(selector, position, { force, requireEditable: true });
+      requireTextControl(el, selector, 'typeable');
       await performType(el, text, delay);
       return { typed: true };
     }
     case 'press': {
-      const { selector, key, position } = command.params;
+      const { selector, key, position, force } = command.params;
       const el = selector
-        ? requireElement(selector, position)
+        ? requireActionable(selector, position, { force, skipOcclusion: true })
         : (document.activeElement ?? document.body);
       performPress(el, key);
       return { pressed: true };
     }
     case 'clear': {
-      const { selector, position } = command.params;
-      const el = requireElement(selector, position);
-      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
-        throw new Error(`Element is not clearable (not an <input> or <textarea>): ${selector}`);
-      }
+      const { selector, position, force } = command.params;
+      const el = requireActionable(selector, position, { force, requireEditable: true });
+      requireTextControl(el, selector, 'clearable');
       performClear(el);
       return { cleared: true };
     }
     case 'focus': {
-      const { selector, position } = command.params;
-      const el = requireElement(selector, position) as HTMLElement;
+      const { selector, position, force } = command.params;
+      const el = requireActionable(selector, position, {
+        force,
+        skipOcclusion: true,
+      }) as HTMLElement;
       el.focus();
       return { focused: true };
     }
     case 'drag': {
       const { source, target } = command.params;
-      const srcEl = requireElement(source);
-      const tgtEl = requireElement(target);
+      const srcEl = requireActionable(source);
+      const tgtEl = requireActionable(target);
       performDrag(srcEl, tgtEl);
       return { dragged: true };
     }
@@ -95,13 +93,20 @@ export async function handleInteraction(command: Command): Promise<unknown> {
   }
 }
 
-function requireElement(
+function requireTextControl(
+  el: Element,
   selector: string,
-  position?: { type: 'first' | 'last' | 'nth'; index?: number },
-): Element {
-  const el = resolveElement(selector, position);
-  if (!el) throw new Error(`Element not found: ${selector}`);
-  return el;
+  verb: string,
+): asserts el is HTMLInputElement | HTMLTextAreaElement {
+  if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
+    throw new BrowserCliError(
+      'ELEMENT_TYPE_MISMATCH',
+      `Element is not ${verb} (not an <input> or <textarea>): ${selector} → ${describeElement(el)}.`,
+      el.getAttribute('contenteditable') === 'true'
+        ? "This is a contenteditable region — click it first, then use 'press' to send keys."
+        : "Target the <input>/<textarea> itself; 'snapshot -i' shows the editable fields with their refs.",
+    );
+  }
 }
 
 function getCenter(el: Element): { x: number; y: number } {

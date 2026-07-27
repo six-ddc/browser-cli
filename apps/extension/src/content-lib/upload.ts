@@ -13,8 +13,9 @@
  * - Triggers appropriate events for framework compatibility
  */
 
-import type { Command } from '@browser-cli/shared';
-import { resolveElement } from './element-ref-store';
+import { BrowserCliError, type Command } from '@browser-cli/shared';
+import { requireElement } from './actionability';
+import { describeElement } from './element-describe';
 
 export async function handleUpload(command: Command): Promise<unknown> {
   if (command.action !== 'upload') {
@@ -23,13 +24,13 @@ export async function handleUpload(command: Command): Promise<unknown> {
 
   const { selector, files: filesParam, clear = false } = command.params;
 
-  const el = resolveElement(selector);
-  if (!el) throw new Error(`Element not found: ${selector}`);
-  if (!(el instanceof HTMLInputElement)) {
-    throw new Error(`Element is not an <input>: ${selector}`);
-  }
-  if (el.type !== 'file') {
-    throw new Error(`Element is not a file input: ${selector}`);
+  const el = requireElement(selector);
+  if (!(el instanceof HTMLInputElement) || el.type !== 'file') {
+    throw new BrowserCliError(
+      'ELEMENT_TYPE_MISMATCH',
+      `Element is not a file input: ${selector} → ${describeElement(el)}.`,
+      'Target the <input type="file"> itself — it is often visually hidden behind a styled label, so query it directly (e.g. `upload \'input[type=file]\' <path>`).',
+    );
   }
 
   const filePaths = Array.isArray(filesParam) ? filesParam : [filesParam];

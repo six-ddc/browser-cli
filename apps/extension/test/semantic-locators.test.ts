@@ -477,3 +477,86 @@ describe('complex scenarios', () => {
     expect(buttonElements).toHaveLength(1);
   });
 });
+
+// ─── shadow DOM ──────────────────────────────────────────────────────
+
+describe('shadow DOM piercing', () => {
+  /** Attach a shadow root to a fresh host appended to `parent`. */
+  function attachHost(parent: ParentNode, id: string, html: string) {
+    const host = document.createElement('div');
+    host.id = id;
+    parent.append(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = html;
+    return { host, shadow };
+  }
+
+  it('role= finds a button inside a shadow root', () => {
+    attachHost(document.body, 'host', '<button>Shadow Button</button>');
+
+    const elements = resolve('role=button[name="Shadow Button"]');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].textContent).toBe('Shadow Button');
+  });
+
+  it('role= finds buttons across nested shadow roots', () => {
+    const outer = attachHost(document.body, 'outer', '<button>Outer</button>');
+    attachHost(outer.shadow, 'inner', '<button>Inner</button>');
+
+    expect(resolve('role=button')).toHaveLength(2);
+  });
+
+  it('text= finds shadow text without matching the host', () => {
+    attachHost(document.body, 'host', '<div><span>Shadow text</span></div>');
+
+    const elements = resolve('text=Shadow text');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].tagName).toBe('SPAN');
+  });
+
+  it('placeholder= finds an input inside a shadow root', () => {
+    attachHost(document.body, 'host', '<input type="text" placeholder="Shadow input" />');
+
+    expect(resolve('placeholder=Shadow input')).toHaveLength(1);
+  });
+
+  it('testid= finds an element inside a shadow root', () => {
+    attachHost(document.body, 'host', '<button data-testid="shadow-btn">Go</button>');
+
+    expect(resolve('testid=shadow-btn')).toHaveLength(1);
+  });
+
+  it('label= resolves for= within the shadow tree scope', () => {
+    document.body.innerHTML = '<input id="email" />';
+    attachHost(
+      document.body,
+      'host',
+      '<label for="email">Email</label><input id="email" class="shadow-input" />',
+    );
+
+    const elements = resolve('label=Email');
+    expect(elements).toHaveLength(1);
+    expect(elements[0].className).toBe('shadow-input');
+  });
+
+  it('alt= finds an image inside a shadow root', () => {
+    attachHost(document.body, 'host', '<img alt="Shadow logo" />');
+
+    expect(resolve('alt=Shadow logo')).toHaveLength(1);
+  });
+
+  it('title= finds an element inside a shadow root', () => {
+    attachHost(document.body, 'host', '<span title="Shadow help">?</span>');
+
+    expect(resolve('title=Shadow help')).toHaveLength(1);
+  });
+
+  it('light DOM matches still come first', () => {
+    document.body.innerHTML = '<button>Save</button>';
+    attachHost(document.body, 'host', '<button>Save</button>');
+
+    const elements = resolve('role=button[name="Save"]');
+    expect(elements).toHaveLength(2);
+    expect(elements[0].getRootNode()).toBe(document);
+  });
+});

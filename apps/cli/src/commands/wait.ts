@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { sendCommand } from './shared.js';
+import { sendCommand, fail } from './shared.js';
 
 export const waitCommand = new Command('wait')
   .description(
@@ -7,7 +7,7 @@ export const waitCommand = new Command('wait')
   )
   .argument('[selectorOrMs]', 'CSS selector or duration in ms')
   .option('--timeout <ms>', 'Timeout in ms (for selector/URL wait)', '10000')
-  .option('--hidden', 'Wait until hidden (not visible)')
+  .option('--hidden', 'Wait until the selector is gone or no longer visible')
   .option('--url <pattern>', 'Wait for URL to match pattern')
   .option('--text <text>', 'Wait for text content to appear on page')
   .option('--load [state]', 'Wait for load state (load/domcontentloaded/networkidle)')
@@ -72,8 +72,12 @@ export const waitCommand = new Command('wait')
       }
 
       if (!selectorOrMs) {
-        console.error('Error: Provide a selector, duration (ms), or --url/--text/--load/--fn');
-        process.exit(1);
+        fail(
+          cmd,
+          'INVALID_ARGS',
+          'Provide a selector, duration (ms), or --url/--text/--load/--fn',
+          'e.g. wait ".spinner" or wait 1000 or wait --url "**/dashboard"',
+        );
       }
 
       // Check if it's a numeric duration
@@ -97,7 +101,7 @@ export const waitCommand = new Command('wait')
           visible: !opts.hidden,
         },
       });
-      console.log(`Found: ${selectorOrMs}`);
+      console.log(opts.hidden ? `Hidden: ${selectorOrMs}` : `Found: ${selectorOrMs}`);
     },
   );
 

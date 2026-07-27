@@ -126,6 +126,8 @@ cat ~/.browser-cli/watches/watch-*.txt        # Inspect captured requests
 
 ## Cookie Management
 
+Text output prints cookie values in full — long values are not truncated.
+
 ### cookies (bare) - List All Cookies
 
 ```bash
@@ -262,12 +264,21 @@ browser-cli tab ungroup 42 43               # Remove from group
 
 ## Frame Management (iframe)
 
+Commands are routed to the focused frame by frame id, so **cross-origin iframes are fully
+supported** — `snapshot`, `find`, `click`, `fill`, `markdown`, `upload` and `evaluate` all work
+inside them just as they do on the top document.
+
 ```bash
-browser-cli frame <selector>                 # Switch to iframe
-browser-cli frame main                       # Back to main frame
-browser-cli frame list                       # List all frames
-browser-cli frame current                    # Show current frame
+browser-cli frame <selector>                 # Enter iframe by CSS / semantic locator / @ref
+browser-cli frame <frameId>                  # Enter by numeric id from `frame list`
+browser-cli frame main                       # Back to the top-level document
+browser-cli frame list                       # List all frames, incl. nested and cross-origin
+browser-cli frame current                    # Show which frame commands go to
 ```
+
+`frame <selector>` resolves the selector **inside the currently focused frame**, so nesting is
+entered one level at a time. `frame <frameId>` is the way in when the parent document has no
+addressable `<iframe>` element to select.
 
 **Examples:**
 
@@ -275,16 +286,49 @@ browser-cli frame current                    # Show current frame
 # Work inside an iframe
 browser-cli frame list                       # Find frames
 browser-cli frame '#payment-frame'           # Enter iframe
+browser-cli snapshot -ic                     # Works inside the frame
 browser-cli fill 'input[name="card"]' 4111111111111111
 browser-cli fill 'input[name="expiry"]' 12/26
 browser-cli frame main                       # Back to main
 
-# Nested iframes
+# Nested iframes — one level per command
 browser-cli frame '#outer-frame'
 browser-cli frame '#inner-frame'
 browser-cli click '#submit'
 browser-cli frame main                       # Back to top
+
+# Enter by frameId when there's no selectable <iframe> in the parent
+browser-cli frame 7
 ```
+
+**`frame list` output:**
+
+```
+Frames (3):
+
+→ [  0] http://localhost:4173/cross-origin-nested  (main)
+  [  4]   http://127.0.0.1:4174/cross-origin-outer  (name=outer-frame)
+  [  7]     http://localhost:4173/cross-origin-frame  (name=inner-frame)
+
+Legend: → = current frame, indentation = nesting depth, [n] = frameId (use with `frame <n>`)
+```
+
+Frames with no injectable content script are tagged `(unreachable)` and cannot be entered.
+
+**Focus lifetime:** the focused frame is stored **per tab** and persists across commands.
+`navigate`, `reload`, `back` and `forward` drop it **silently** (you asked for the navigation). An
+**unexpected** top-level navigation, or the focused frame being removed from the DOM, makes the
+**next** command fail once with `FRAME_ERROR` explaining the focus was reset — re-run it and it acts
+on the main frame. The one-time error exists so a command never silently hits the wrong document.
+
+**Limits:**
+
+| Limitation                  | Detail                                                                                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `srcdoc` iframes            | No content script is injected — shown as `(unreachable)`, cannot be entered                                                                              |
+| `screenshot`                | Always captures the top-level viewport (or the whole top document with `--full`), never a single frame                                                   |
+| `get url` / `get title`     | Tab-level: always the **top** document regardless of focus (same for `verify url` / `verify title`)                                                      |
+| `--debugger` inside a frame | Supported (coordinates come from the ancestor iframe chain), but fails with `UNSUPPORTED` when an ancestor iframe has a scaling/rotating CSS `transform` |
 
 ---
 
@@ -417,11 +461,16 @@ browser-cli state save <path>
 
 Exports cookies, localStorage, and sessionStorage to a JSON file.
 
+`--json` now writes the file first, then prints
+`{"success":true,"data":{"path","url","cookies","localStorage","sessionStorage"}}` (counts of each
+kind, not the raw values) — previously `--json` skipped writing the file entirely.
+
 **Examples:**
 
 ```bash
 browser-cli state save ./session.json
 browser-cli state save /tmp/auth-state.json
+browser-cli state save ./session.json --json
 ```
 
 ### state load - Import State
@@ -465,6 +514,6 @@ browser-cli navigate https://app.example.com/dashboard
 
 3. **Dialog handlers are one-shot**: Each `dialog accept/dismiss` handles only the next dialog. Set it again for subsequent dialogs.
 
-4. **Frame switching is stateful**: Remember to `frame main` after working in an iframe, or subsequent commands will target the iframe.
+4. **Frame switching is stateful**: The focus is per tab and persists across commands — remember to `frame main` after working in an iframe, or subsequent commands will keep targeting it.
 
 5. **Viewport affects layout**: Set viewport before navigating for consistent responsive behavior.

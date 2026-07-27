@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cross-Origin Outer Frame</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 12px;
+        background: #fff7e6;
+      }
+      iframe {
+        border: 1px solid #ccc;
+        width: 420px;
+        height: 180px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="outer-heading">Outer Frame</h1>
+    <iframe
+      id="inner-frame"
+      name="inner-frame"
+      src="http://localhost:4173/cross-origin-frame"
+    ></iframe>
+  </body>
+</html>

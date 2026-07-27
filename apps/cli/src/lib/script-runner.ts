@@ -10,6 +10,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { existsSync } from 'node:fs';
 import { format } from 'node:util';
+import { formatArgStacks, formatConsoleArgs } from './console-format.js';
 import type {
   ActionParamsMap,
   ActionResultMap,
@@ -18,6 +19,7 @@ import type {
 } from '@browser-cli/shared';
 import { SocketClient } from '../client/socket-client.js';
 import { ensureDaemon } from '../daemon/process.js';
+import { enforceActionNonInteractive } from './policy.js';
 import { getSocketPath } from '../util/paths.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -89,7 +91,7 @@ export function printConsoleLogs(logs: ConsoleEntry[]): void {
     const ts = DIM + new Date(entry.timestamp).toLocaleTimeString() + RESET;
     const style = LEVEL_STYLE[entry.level] ?? MAGENTA;
     const prefix = entry.level === 'log' || entry.level === 'info' ? '▸' : entry.level;
-    const msg = entry.args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+    const msg = formatConsoleArgs(entry.args) + formatArgStacks(entry.args);
     process.stderr.write(`${ts} ${style}${prefix}${RESET} ${msg}\n`);
   }
 }
@@ -107,6 +109,7 @@ function createBrowserSDK(client: SocketClient, options: ScriptOptions): Browser
       const action = prop;
       return async (params: Record<string, unknown> = {}) => {
         stepIndex++;
+        enforceActionNonInteractive(action, params);
         const response = await client.sendCommand(
           { action: action as ActionType, params } as never,
           { tabId: options.tabId, sessionId: options.sessionId, timeout: options.timeout },

@@ -159,7 +159,7 @@ describe('uncheck', () => {
         action: 'uncheck',
         params: { selector: '#d' },
       } as Command),
-    ).rejects.toThrow('not an <input>');
+    ).rejects.toThrow('not a checkbox or radio input');
   });
 });
 

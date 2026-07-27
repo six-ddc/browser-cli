@@ -137,16 +137,15 @@ export function isInteractiveElement(el: Element, options?: { cursor?: boolean }
 }
 
 /**
- * Check if element is visible for snapshot purposes.
+ * Snapshot visibility, deliberately different from `isElementVisible` in
+ * visibility.ts: an accessibility tree keeps opacity:0 nodes (mid-transition,
+ * still focusable) and drops aria-hidden ones, whereas an interaction check
+ * wants the opposite. Do not merge the two.
  */
 export function isVisibleForSnapshot(el: Element): boolean {
   const style = window.getComputedStyle(el);
   if (style.display === 'none') return false;
   if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
-
-  // Don't filter by opacity=0 for snapshot — could be transition state
-
-  // Check aria-hidden
   if (el.getAttribute('aria-hidden') === 'true') return false;
 
   return true;

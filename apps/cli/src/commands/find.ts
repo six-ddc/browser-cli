@@ -47,24 +47,25 @@ export function buildCommand(
   action: string,
   actionValue: string | undefined,
   position?: { type: 'first' | 'last' | 'nth'; index?: number },
+  force?: boolean,
 ): { action: string; params: Record<string, unknown> } {
   switch (action) {
     case 'fill':
       if (!actionValue) throw new Error('fill requires a value: find <selector> fill <value>');
-      return { action: 'fill', params: { selector, value: actionValue, position } };
+      return { action: 'fill', params: { selector, value: actionValue, position, force } };
     case 'type':
       if (!actionValue) throw new Error('type requires text: find <selector> type <text>');
-      return { action: 'type', params: { selector, text: actionValue, delay: 0, position } };
+      return { action: 'type', params: { selector, text: actionValue, delay: 0, position, force } };
     case 'select':
       if (!actionValue) throw new Error('select requires a value: find <selector> select <value>');
-      return { action: 'select', params: { selector, value: actionValue, position } };
+      return { action: 'select', params: { selector, value: actionValue, position, force } };
     case 'press':
       if (!actionValue) throw new Error('press requires a key: find <selector> press <key>');
-      return { action: 'press', params: { selector, key: actionValue, position } };
+      return { action: 'press', params: { selector, key: actionValue, position, force } };
     case 'click':
-      return { action: 'click', params: { selector, button: 'left', position } };
+      return { action: 'click', params: { selector, button: 'left', position, force } };
     default:
-      return { action, params: { selector, position } };
+      return { action, params: { selector, position, force } };
   }
 }
 
@@ -100,12 +101,13 @@ export const findCommand = new Command('find')
     if (isNaN(n) || n < 1) throw new Error(`--nth requires a positive integer, got: ${v}`);
     return n;
   })
+  .option('--force', 'Skip the disabled and occlusion checks')
   .action(
     async (
       selector: string,
       action: string | undefined,
       value: string | undefined,
-      opts: { first?: boolean; last?: boolean; nth?: number },
+      opts: { first?: boolean; last?: boolean; nth?: number; force?: boolean },
       cmd: Command,
     ) => {
       const resolvedAction = action ?? 'click';
@@ -120,7 +122,7 @@ export const findCommand = new Command('find')
       else if (opts.last) position = { type: 'last' };
       else if (opts.nth !== undefined) position = { type: 'nth', index: opts.nth };
 
-      const command = buildCommand(selector, resolvedAction, value, position);
+      const command = buildCommand(selector, resolvedAction, value, position, opts.force);
       const result = await sendCommand(cmd, command as Parameters<typeof sendCommand>[1]);
 
       const label = ACTION_LABELS[resolvedAction] || resolvedAction;

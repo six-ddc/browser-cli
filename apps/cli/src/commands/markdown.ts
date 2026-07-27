@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { truncateUrl } from '@browser-cli/shared';
 import type { MarkdownResult } from '@browser-cli/shared';
 import { sendCommand, getRootOpts } from './shared.js';
+import { wrapPageContent } from '../lib/boundaries.js';
 
 /** Truncate long URLs inside markdown link/image syntax */
 function trimMarkdownUrls(md: string): string {
@@ -33,5 +34,5 @@ export const markdownCommand = new Command('markdown')
       process.exit(0);
     }
 
-    console.log(result.markdown);
+    console.log(wrapPageContent(result.markdown));
   });

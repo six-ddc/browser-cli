@@ -132,6 +132,41 @@ browser-cli click @e4              # Click "Search" button
 
 Element refs are the most reliable selectors — they're unambiguous and mapped directly to elements.
 
+### 4. Shadow DOM (pierced automatically)
+
+Every selector type above — **except `xpath=`** — reaches into shadow roots on its own. No special
+syntax, no flag: a plain CSS selector or semantic locator is matched in the light DOM first and then
+in every shadow root beneath the search root. Web-component-heavy pages (Salesforce Lightning, Ionic,
+Vaadin, `<model-viewer>`, most design systems) need exactly the same commands as a plain page.
+
+```bash
+browser-cli click 'button.submit'                      # matches inside a custom element too
+browser-cli fill 'role=textbox[name="Email"]' a@b.com
+browser-cli click 'testid=confirm'
+```
+
+| Aspect                                                            | Behaviour                                                                                          |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| CSS selectors                                                     | Pierce                                                                                             |
+| `role=` `text=` `label=` `placeholder=` `alt=` `title=` `testid=` | Pierce                                                                                             |
+| `xpath=`                                                          | **Does not pierce** — XPath cannot cross a shadow boundary                                         |
+| Open shadow roots                                                 | All browsers                                                                                       |
+| Closed shadow roots                                               | **Chrome only** (`chrome.dom.openOrClosedShadowRoot`); invisible on Firefox, skipped silently      |
+| Match order                                                       | Light-DOM matches first, then shadow matches — `--first` / `--last` / `--nth <n>` stay predictable |
+| Strict matching                                                   | Still enforced: the wider candidate set means a selector can newly report `MULTIPLE_MATCHES`       |
+
+**Explicit piercing path** — Playwright-style `>>>` crosses exactly one shadow boundary per step.
+This is also the form `snapshot` emits for elements that live inside a shadow root, so a ref it hands
+back resolves again later:
+
+```bash
+browser-cli click '#host >>> #inner'
+browser-cli click 'my-card >>> .actions >>> button'
+```
+
+If a selector works in Chrome but reports `ELEMENT_NOT_FOUND` on Firefox, a **closed** shadow root is
+the usual reason.
+
 ---
 
 ## Find Command
@@ -227,7 +262,7 @@ When choosing a selector, prefer in this order:
 
 4. **Use quoted values for exact match**: `text="Submit"` matches exactly, while `text=Submit` does partial matching.
 
-5. **Fall back to XPath**: For complex structural queries that can't be expressed with other locators: `xpath=//table//tr[3]//td[2]`.
+5. **Fall back to XPath**: For complex structural queries that can't be expressed with other locators: `xpath=//table//tr[3]//td[2]`. Note that XPath is the one selector type that does **not** pierce shadow DOM — inside a web component, use CSS, a semantic locator, or a `>>>` path.
 
 6. **Combine with `wait`**: For dynamic content, wait for the element first:
    ```bash

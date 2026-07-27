@@ -4,14 +4,36 @@ Comprehensive documentation for element interaction commands in Browser-CLI.
 
 ## Overview
 
-Browser-CLI provides commands for clicking, typing, filling forms, checking boxes, selecting options, uploading files, dragging elements, and pressing keys. All interaction commands accept CSS selectors, semantic locators, or element refs (`@e1`).
+Browser-CLI provides commands for clicking, typing, filling forms, checking boxes, selecting options, uploading files, dragging elements, and pressing keys. All interaction commands accept CSS selectors, semantic locators, or element refs (`@e1`). For filling several fields at once, see `form fill` below — it batches many fields into a single round-trip instead of one command per field.
+
+## Shared options
+
+Every element-targeting command accepts:
+
+| Option      | Description                                                                  |
+| ----------- | ---------------------------------------------------------------------------- |
+| `--first`   | Act on the first match instead of failing on an ambiguous selector           |
+| `--last`    | Act on the last match                                                        |
+| `--nth <n>` | Act on the nth match (1-based)                                               |
+| `--force`   | Skip the disabled and occlusion checks (the visibility check always applies) |
+
+## Actionability
+
+Before dispatching events, the element must be **visible**, **enabled** (no `disabled`,
+`aria-disabled`, or enclosing `<fieldset disabled>`; `fill`/`type`/`clear` also reject `readonly`),
+and **not occluded** — hit-testing its centre point has to reach the element rather than an overlay
+on top of it. The element is scrolled to the centre of the viewport first. Failures come back as
+`ELEMENT_NOT_VISIBLE`, `ELEMENT_DISABLED` or `ELEMENT_OCCLUDED`, each with a hint.
+
+A selector matching more than one element fails with `MULTIPLE_MATCHES` (strict mode) — use
+`--first`/`--last`/`--nth` or a narrower selector.
 
 ## Operations
 
 ### click - Click an Element
 
 ```bash
-browser-cli click <selector> [--button <button>]
+browser-cli click <selector> [--button <button>] [--force] [--first|--last|--nth <n>]
 ```
 
 **Parameters:**
@@ -192,6 +214,83 @@ Selects an `<option>` by its `value` attribute, or by its visible text/label as 
 ```bash
 browser-cli select 'select[name="country"]' US
 browser-cli select '#color-picker' red
+```
+
+---
+
+### form fill - Batch Form Fill
+
+```bash
+browser-cli form fill --data '<json>' [--data-file <path>] [--force] [--continue-on-error]
+```
+
+Fills many fields in **one** protocol round-trip instead of one `fill`/`check`/`select` call per
+field. Reach for this when populating a form with several fields — it is faster and the errors are
+easier to reason about as a group.
+
+| Option                | Type    | Description                                                                      |
+| --------------------- | ------- | -------------------------------------------------------------------------------- |
+| `--data <json>`       | string  | JSON object `{selector: value}`, or a JSON array of pairs/objects                |
+| `--data-file <path>`  | string  | Read the same JSON from a file (`-` for stdin); mutually exclusive with `--data` |
+| `--force`             | boolean | Skip the disabled and occlusion checks on every field                            |
+| `--continue-on-error` | boolean | Apply remaining fields after one fails, instead of aborting                      |
+
+**Control type decides the primitive** — you don't specify an action per field, the extension picks
+it from the target element:
+
+| Element                                 | Primitive used                                                     |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `<select>`                              | `select` — matched by option `value`, falling back to visible text |
+| `input[type=checkbox]` / `[type=radio]` | `check` / `uncheck` — decided by the value's truthiness            |
+| everything else (`input`, `textarea`)   | `fill`                                                             |
+
+**`--data`** as a JSON object — key order is the fill order:
+
+```bash
+browser-cli form fill --data '{"#user":"alice","#terms":true,"#country":"Japan"}'
+```
+
+As a JSON array, for when the same selector must repeat:
+
+```bash
+browser-cli form fill --data '[["#tag","a"],["#tag","b"]]'
+browser-cli form fill --data '[{"selector":"#tag","value":"a"},{"selector":"#tag","value":"b"}]'
+```
+
+**`--data-file <path>`** reads the same shape from a file, or stdin with `-`:
+
+```bash
+browser-cli form fill --data-file ./fields.json
+cat fields.json | browser-cli form fill --data-file -
+```
+
+**Checkbox/radio truthiness**: boolean `true`/`false` map directly to checked/unchecked. For string
+values, `""`, `"false"`, `"0"`, `"no"`, `"off"` (case-insensitive) mean **unchecked**; any other
+string means **checked**.
+
+**Failure behavior**: by default, the fill aborts at the first field that errors — fields filled
+before the failure stay applied, fields after it are never touched — and the command reports
+`Field "#nope" failed after 1 of 3 fields: <error message>`. With `--continue-on-error`, every field
+is attempted regardless of earlier failures; the result lists each field with its own `error` where
+applicable.
+
+**Output**: text mode prints one line per field, `<action> <selector> = <value>`, followed by a
+summary line `Filled N/M fields`. `--json` output is
+`{"success":true,"data":{"fields":[{"selector","action","value","error"?}],"filled","failed"}}`.
+
+**Examples:**
+
+```bash
+browser-cli form fill --data '{"#name":"Alice","#email":"alice@example.com","#bio":"hello there","#country":"Japan","#terms":true,"#newsletter":false}'
+# fill #name = Alice
+# fill #email = alice@example.com
+# fill #bio = hello there
+# select #country = Japan
+# check #terms = true
+# uncheck #newsletter = false
+# Filled 6/6 fields
+
+browser-cli --json form fill --data '{"#name":"Bob","#nope":"x"}' --continue-on-error
 ```
 
 ---

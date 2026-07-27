@@ -8,7 +8,7 @@
 export interface ContentScriptResponse {
   success: boolean;
   data?: unknown;
-  error?: { message?: string };
+  error?: { code?: string; message?: string; hint?: string; stack?: string };
 }
 
 /**
@@ -19,15 +19,15 @@ export interface ContentScriptResponse {
 export async function sendToContentScript(
   tabId: number,
   message: { type: string; id: string; command: unknown },
-  maxRetries = 3,
-  delayMs = 500,
+  options?: { frameId?: number; maxRetries?: number; delayMs?: number },
 ): Promise<ContentScriptResponse> {
+  const { frameId = 0, maxRetries = 3, delayMs = 500 } = options ?? {};
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Always target the main frame (frameId: 0) to avoid iframe content scripts
-      // responding first. The main frame's content script handles iframe routing
-      // via frame-bridge when a frame switch is active.
-      return await browser.tabs.sendMessage(tabId, message, { frameId: 0 });
+      // Always address a specific frame — without it every frame's content
+      // script would answer and the first response would win. The caller passes
+      // the frame focused by `frame <selector>`; 0 is the top-level document.
+      return await browser.tabs.sendMessage(tabId, message, { frameId });
     } catch (err) {
       const msg = (err as Error).message || '';
       const isReceivingEndError =

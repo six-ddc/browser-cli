@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>The Internet - Form Fill</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      label {
+        display: block;
+        margin: 10px 0;
+      }
+      input[type='text'],
+      input[type='email'],
+      textarea,
+      select {
+        padding: 6px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="example">
+      <h3>Registration Form</h3>
+      <form id="signup">
+        <label>Name <input type="text" id="name" name="name" /></label>
+        <label>Email <input type="email" id="email" name="email" /></label>
+        <label>Bio <textarea id="bio" name="bio"></textarea></label>
+        <label>
+          Country
+          <select id="country" name="country">
+            <option value="" selected>Choose…</option>
+            <option value="jp">Japan</option>
+            <option value="us">United States</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="terms" name="terms" /> Accept terms</label>
+        <label><input type="checkbox" id="newsletter" name="newsletter" checked /> Newsletter</label>
+        <label><input type="radio" id="plan-pro" name="plan" value="pro" /> Pro plan</label>
+        <label>Disabled <input type="text" id="locked" disabled /></label>
+        <button type="button" id="submit">Submit</button>
+      </form>
+      <p id="status">untouched</p>
+      <script>
+        document.getElementById('submit').addEventListener('click', () => {
+          document.getElementById('status').textContent = 'submitted';
+        });
+      </script>
+    </div>
+  </body>
+</html>

@@ -1,4 +1,10 @@
-import { COMMAND_TIMEOUT_MS } from '@browser-cli/shared';
+import {
+  BrowserCliError,
+  COMMAND_TIMEOUT_MS,
+  normalizeError,
+  protocolError,
+  socketTimeoutFor,
+} from '@browser-cli/shared';
 import type { DaemonRequest, DaemonResponse, RequestMessage } from '@browser-cli/shared';
 import type { WsServer } from './ws-server.js';
 import type { WatchManager } from './watch-manager.js';
@@ -30,6 +36,19 @@ export class Bridge {
   }
 
   async handleRequest(req: DaemonRequest): Promise<DaemonResponse> {
+    // networkWatchFile reads local watch metadata/files — no extension round
+    // trip needed, so this must be handled before the connectivity check
+    // below (the extension may not even be connected).
+    if (req.command.action === 'networkWatchFile' && this.watchManager) {
+      try {
+        const params = req.command.params as { watchId?: string };
+        const result = this.watchManager.getWatchFile(params.watchId);
+        return { id: req.id, success: true, data: result };
+      } catch (err) {
+        return { id: req.id, success: false, error: errorFrom(err) };
+      }
+    }
+
     // If a specific session is requested, check that connection
     if (req.sessionId) {
       const conn = this.wsServer.getConnection(req.sessionId);
@@ -38,19 +57,22 @@ export class Bridge {
         return {
           id: req.id,
           success: false,
-          error: {
-            message: `Browser session '${req.sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'} Run 'browser-cli status' to see connected browsers, then use --session <sessionId> to target one.`,
-          },
+          error: protocolError(
+            'SESSION_NOT_FOUND',
+            `Browser session '${req.sessionId}' not found.${available ? ` Connected: ${available}` : ' No browsers connected.'}`,
+            "Run 'browser-cli status' to see connected browsers, then use --session <sessionId> to target one.",
+          ),
         };
       }
     } else if (!this.wsServer.isConnected) {
       return {
         id: req.id,
         success: false,
-        error: {
-          message:
-            "Extension is not connected. Please ensure the Browser-CLI extension is installed and enabled. Check that the Browser-CLI extension is installed, enabled, and the browser is open. Run 'browser-cli status' to verify.",
-        },
+        error: protocolError(
+          'EXTENSION_NOT_CONNECTED',
+          'Extension is not connected to the daemon.',
+          "Check that the Browser-CLI extension is installed, enabled, and the browser is open, then run 'browser-cli status' to verify.",
+        ),
       };
     }
 
@@ -62,14 +84,14 @@ export class Bridge {
           timeout?: number;
           body?: boolean;
           method?: string;
+          json?: boolean;
         };
         const result = await this.watchManager.startWatch(req.tabId ?? 0, params, (msg) =>
           this.sendToExtension(msg, req.sessionId),
         );
         return { id: req.id, success: true, data: result };
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { id: req.id, success: false, error: { message: msg } };
+        return { id: req.id, success: false, error: errorFrom(err) };
       }
     }
 
@@ -80,8 +102,7 @@ export class Bridge {
         );
         return { id: req.id, success: true, data: result };
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { id: req.id, success: false, error: { message: msg } };
+        return { id: req.id, success: false, error: errorFrom(err) };
       }
     }
 
@@ -95,23 +116,37 @@ export class Bridge {
     try {
       const response = await this.wsServer.sendRequest(
         wsRequest,
-        COMMAND_TIMEOUT_MS,
+        socketTimeoutFor(req.command),
         req.sessionId,
       );
       return {
         id: req.id,
         success: response.success,
         data: response.data as DaemonResponse['data'],
-        error: response.error,
+        error: response.error ? normalizeError(response.error) : undefined,
       };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logger.error(`Command ${req.command.action} failed:`, msg);
+      const error = errorFrom(err);
+      logger.error(`Command ${req.command.action} failed:`, error.message);
       return {
         id: req.id,
         success: false,
-        error: { message: msg },
+        error,
       };
     }
   }
+}
+
+/** Daemon-side failures: timeouts get their own code, everything else is UNKNOWN. */
+function errorFrom(err: unknown) {
+  if (err instanceof BrowserCliError) return err.toProtocolError();
+  const message = err instanceof Error ? err.message : String(err);
+  if (/timed out/i.test(message)) {
+    return protocolError(
+      'TIMEOUT',
+      message,
+      'The extension did not answer in time. Check the browser is responsive and the page is not blocking on a dialog.',
+    );
+  }
+  return normalizeError({ message });
 }

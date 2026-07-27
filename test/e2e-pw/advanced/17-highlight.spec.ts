@@ -87,7 +87,7 @@ test.describe('highlight with semantic locators', () => {
 
   test('works with text= locator', async ({ bcli, navigateAndWait }) => {
     await navigateAndWait(PAGES.LOGIN);
-    const r = bcli('highlight', 'text=Login');
+    const r = bcli('highlight', 'text=Login', '--last');
     expect(r).toBcliSuccess();
     expect(r.stdout).toContain('Highlighted');
   });
