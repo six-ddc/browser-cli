@@ -8,7 +8,13 @@ import {
   closeSync,
   constants,
 } from 'node:fs';
-import { getPidPath, getSocketPath } from '../util/paths.js';
+import {
+  getPidPath,
+  getSocketPath,
+  getWsHost,
+  getWsPort,
+  writeDaemonEndpoint,
+} from '../util/paths.js';
 import { logger } from '../util/logger.js';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -147,9 +153,14 @@ export async function startDaemon(
   // When built, it's at dist/daemon/index.js relative to the CLI package
   const daemonEntry = new URL('./daemon/index.js', import.meta.url).pathname;
 
+  // No explicit endpoint means "wherever this app dir's daemon lives" — not
+  // necessarily the default port. See writeDaemonEndpoint in util/paths.
+  const resolvedPort = wsPort ?? getWsPort();
+  const resolvedHost = wsHost ?? getWsHost();
+
   const args = ['--daemon'];
-  if (wsPort) args.push('--port', String(wsPort));
-  if (wsHost) args.push('--host', wsHost);
+  args.push('--port', String(resolvedPort));
+  args.push('--host', resolvedHost);
   if (opts?.token) args.push('--token', opts.token);
   else if (opts?.auth) args.push('--auth');
 
@@ -180,6 +191,11 @@ export async function startDaemon(
     cleanupPidFile();
     throw err;
   }
+
+  writeDaemonEndpoint({
+    wsHost: info.wsHost ?? resolvedHost,
+    wsPort: info.wsPort ?? resolvedPort,
+  });
 
   // Daemon is ready — disconnect IPC and detach so parent can exit
   child.disconnect();
